@@ -123,7 +123,7 @@ pub impl DigestHash<S, +HashStateTrait<S>, +Drop<S>> of Hash<Digest, S> {
 
 #[cfg(test)]
 mod tests {
-    use crate::hex::from_hex;
+    use crate::utils::hex::from_hex;
     use super::Digest;
 
     #[test]

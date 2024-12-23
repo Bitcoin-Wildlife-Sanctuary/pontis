@@ -17,14 +17,16 @@ pub mod Bridge {
     use starknet::storage::VecTrait;
     use starknet::ContractAddress;
     use starknet::get_caller_address;
-    use crate::hash::{Digest, DigestTrait};
+    use crate::utils::hash::{Digest, DigestTrait};
     use super::L1Address;
     use starknet::storage::{
         StoragePointerReadAccess, StoragePointerWriteAccess, Vec, MutableVecTrait,
     };
-    use crate::double_sha256::{double_sha256_digests, double_sha256_word_array};
     use crate::btc::{IBTCDispatcher, IBTCDispatcherTrait};
-    use crate::word_array::{WordArray, WordArrayTrait};
+    use crate::utils::{
+        double_sha256::{double_sha256_digests, double_sha256_word_array},
+        word_array::{WordArray, WordArrayTrait},
+    };
 
     // TODO: this should be declared in InternalImpl
     pub const TREE_HEIGHT: u8 = 10;
@@ -216,11 +218,11 @@ pub mod Bridge {
 
 #[cfg(test)]
 mod merkle_tree_tests {
-    use crate::hash::{Digest, DigestTrait};
-    use crate::double_sha256::double_sha256_digests;
+    use crate::utils::hash::{Digest, DigestTrait};
+    use crate::utils::double_sha256::double_sha256_digests;
     use super::{Bridge};
     use super::Bridge::InternalTrait;
-    use crate::bit_shifts::pow2;
+    use crate::utils::bit_shifts::pow2;
 
     fn merkle_root(hashes: Span<Digest>) -> Digest {
         let zero_hash = DigestTrait::new([0; 8]);
