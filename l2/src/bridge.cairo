@@ -28,9 +28,6 @@ pub mod Bridge {
         word_array::{WordArray, WordArrayTrait},
     };
 
-    // TODO: this should be declared in InternalImpl
-    pub const TREE_HEIGHT: u8 = 10;
-
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
 
     // External
@@ -142,6 +139,9 @@ pub mod Bridge {
 
     #[generate_trait]
     pub impl InternalImpl of InternalTrait {
+         const TREE_HEIGHT: u8 = 10;
+         const TREE_MAX_SIZE: u16 = 1024; //pow2(TREE_HEIGHT)!
+
         // TODO: how to enforce ZERO_HASHES.len() == TREE_HEIGHT?
         // calculated with print_zero_hashes below
         #[cairofmt::skip]
@@ -201,7 +201,11 @@ pub mod Bridge {
             let mut height = 0;
             let mut size = self.batch.size.read();
 
-            while height < TREE_HEIGHT.into() {
+            if size == Self::TREE_MAX_SIZE {
+                return self.get_element(Self::TREE_HEIGHT.into());
+            }
+
+            while height < Self::TREE_HEIGHT.into() {
                 if size % 2 == 1 {
                     root = double_sha256_digests(@self.get_element(height.into()), @root);
                 } else {
@@ -220,22 +224,21 @@ pub mod Bridge {
 mod merkle_tree_tests {
     use crate::utils::hash::{Digest, DigestTrait};
     use crate::utils::double_sha256::double_sha256_digests;
-    use super::{Bridge};
-    use super::Bridge::InternalTrait;
-    use crate::utils::bit_shifts::pow2;
+    use super::Bridge;
+    use super::Bridge::{InternalTrait, InternalImpl};
 
     fn merkle_root(hashes: Span<Digest>) -> Digest {
         let zero_hash = DigestTrait::new([0; 8]);
         let mut hashes: Array<Digest> = hashes.into();
 
-        let expected_size = pow2(Bridge::TREE_HEIGHT.into());
-        for _ in 0..(expected_size - hashes.len().into()) {
+        let expected_size = InternalImpl::TREE_MAX_SIZE;
+        for _ in 0..(expected_size.into() - hashes.len()) {
             hashes.append(zero_hash);
         };
 
         let mut hashes = hashes.span();
 
-        for _ in 0..Bridge::TREE_HEIGHT {
+        for _ in 0..InternalImpl::TREE_HEIGHT {
             let mut next_hashes: Array<Digest> = array![];
             while let Option::Some(v) = hashes.multi_pop_front::<2>() {
                 let [a, b] = (*v).unbox();
@@ -252,7 +255,7 @@ mod merkle_tree_tests {
     #[ignore]
     fn print_zero_hashes() {
         let mut previous: Digest = 0_u256.into();
-        for _ in 0..Bridge::TREE_HEIGHT {
+        for _ in 0..InternalImpl::TREE_HEIGHT {
             previous = double_sha256_digests(@previous, @previous);
         }
     }
@@ -269,13 +272,13 @@ mod merkle_tree_tests {
     fn test_data(size: u256) {
         let data = data(size).span();
 
-        let mut Bridge = Bridge::contract_state_for_testing();
+        let mut bridge = Bridge::contract_state_for_testing();
 
         for d in data {
-            Bridge.append(*d);
+            bridge.append(*d);
         };
 
-        assert_eq!(Bridge.root(), merkle_root(data), "merkle root mismatch");
+        assert_eq!(bridge.root(), merkle_root(data), "merkle root mismatch");
     }
 
     #[test]
@@ -298,8 +301,14 @@ mod merkle_tree_tests {
         test_data(256);
     }
 
+    #[test]
     fn test_merkle_root1023() {
         test_data(1023);
+    }
+
+    #[test]
+    fn test_merkle_root1024() {
+        test_data(1024);
     }
 }
 
@@ -378,4 +387,5 @@ mod bridge_tests {
         cheat_caller_address(bridge.contract_address, admin_address, CheatSpan::TargetCalls(1));
         bridge.close_batch();
     }
+
 }
