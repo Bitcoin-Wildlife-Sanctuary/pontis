@@ -5,7 +5,7 @@
 //! SHA256 hash function which operates on 4-byte words.
 
 use core::traits::DivRem;
-use crate::bit_shifts::pow256;
+use crate::utils::bit_shifts::pow256;
 
 /// Array of 4-byte words where the last word can be partial.
 #[derive(Drop, Debug, Default, PartialEq)]
@@ -308,7 +308,7 @@ impl WordSpanIntoArray of Into<WordSpan, WordArray> {
 #[cfg(target: 'test')]
 pub mod hex {
     use core::traits::DivRem;
-    use crate::hex::hex_char_to_nibble;
+    use crate::utils::hex::hex_char_to_nibble;
     use super::{WordArray, WordArrayTrait, WordSpan, WordSpanTrait};
 
     /// Gets words from hex (base16).
