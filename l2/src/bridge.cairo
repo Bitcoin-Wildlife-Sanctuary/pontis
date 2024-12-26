@@ -111,7 +111,7 @@ pub mod Bridge {
         }
 
         fn close_batch(ref self: ContractState) {
-            // TODO: how this should be restricted?
+            self.ownable.assert_only_owner();
 
             let root = self.root();
             let id = self.batch.id.read();
