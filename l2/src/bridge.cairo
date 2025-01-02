@@ -64,6 +64,7 @@ pub mod Bridge {
 
     #[derive(Drop, starknet::Event)]
     struct WithdrawEvent {
+        id: u128,
         recipient: L1Address,
         amount: u256,
     }
@@ -107,7 +108,7 @@ pub mod Bridge {
 
             self.append(HelpersTrait::double_sha256_withdrawal(recipient, amount));
 
-            self.emit(WithdrawEvent { recipient, amount });
+            self.emit(WithdrawEvent { id: self.batch.id.read(), recipient, amount });
         }
 
         fn close_batch(ref self: ContractState) {
