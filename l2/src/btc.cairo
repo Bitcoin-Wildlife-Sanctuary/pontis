@@ -30,7 +30,7 @@ mod BTC {
 
     // External
     #[abi(embed_v0)]
-    impl ERC20MixinImpl = ERC20Component::ERC20MixinImpl<ContractState>;
+    impl ERC20Impl = ERC20Component::ERC20Impl<ContractState>;
     #[abi(embed_v0)]
     impl OwnableMixinImpl = OwnableComponent::OwnableMixinImpl<ContractState>;
 
@@ -57,7 +57,6 @@ mod BTC {
 
     #[constructor]
     fn constructor(ref self: ContractState, owner: ContractAddress) {
-        self.erc20.initializer("pocBTC", "pocBTC");
         self.ownable.initializer(owner);
     }
 
@@ -73,6 +72,21 @@ mod BTC {
         fn mint(ref self: ContractState, recipient: ContractAddress, amount: u256) {
             self.ownable.assert_only_owner();
             self.erc20.mint(recipient, amount);
+        }
+
+        #[external(v0)]
+        fn name(self: @ContractState) -> ByteArray {
+            self.symbol()
+        }
+
+        #[external(v0)]
+        fn symbol(self: @ContractState) -> ByteArray {
+            "pocBTC"
+        }
+
+        #[external(v0)]
+        fn decimals(self: @ContractState) -> u8 {
+            8
         }
     }
 }
