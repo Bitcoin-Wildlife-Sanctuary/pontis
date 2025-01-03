@@ -65,27 +65,27 @@ pub mod Bridge {
     }
 
     #[derive(Drop, starknet::Event)]
-    struct DepositEvent {
-        root: Digest,
-        total: u256,
+    pub struct DepositEvent {
+        pub root: Digest,
+        pub total: u256,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct WithdrawEvent {
-        id: u128,
-        recipient: L1Address,
-        amount: u256,
+    pub struct WithdrawEvent {
+        pub id: u128,
+        pub recipient: L1Address,
+        pub amount: u256,
     }
 
     #[derive(Drop, starknet::Event)]
-    struct CloseBatchEvent {
-        id: u128,
-        root: Digest,
+    pub struct CloseBatchEvent {
+        pub id: u128,
+        pub root: Digest,
     }
 
     #[event]
     #[derive(Drop, starknet::Event)]
-    enum Event {
+    pub enum Event {
         #[flat]
         OwnableEvent: OwnableComponent::Event,
         DepositEvent: DepositEvent,
@@ -102,7 +102,7 @@ pub mod Bridge {
     }
 
     #[abi(embed_v0)]
-    impl Bridge of super::IBridge<ContractState> {
+    impl BridgeImpl of super::IBridge<ContractState> {
         fn deposit(ref self: ContractState, deposits: Span<Deposit>) {
             self.ownable.assert_only_owner();
 
@@ -126,6 +126,7 @@ pub mod Bridge {
 
         fn withdraw(ref self: ContractState, recipient: L1Address, amount: u256) {
             let caller = get_caller_address();
+
             self.btc.read().burn(caller, amount);
 
             self.append(HelpersTrait::double_sha256_withdrawal(recipient, amount));
@@ -136,13 +137,7 @@ pub mod Bridge {
         fn close_batch(ref self: ContractState) {
             self.ownable.assert_only_owner();
 
-            let root = self.root();
-            let id = self.batch.id.read();
-
-            self.batch.id.write(id + 1);
-            self.batch.size.write(0);
-
-            self.emit(CloseBatchEvent { id, root });
+            self.close_batch_internal();
         }
     }
 
@@ -177,12 +172,12 @@ pub mod Bridge {
 
     #[generate_trait]
     pub impl InternalImpl of InternalTrait {
-        const TREE_HEIGHT: u8 = 10;
-        const TREE_MAX_SIZE: u16 = 1024; //pow2(TREE_HEIGHT)!
+        const TREE_HEIGHT: u8 = 8;
+        const TREE_MAX_SIZE: u16 = 256; //pow2(TREE_HEIGHT)!
         // TODO: how to enforce ZERO_HASHES.len() == TREE_HEIGHT?
         // calculated with print_zero_hashes below
         #[cairofmt::skip]
-        const ZERO_HASHES: [[u32; 8]; 10] = [
+        const ZERO_HASHES: [[u32; 8]; 8] = [
             [0, 0, 0, 0, 0, 0, 0, 0],
             [3807779903, 1909579517, 1068079583, 2741588853, 1550386825, 2040095412, 2347489334, 2538507513],
             [2099567403, 4198582091, 4214196093, 1754246239, 2858291362, 2156722654, 812871865, 861070664],
@@ -191,8 +186,6 @@ pub mod Bridge {
             [2911086469, 1887493546, 3378700630, 3912122119, 3565730943, 113941511, 247519979, 1936780936],
             [4149171068, 670075167, 4270418929, 385287363, 953086358, 3888476695, 4151032589, 3608278989],
             [1723082150, 3777628280, 2788800972, 2132291431, 4168203796, 2521771669, 2723785127, 1542325057],
-            [1829197597, 3996005857, 931906618, 2383644882, 4277580546, 482972235, 2287817650, 3459845800],
-            [2257188826, 1732868934, 4244326882, 39139633, 3210730636, 2509762326, 1485744241, 392942686],
         ];
 
         fn get_element(self: @ContractState, i: u64) -> Digest {
@@ -213,11 +206,15 @@ pub mod Bridge {
             }
         }
 
+        fn is_full(self: @ContractState) -> bool {
+            self.batch.size.read() == Self::TREE_MAX_SIZE
+        }
+
         fn append(ref self: ContractState, withdrawal: Digest) {
             let original_size = self.batch.size.read();
 
             if original_size == Self::TREE_MAX_SIZE {
-                panic!("batch {} is full", self.batch.id.read());
+                self.close_batch_internal();
             }
 
             let mut value = withdrawal;
@@ -257,6 +254,16 @@ pub mod Bridge {
             };
 
             root
+        }
+
+        fn close_batch_internal(ref self: ContractState) {
+            let root = self.root();
+            let id = self.batch.id.read();
+
+            self.batch.id.write(id + 1);
+            self.batch.size.write(0);
+
+            self.emit(CloseBatchEvent { id, root });
         }
     }
 }
@@ -341,33 +348,23 @@ mod merkle_tree_tests {
     fn test_merkle_root256() {
         test_data(256);
     }
-
-    #[test]
-    fn test_merkle_root1023() {
-        test_data(1023);
-    }
-
-    #[test]
-    fn test_merkle_root1024() {
-        test_data(1024);
-    }
-
-    #[test]
-    #[should_panic(expected: "batch 0 is full")]
-    fn test_merkle_full_check() {
-        test_data(1025);
-    }
 }
 
 #[cfg(test)]
 mod bridge_tests {
     use snforge_std::{
-        declare, start_cheat_caller_address_global, stop_cheat_caller_address_global,
+        declare, spy_events, start_cheat_caller_address_global, stop_cheat_caller_address_global,
         cheat_caller_address, ContractClassTrait, DeclareResultTrait, CheatSpan,
+        EventSpyAssertionsTrait,
     };
+
     use starknet::{ContractAddress, contract_address_const};
     use crate::btc::{IBTCDispatcher, IBTCDispatcherTrait};
-    use super::{Deposit, IBridgeDispatcher, IBridgeDispatcherTrait};
+    use super::{
+        Deposit, Bridge::{Event, CloseBatchEvent, InternalTrait, InternalImpl}, IBridgeDispatcher,
+        IBridgeDispatcherTrait,
+    };
+
     use openzeppelin_access::ownable::interface::{IOwnableDispatcher, IOwnableDispatcherTrait};
 
     fn fixture() -> (
@@ -413,7 +410,7 @@ mod bridge_tests {
     }
 
     #[test]
-    fn test_deposit() { // let Bridge_class = declare("Bridge").unwrap().contract_class();
+    fn test_basic_flow() {
         let (admin_address, alice_address, bob_address, carol_address, btc, bridge) = fixture();
 
         cheat_caller_address(bridge.contract_address, admin_address, CheatSpan::TargetCalls(1));
@@ -433,5 +430,37 @@ mod bridge_tests {
 
         cheat_caller_address(bridge.contract_address, admin_address, CheatSpan::TargetCalls(1));
         bridge.close_batch();
+    }
+
+    #[test]
+    fn test_auto_close_batch() {
+        let (admin_address, alice_address, _, _, btc, bridge) = fixture();
+
+        cheat_caller_address(bridge.contract_address, admin_address, CheatSpan::TargetCalls(1));
+        bridge.deposit(array![Deposit { recipient: alice_address, amount: 2000 }].span());
+
+        let mut spy = spy_events();
+
+        start_cheat_caller_address_global(alice_address);
+        btc.approve(bridge.contract_address, 2000);
+        for _ in 0..InternalTrait::TREE_MAX_SIZE + 1 {
+            bridge.withdraw(808_u256, 1);
+        };
+
+        spy
+            .assert_emitted(
+                @array![
+                    (
+                        bridge.contract_address,
+                        Event::CloseBatchEvent(
+                            CloseBatchEvent {
+                                id: 0,
+                                root: 0x96a73c264a774ea8b897f9d048fc199f3e4779f2ad192c1decd66ed9f38b13e9_u256
+                                    .into(),
+                            },
+                        ),
+                    ),
+                ],
+            );
     }
 }
