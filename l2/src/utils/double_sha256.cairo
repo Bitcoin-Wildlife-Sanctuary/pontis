@@ -6,7 +6,7 @@ use core::sha256::compute_sha256_u32_array;
 use super::word_array::WordArray;
 
 /// Calculates double sha256 digest of a concatenation of two hashes.
-pub fn double_sha256_digests(a: @Digest, b: @Digest) -> Digest {
+pub fn double_sha256_parent(a: @Digest, b: @Digest) -> Digest {
     let mut input1: Array<u32> = array![];
     input1.append_span(a.value.span());
     input1.append_span(b.value.span());
@@ -30,7 +30,7 @@ pub fn double_sha256_word_array(words: WordArray) -> Digest {
 #[cfg(test)]
 mod tests {
     use crate::utils::{hex::from_hex, hash::Digest, word_array::hex::words_from_hex};
-    use super::{double_sha256_word_array, double_sha256_digests};
+    use super::{double_sha256_word_array, double_sha256_parent};
 
     #[test]
     fn test_double_sha256_word_array() {
@@ -55,7 +55,7 @@ mod tests {
         // hashlib.sha256(sha256(bytes.fromhex("00000001" * 8 + "00000002" *
         // 8)).digest()).hexdigest()
         assert_eq!(
-            double_sha256_digests(@Digest { value: [1; 8] }, @Digest { value: [2; 8] }).into(),
+            double_sha256_parent(@Digest { value: [1; 8] }, @Digest { value: [2; 8] }).into(),
             from_hex("14a6e4a4caef969126944266724d11866b39b3390cee070b0aa4c9390cd77f47"),
         )
     }
