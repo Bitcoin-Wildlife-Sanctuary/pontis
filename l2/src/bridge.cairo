@@ -3,9 +3,15 @@ use starknet::ContractAddress;
 // TODO: Add the correct type for L1Address
 type L1Address = u256;
 
+#[derive(Drop, Serde)]
+struct Deposit {
+    recipient: ContractAddress,
+    amount: u256,
+}
+
 #[starknet::interface]
 pub trait IBridge<TContractState> {
-    fn deposit(ref self: TContractState, recipient: ContractAddress, amount: u256);
+    fn deposit(ref self: TContractState, deposits: Span<Deposit>);
     fn withdraw(ref self: TContractState, recipient: L1Address, amount: u256);
     fn close_batch(ref self: TContractState);
 }
@@ -18,13 +24,15 @@ pub mod Bridge {
     use starknet::ContractAddress;
     use starknet::get_caller_address;
     use crate::utils::hash::{Digest, DigestTrait};
+    use crate::utils::merkle_tree::merkle_root;
     use super::L1Address;
+    use super::Deposit;
     use starknet::storage::{
         StoragePointerReadAccess, StoragePointerWriteAccess, Vec, MutableVecTrait,
     };
     use crate::btc::{IBTCDispatcher, IBTCDispatcherTrait};
     use crate::utils::{
-        double_sha256::{double_sha256_digests, double_sha256_word_array},
+        double_sha256::{double_sha256_parent, double_sha256_word_array},
         word_array::{WordArray, WordArrayTrait},
     };
 
@@ -58,8 +66,8 @@ pub mod Bridge {
 
     #[derive(Drop, starknet::Event)]
     struct DepositEvent {
-        recipient: ContractAddress,
-        amount: u256,
+        root: Digest,
+        total: u256,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -95,11 +103,25 @@ pub mod Bridge {
 
     #[abi(embed_v0)]
     impl Bridge of super::IBridge<ContractState> {
-        fn deposit(ref self: ContractState, recipient: ContractAddress, amount: u256) {
+        fn deposit(ref self: ContractState, deposits: Span<Deposit>) {
             self.ownable.assert_only_owner();
-            self.btc.read().mint(recipient, amount);
 
-            self.emit(DepositEvent { recipient, amount });
+            let mut deposits_ = deposits;
+            let mut leafs: Array<Digest> = array![];
+            while let Option::Some(Deposit { recipient, amount }) = deposits_.pop_front() {
+                leafs.append(HelpersTrait::double_sha256_deposit(*recipient, *amount));
+            };
+
+            let root = merkle_root(leafs.span());
+            let btc = self.btc.read();
+            let mut total = 0;
+            let mut deposits_ = deposits;
+            while let Option::Some(d) = deposits_.pop_front() {
+                btc.mint(*d.recipient, *d.amount);
+                total = total + *d.amount;
+            };
+
+            self.emit(DepositEvent { root, total });
         }
 
         fn withdraw(ref self: ContractState, recipient: L1Address, amount: u256) {
@@ -126,6 +148,19 @@ pub mod Bridge {
 
     #[generate_trait]
     pub impl HelpersImpl of HelpersTrait {
+        fn double_sha256_deposit(recipient: ContractAddress, amount: u256) -> Digest {
+            let mut b: WordArray = Default::default();
+
+            let recipient: felt252 = recipient.into();
+            let recipient: u256 = recipient.into();
+            let recipient: Digest = recipient.into();
+            b.append_span(recipient.value.span());
+
+            let amount: Digest = amount.into();
+            b.append_span(amount.value.span());
+
+            double_sha256_word_array(b)
+        }
         fn double_sha256_withdrawal(recipient: L1Address, amount: u256) -> Digest {
             let mut b: WordArray = Default::default();
 
@@ -186,7 +221,7 @@ pub mod Bridge {
             let mut i = 0;
 
             while size % 2 == 1 {
-                value = double_sha256_digests(@self.get_element(i), @value);
+                value = double_sha256_parent(@self.get_element(i), @value);
                 size = size / 2;
                 i += 1;
             };
@@ -209,9 +244,9 @@ pub mod Bridge {
 
             while height < Self::TREE_HEIGHT.into() {
                 if size % 2 == 1 {
-                    root = double_sha256_digests(@self.get_element(height.into()), @root);
+                    root = double_sha256_parent(@self.get_element(height.into()), @root);
                 } else {
-                    root = double_sha256_digests(@root, @DigestTrait::new(*zero_hashes.at(height)));
+                    root = double_sha256_parent(@root, @DigestTrait::new(*zero_hashes.at(height)));
                 }
                 size = size / 2;
                 height += 1;
@@ -225,7 +260,7 @@ pub mod Bridge {
 #[cfg(test)]
 mod merkle_tree_tests {
     use crate::utils::hash::{Digest, DigestTrait};
-    use crate::utils::double_sha256::double_sha256_digests;
+    use crate::utils::double_sha256::double_sha256_parent;
     use super::Bridge;
     use super::Bridge::{InternalTrait, InternalImpl};
 
@@ -244,7 +279,7 @@ mod merkle_tree_tests {
             let mut next_hashes: Array<Digest> = array![];
             while let Option::Some(v) = hashes.multi_pop_front::<2>() {
                 let [a, b] = (*v).unbox();
-                next_hashes.append(double_sha256_digests(@a, @b));
+                next_hashes.append(double_sha256_parent(@a, @b));
             };
             hashes = next_hashes.span();
         };
@@ -258,7 +293,7 @@ mod merkle_tree_tests {
     fn print_zero_hashes() {
         let mut previous: Digest = 0_u256.into();
         for _ in 0..InternalImpl::TREE_HEIGHT {
-            previous = double_sha256_digests(@previous, @previous);
+            previous = double_sha256_parent(@previous, @previous);
         }
     }
 
@@ -322,7 +357,7 @@ mod bridge_tests {
     };
     use starknet::{ContractAddress, contract_address_const};
     use crate::btc::{IBTCDispatcher, IBTCDispatcherTrait};
-    use super::{IBridgeDispatcher, IBridgeDispatcherTrait};
+    use super::{Deposit, IBridgeDispatcher, IBridgeDispatcherTrait};
     use openzeppelin_access::ownable::interface::{IOwnableDispatcher, IOwnableDispatcherTrait};
 
     fn fixture() -> (
@@ -372,7 +407,7 @@ mod bridge_tests {
         let (admin_address, alice_address, bob_address, carol_address, btc, bridge) = fixture();
 
         cheat_caller_address(bridge.contract_address, admin_address, CheatSpan::TargetCalls(1));
-        bridge.deposit(alice_address, 100);
+        bridge.deposit(array![Deposit { recipient: alice_address, amount: 100 }].span());
 
         start_cheat_caller_address_global(alice_address);
         btc.transfer(bob_address, 50);
