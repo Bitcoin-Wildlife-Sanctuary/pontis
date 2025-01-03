@@ -24,7 +24,6 @@ pub mod Bridge {
     use starknet::ContractAddress;
     use starknet::get_caller_address;
     use crate::utils::hash::{Digest, DigestTrait};
-    use crate::utils::merkle_tree::merkle_root;
     use super::L1Address;
     use super::Deposit;
     use starknet::storage::{
@@ -112,7 +111,7 @@ pub mod Bridge {
                 leafs.append(HelpersTrait::double_sha256_deposit(*recipient, *amount));
             };
 
-            let root = merkle_root(leafs.span());
+            let root = HelpersImpl::merkle_root(leafs.span());
             let btc = self.btc.read();
             let mut total = 0;
             let mut deposits_ = deposits;
@@ -167,6 +166,28 @@ pub mod Bridge {
             b.append_span(amount.value.span());
 
             double_sha256_word_array(b)
+        }
+        fn merkle_root(hashes: Span<Digest>) -> Digest {
+            let zero_hash = DigestTrait::new([0; 8]);
+            let mut hashes: Array<Digest> = hashes.into();
+
+            let expected_size = InternalImpl::TREE_MAX_SIZE;
+            for _ in 0..(expected_size.into() - hashes.len()) {
+                hashes.append(zero_hash);
+            };
+
+            let mut hashes = hashes.span();
+
+            for _ in 0..InternalImpl::TREE_HEIGHT {
+                let mut next_hashes: Array<Digest> = array![];
+                while let Option::Some(v) = hashes.multi_pop_front::<2>() {
+                    let [a, b] = (*v).unbox();
+                    next_hashes.append(double_sha256_parent(@a, @b));
+                };
+                hashes = next_hashes.span();
+            };
+
+            *hashes.at(0)
         }
     }
 
@@ -270,33 +291,10 @@ pub mod Bridge {
 
 #[cfg(test)]
 mod merkle_tree_tests {
-    use crate::utils::hash::{Digest, DigestTrait};
+    use crate::utils::hash::Digest;
     use crate::utils::double_sha256::double_sha256_parent;
     use super::Bridge;
-    use super::Bridge::{InternalTrait, InternalImpl};
-
-    fn merkle_root(hashes: Span<Digest>) -> Digest {
-        let zero_hash = DigestTrait::new([0; 8]);
-        let mut hashes: Array<Digest> = hashes.into();
-
-        let expected_size = InternalImpl::TREE_MAX_SIZE;
-        for _ in 0..(expected_size.into() - hashes.len()) {
-            hashes.append(zero_hash);
-        };
-
-        let mut hashes = hashes.span();
-
-        for _ in 0..InternalImpl::TREE_HEIGHT {
-            let mut next_hashes: Array<Digest> = array![];
-            while let Option::Some(v) = hashes.multi_pop_front::<2>() {
-                let [a, b] = (*v).unbox();
-                next_hashes.append(double_sha256_parent(@a, @b));
-            };
-            hashes = next_hashes.span();
-        };
-
-        *hashes.at(0)
-    }
+    use super::Bridge::{InternalTrait, InternalImpl, HelpersImpl};
 
     // use this to fill the ZERO_HASHES array
     #[test]
@@ -326,7 +324,7 @@ mod merkle_tree_tests {
             bridge.append(*d);
         };
 
-        assert_eq!(bridge.root(), merkle_root(data), "merkle root mismatch");
+        assert_eq!(bridge.root(), HelpersImpl::merkle_root(data), "merkle root mismatch");
     }
 
     #[test]
