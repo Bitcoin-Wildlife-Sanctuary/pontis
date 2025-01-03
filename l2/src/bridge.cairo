@@ -214,9 +214,13 @@ pub mod Bridge {
         }
 
         fn append(ref self: ContractState, withdrawal: Digest) {
-            //TODO: make sure it is not full
-            let mut value = withdrawal;
             let original_size = self.batch.size.read();
+
+            if original_size == Self::TREE_MAX_SIZE {
+                panic!("batch {} is full", self.batch.id.read());
+            }
+
+            let mut value = withdrawal;
             let mut size = original_size;
             let mut i = 0;
 
@@ -346,6 +350,12 @@ mod merkle_tree_tests {
     #[test]
     fn test_merkle_root1024() {
         test_data(1024);
+    }
+
+    #[test]
+    #[should_panic(expected: "batch 0 is full")]
+    fn test_merkle_full_check() {
+        test_data(1025);
     }
 }
 
