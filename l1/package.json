@@ -1,0 +1,41 @@
+{
+  "name": "pontis",
+  "version": "0.1.0",
+  "description": "",
+  "author": "",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "clean": "rimraf scrypt.index.json && rimraf dist && rimraf artifacts",
+    "compile": "npx scrypt-cli@latest compile",
+    "prebuild": "npm run clean && npm run compile",
+    "build": "tsc",
+    "pretest": "npm run build",
+    "test": "mocha",
+    "lint": "eslint . --ext .js,.ts --fix && prettier --write --ignore-unknown \"**/*\"",
+    "lint-check": "eslint . --ext .js,.ts && prettier --check --ignore-unknown \"**/*\""
+  },
+  "dependencies": {
+    "dotenv": "^16.0.3",
+    "scrypt-ts": "^1.4.4"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.4",
+    "@types/chai-as-promised": "^7.1.5",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^18.11.10",
+    "@typescript-eslint/eslint-plugin": "^6.5.0",
+    "@typescript-eslint/parser": "^6.5.0",
+    "bitcore-lib-inquisition": "^10.3.1",
+    "chai": "^4.3.6",
+    "chai-as-promised": "^7.1.1",
+    "eslint": "^8.48.0",
+    "eslint-config-prettier": "^8.6.0",
+    "mocha": "^10.8.2",
+    "prettier": "^2.8.2",
+    "rimraf": "^3.0.2",
+    "ts-node": "^10.9.2",
+    "typescript": "=5.3.3"
+  },
+  "license": "MIT"
+}

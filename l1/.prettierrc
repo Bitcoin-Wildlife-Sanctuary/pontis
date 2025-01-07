@@ -1,0 +1,14 @@
+{
+  "endOfLine": "auto",
+  "overrides": [
+    {
+      "files": "*.ts",
+      "options": {
+        "tabWidth": 4,
+        "singleQuote": true,
+        "trailingComma": "all",
+        "semi": true
+      }
+    }
+  ]
+}
