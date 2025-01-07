@@ -70,7 +70,7 @@ function contractEventsInRange(
           }
 
           continuationToken = response.continuation_token;
-        } while (continuationToken) 
+        } while (continuationToken);
         subscriber.complete();
       } catch (err) {
         subscriber.error(err);
