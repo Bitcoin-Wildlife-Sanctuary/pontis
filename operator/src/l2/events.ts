@@ -47,7 +47,6 @@ function contractEventsInRange(
   from: number,
   to: number
 ) {
-  console.log(`Fetching events from ${from} to ${to}`);
   return new Observable<Object>((subscriber) => {
     async function getEvents() {
       const parseEvents = await eventParser(provider, contractAddress);
@@ -90,6 +89,20 @@ export function contractEvents(
   return currentBlockRange(provider, initialBlockNumber).pipe(
     switchMap(([previous, current]) =>
       from(contractEventsInRange(provider, contractAddress, previous, current))
+    )
+  );
+}
+
+export type L2Event = {};
+
+export function l2Events(
+  provider: Provider,
+  initialBlockNumber: number,
+  contractAddresses: string[]
+): Observable<L2Event> {
+  return from(contractAddresses).pipe(
+    switchMap((contractAddress) =>
+      contractEvents(provider, contractAddress, initialBlockNumber)
     )
   );
 }
