@@ -102,6 +102,7 @@ pub mod Bridge {
 
     #[abi(embed_v0)]
     impl BridgeImpl of super::IBridge<ContractState> {
+        // limits: max tx size 10M steps, number of events 1K, calldata 4K felts
         fn deposit(ref self: ContractState, deposits: Span<Deposit>) {
             self.ownable.assert_only_owner();
 
