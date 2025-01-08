@@ -1,4 +1,5 @@
 use starknet::ContractAddress;
+use crate::utils::hash::Digest;
 
 // TODO: Add the correct type for L1Address
 type L1Address = u256;
@@ -11,7 +12,7 @@ struct Deposit {
 
 #[starknet::interface]
 pub trait IBridge<TContractState> {
-    fn deposit(ref self: TContractState, deposits: Span<Deposit>);
+    fn deposit(ref self: TContractState, txid: Digest, deposits: Span<Deposit>);
     fn withdraw(ref self: TContractState, recipient: L1Address, amount: u256);
     fn close_batch(ref self: TContractState);
 }
@@ -65,7 +66,7 @@ pub mod Bridge {
 
     #[derive(Drop, starknet::Event)]
     pub struct DepositEvent {
-        pub root: Digest,
+        pub id: Digest,
         pub total: u256,
     }
 
@@ -103,7 +104,7 @@ pub mod Bridge {
     #[abi(embed_v0)]
     impl BridgeImpl of super::IBridge<ContractState> {
         // limits: max tx size 10M steps, number of events 1K, calldata 4K felts
-        fn deposit(ref self: ContractState, deposits: Span<Deposit>) {
+        fn deposit(ref self: ContractState, txid: Digest, deposits: Span<Deposit>) {
             self.ownable.assert_only_owner();
 
             let mut deposits_ = deposits;
@@ -121,7 +122,9 @@ pub mod Bridge {
                 total = total + *d.amount;
             };
 
-            self.emit(DepositEvent { root, total });
+            let id = double_sha256_parent(@txid, @root);
+
+            self.emit(DepositEvent { id, total });
         }
 
         fn withdraw(ref self: ContractState, recipient: L1Address, amount: u256) {
@@ -413,7 +416,12 @@ mod bridge_tests {
         let (admin_address, alice_address, bob_address, carol_address, btc, bridge) = fixture();
 
         cheat_caller_address(bridge.contract_address, admin_address, CheatSpan::TargetCalls(1));
-        bridge.deposit(array![Deposit { recipient: alice_address, amount: 100 }].span());
+
+        bridge
+            .deposit(
+                Default::default(),
+                array![Deposit { recipient: alice_address, amount: 100 }].span(),
+            );
 
         start_cheat_caller_address_global(alice_address);
         btc.transfer(bob_address, 50);
@@ -436,7 +444,11 @@ mod bridge_tests {
         let (admin_address, alice_address, _, _, btc, bridge) = fixture();
 
         cheat_caller_address(bridge.contract_address, admin_address, CheatSpan::TargetCalls(1));
-        bridge.deposit(array![Deposit { recipient: alice_address, amount: 2000 }].span());
+        bridge
+            .deposit(
+                Default::default(),
+                array![Deposit { recipient: alice_address, amount: 2000 }].span(),
+            );
 
         let mut spy = spy_events();
 
