@@ -64,5 +64,5 @@ export async function basicFlow(
   await bridge.withdraw(bob.address, 500);
 
   bridge.connect(admin);
-  await bridge.close_batch();
+  await bridge.close_withdrawal_batch();
 }

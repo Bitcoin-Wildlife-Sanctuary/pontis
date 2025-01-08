@@ -14,7 +14,7 @@ struct Deposit {
 pub trait IBridge<TContractState> {
     fn deposit(ref self: TContractState, txid: Digest, deposits: Span<Deposit>);
     fn withdraw(ref self: TContractState, recipient: L1Address, amount: u256);
-    fn close_batch(ref self: TContractState);
+    fn close_withdrawal_batch(ref self: TContractState);
 }
 
 #[starknet::contract]
@@ -137,7 +137,7 @@ pub mod Bridge {
             self.emit(WithdrawEvent { id: self.batch.id.read(), recipient, amount });
         }
 
-        fn close_batch(ref self: ContractState) {
+        fn close_withdrawal_batch(ref self: ContractState) {
             self.ownable.assert_only_owner();
 
             self.close_batch_internal();
@@ -436,7 +436,7 @@ mod bridge_tests {
         bridge.withdraw(808_u256, 50);
 
         cheat_caller_address(bridge.contract_address, admin_address, CheatSpan::TargetCalls(1));
-        bridge.close_batch();
+        bridge.close_withdrawal_batch();
     }
 
     #[test]
