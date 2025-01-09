@@ -1,50 +1,27 @@
 import { Provider, ReceiptTx, RpcProvider } from 'starknet';
-import { L2TxHashAndStatus, OperatorState } from './state';
-import {
-  filter,
-  from,
-  interval,
-  map,
-  Observable,
-  switchMap,
-  takeWhile,
-} from 'rxjs';
+import { L2TxHashAndStatus, OperatorState } from '../state';
+import { filter, from, interval, map, Observable, switchMap } from 'rxjs';
 
 export function getAllL2Txs(state: OperatorState): Set<L2TxHashAndStatus> {
   const results: Set<L2TxHashAndStatus> = new Set();
 
   for (const depositBatch of state.depositBatches) {
     switch (depositBatch.status) {
-      case 'BEING_AGGREGATED':
-      case 'AGGREGATED':
-        break;
       case 'SUBMITTED_TO_L2':
-      case 'DEPOSITED':
-      case 'SUBMITTED_FOR_VERIFICATION':
-      case 'VERIFIED':
-        results.add(depositBatch.l2Tx);
+        results.add(depositBatch.depositTx);
         break;
-      default:
-        const _exhaustive: never = depositBatch;
-        return _exhaustive;
+      // default:
+      //   break;
     }
   }
 
   for (const withdrawalBatch of state.withdrawalBatches) {
     switch (withdrawalBatch.status) {
-      case 'PENDING':
+      case 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED':
+        results.add(withdrawalBatch.closeWithdrawalBatchTx);
         break;
-      case 'CLOSE_SUBMITTED':
-      case 'CLOSED':
-      case 'SUBMITTED_FOR_VERIFICATION':
-      case 'BEING_EXPANDED':
-      case 'EXPANDED':
-        results.add(withdrawalBatch.l2Tx);
-        break;
-
       default:
-        const _exhaustive: never = withdrawalBatch;
-        return _exhaustive;
+        break;
     }
   }
   return results;

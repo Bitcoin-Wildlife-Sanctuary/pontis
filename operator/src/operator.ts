@@ -12,11 +12,12 @@ import {
   tap,
 } from 'rxjs';
 import {
-  Deposit,
-  L1TxHashAndStatus,
-  L2TxHashAndStatus,
+  applyChange,
+  l2EventToEvent,
+  l2TxHashAndStatusToTransaction,
   OperatorState,
-} from './l2/state';
+  Transaction,
+} from './state';
 import { RpcProvider, TransactionStatus } from 'starknet';
 import { L2Event, l2Events } from './l2/events';
 import { getAllL2Txs, l2TransactionStatus } from './l2/transactions';
@@ -61,36 +62,10 @@ function operatorMain<E, T, S>(
   ).pipe(mergeScan(applyChange, initialState, 1), tap(s));
 }
 
-type Event =
-  | ({ type: 'l2event' } & L2Event)
-  | ({ type: 'deposits' } & Deposit[]); // add blocknumber, etc
-
-type Transaction =
-  | ({ type: 'l2tx' } & L2TxHashAndStatus)
-  | ({ type: 'l1tx' } & L1TxHashAndStatus);
-
-function applyChange(
-  state: OperatorState,
-  change: Event | Transaction
-): Observable<OperatorState> {
-  // TODO ...
-  return of();
-}
-
-function l2TxHashAndStatusToTransaction(tx: L2TxHashAndStatus): Transaction {
-  return { type: 'l2tx', ...tx };
-}
-
-function l2EventToEvent(e: L2Event): Event {
-  return { type: 'l2event', ...e };
-}
-
 function operator(provider: RpcProvider): Observable<OperatorState> {
   const initialState = new OperatorState(); // load from storage
 
   const l2BridgeContractAddress = '';
-
-  provider.waitForTransaction;
 
   return operatorMain(
     // events

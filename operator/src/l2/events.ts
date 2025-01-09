@@ -1,9 +1,16 @@
-import { Provider, events, CallData, AbiEvent, ParsedEvents } from 'starknet';
+import {
+  Provider,
+  events,
+  CallData,
+  AbiEvent,
+  ParsedEvents,
+  ParsedEvent,
+} from 'starknet';
 import { Observable, interval, from } from 'rxjs';
 import { switchMap, scan, distinctUntilChanged } from 'rxjs/operators';
 import { EVENT } from 'starknet-types-07/dist/types/api/components';
 
-const POLL_INTERVAL = 2000;
+const POLL_INTERVAL = 5000;
 const CHUNK_SIZE = 10;
 
 export function currentBlockRange(
@@ -27,7 +34,7 @@ export function currentBlockRange(
 async function eventParser(
   provider: Provider,
   contractAddress: string
-): Promise<(rawEvents: EVENT[]) => ParsedEvents> {
+): Promise<(rawEvent: EVENT) => ParsedEvent> {
   const { abi } = await provider.getClassAt(contractAddress);
   if (abi === undefined) {
     throw 'no abi';
@@ -37,9 +44,11 @@ async function eventParser(
   const abiStructs = CallData.getAbiStruct(abi);
   const abiEnums = CallData.getAbiEnum(abi);
 
-  return (rawEvents: EVENT[]) =>
-    events.parseEvents(rawEvents, abiEvents, abiStructs, abiEnums);
+  return (rawEvent: EVENT) =>
+    events.parseEvents([rawEvent], abiEvents, abiStructs, abiEnums)[0];
 }
+
+export type L2Event = { blockNumber: number; parsedEvent: ParsedEvent };
 
 function contractEventsInRange(
   provider: Provider,
@@ -47,7 +56,7 @@ function contractEventsInRange(
   from: number,
   to: number
 ) {
-  return new Observable<Object>((subscriber) => {
+  return new Observable<L2Event>((subscriber) => {
     async function getEvents() {
       const parseEvents = await eventParser(provider, contractAddress);
 
@@ -64,10 +73,11 @@ function contractEventsInRange(
           });
 
           const events = response.events;
-          for (const event of parseEvents(events)) {
-            subscriber.next(event);
+          for (const rawEvent of events) {
+            const blockNumber = rawEvent.block_number;
+            const parsedEvent = parseEvents(rawEvent);
+            subscriber.next({ blockNumber, parsedEvent });
           }
-
           continuationToken = response.continuation_token;
         } while (continuationToken);
         subscriber.complete();
@@ -85,15 +95,13 @@ export function contractEvents(
   provider: Provider,
   contractAddress: string,
   initialBlockNumber: number
-): Observable<Object> {
+): Observable<L2Event> {
   return currentBlockRange(provider, initialBlockNumber).pipe(
     switchMap(([previous, current]) =>
       from(contractEventsInRange(provider, contractAddress, previous, current))
     )
   );
 }
-
-export type L2Event = {};
 
 export function l2Events(
   provider: Provider,
