@@ -9,7 +9,6 @@ import {
   of,
   scan,
   Subject,
-  switchScan,
   tap,
 } from 'rxjs';
 import {
@@ -21,6 +20,7 @@ import {
 import { RpcProvider, TransactionStatus } from 'starknet';
 import { L2Event, l2Events } from './l2/events';
 import { getAllL2Txs, l2TransactionStatus } from './l2/transactions';
+import * as _ from 'lodash';
 
 function diff<T>(a: Set<T>, b: Set<T>): Set<T> {
   const result = new Set<T>();
@@ -34,25 +34,31 @@ function diff<T>(a: Set<T>, b: Set<T>): Set<T> {
   return result;
 }
 
+function mapSet<T, U>(input: Set<T>, fn: (item: T) => U): Set<U> {
+  return new Set(Array.from(input, fn));
+}
+
 function operatorMain<E, T, S>(
   events: Observable<E>,
   transactions: (state: S) => Set<T>,
   transactionStatus: (tx: T) => Observable<T>,
-  process: (state: S, input: E | T) => Observable<S>,
+  applyChange: (state: S, change: E | T) => Observable<S>,
   initialState: S
-) {
+): Observable<S> {
   const s = new Subject<S>();
   return merge(
     events,
-    s
-      .pipe(
-        map(transactions),
-        scan(diff, new Set()),
-        mergeMap(from),
-        mergeMap(transactionStatus)
-      )
-      .pipe(mergeScan(process, initialState, 1), tap(s))
-  );
+    s.pipe(
+      map(transactions),
+      scan(
+        ([allTxs, _], currentTxs) => [currentTxs, diff(currentTxs, allTxs)],
+        [new Set(), new Set()]
+      ),
+      map(([_, newTxs]) => newTxs),
+      mergeMap(from),
+      mergeMap(transactionStatus)
+    )
+  ).pipe(mergeScan(applyChange, initialState, 1), tap(s));
 }
 
 type Event =
@@ -71,7 +77,15 @@ function applyChange(
   return of();
 }
 
-function operator(provider: RpcProvider) {
+function l2TxHashAndStatusToTransaction(tx: L2TxHashAndStatus): Transaction {
+  return { type: 'l2tx', ...tx };
+}
+
+function l2EventToEvent(e: L2Event): Event {
+  return { type: 'l2event', ...e };
+}
+
+function operator(provider: RpcProvider): Observable<OperatorState> {
   const initialState = new OperatorState(); // load from storage
 
   const l2BridgeContractAddress = '';
@@ -79,19 +93,32 @@ function operator(provider: RpcProvider) {
   provider.waitForTransaction;
 
   return operatorMain(
+    // events
     merge(
-      l2Events(provider, initialState.l2BlockNumber, [l2BridgeContractAddress])
+      l2Events(provider, initialState.l2BlockNumber, [
+        l2BridgeContractAddress,
+      ]).pipe(map(l2EventToEvent))
       // add l1Events
     ),
     (state: OperatorState) => {
-      return getAllL2Txs(state);
-      // add l2 transactions
+      return mapSet(getAllL2Txs(state), l2TxHashAndStatusToTransaction);
+      // add l1 transactions
     },
-    (tx) => l2TransactionStatus(provider, tx), // add l1 transactions
+    (tx: Transaction) => {
+      switch (tx.type) {
+        case 'l2tx':
+          return l2TransactionStatus(provider, tx);
+        case 'l1tx':
+          throw new Error('not implemented'); // add l1 transactions
+        default:
+          const _exhaustive: never = tx;
+          return _exhaustive;
+      }
+    },
     applyChange,
     initialState
   ).pipe(
-    distinctUntilChanged()
+    distinctUntilChanged(_.isEqual)
     //save state to storage
   );
 }

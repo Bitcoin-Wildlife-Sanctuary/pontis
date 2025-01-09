@@ -1,4 +1,8 @@
-import { ReceiptTx, TransactionStatus } from 'starknet';
+import {
+  ReceiptTx,
+  TransactionStatus,
+  GetTransactionReceiptResponse,
+} from 'starknet';
 
 type L1Address = `0x${string}`; // or bigint?
 type L2Address = `0x${string}`; // or bigint?
