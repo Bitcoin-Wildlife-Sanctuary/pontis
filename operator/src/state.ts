@@ -64,7 +64,11 @@ type DepositBatch =
       depositTx: L2TxHashAndStatus;
     } & DepositBatchCommon)
   | ({
+<<<<<<< Updated upstream
       status: 'SUBMITTED_FOR_VERIFICATION';
+=======
+      status: 'SUBMITTED_FOR_COMPLETION';
+>>>>>>> Stashed changes
       aggregationTxs: L1TxHashAndStatus[][];
       stateUpdateTx: L1TxHashAndStatus;
       depositTx: L2TxHashAndStatus;
@@ -108,7 +112,11 @@ type WithdrawalBatch =
       closeWithdrawalBatchTx: L2TxHashAndStatus;
     } & WithdrawalBatchCommon)
   | ({
+<<<<<<< Updated upstream
       status: 'SUBMITTED_FOR_VERIFICATION';
+=======
+      status: 'SUBMITTED_FOR_EXPANSION';
+>>>>>>> Stashed changes
       withdrawals: Withdrawal[];
       hash: bigint;
       closeWithdrawalBatchTx: L2TxHashAndStatus;
@@ -197,7 +205,10 @@ export function applyChange(
         switch (depositBatch.status) {
           case 'SUBMITTED_TO_L2':
             if (depositBatch.depositTx.hash === change.hash) {
+<<<<<<< Updated upstream
               depositBatch.depositTx = change;
+=======
+>>>>>>> Stashed changes
               if (change.status.isSuccess()) {
                 // TODO: finality?
                 newState.depositBatches[i] = {
