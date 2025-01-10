@@ -13,12 +13,7 @@ type L2Address = `0x${string}`; // or bigint?
 type L1TxHash = `0x${string}`; // or bigint?
 type L2TxHash = `0x${string}`; // or bigint?
 
-export interface Deposit {
-  amount: bigint;
-  recipient: L2Address;
-  origin: L1TxHash;
-}
-
+// TODO: everything about L1 is very WIP, should be checked with sCrypt team
 export type L1TxStatus = 'Unconfirmed' | 'Confirmed' | 'Spent'; // Orphaned, Droped?
 export type L1TxHashAndStatus = {
   hash: L1TxHash;
@@ -30,6 +25,12 @@ export type L2TxHashAndStatus = {
   status: ReceiptTx;
   blockNumber: bigint;
 };
+
+export interface Deposit {
+  amount: bigint;
+  recipient: L2Address;
+  origin: L1TxHashAndStatus;
+}
 
 type DepositBatchCommon = {
   deposits: Deposit[];
@@ -215,6 +216,7 @@ export function applyChange(
       break;
     }
     case 'l1tx': {
+      // TODO: handle l1tx
       console.log('Handling L1Tx:', change);
       throw new Error('not implemented');
     }

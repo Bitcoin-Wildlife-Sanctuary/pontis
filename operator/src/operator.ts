@@ -18,20 +18,18 @@ import {
   OperatorState,
   Transaction,
 } from './state';
-import { RpcProvider, TransactionStatus } from 'starknet';
-import { L2Event, l2Events } from './l2/events';
+import { RpcProvider } from 'starknet';
+import { l2Events } from './l2/events';
 import { getAllL2Txs, l2TransactionStatus } from './l2/transactions';
 import * as _ from 'lodash';
 
 function diff<T>(a: Set<T>, b: Set<T>): Set<T> {
   const result = new Set<T>();
-
   for (const e of a) {
     if (!b.has(e)) {
       result.add(e);
     }
   }
-
   return result;
 }
 
@@ -63,9 +61,9 @@ function operatorMain<E, T, S>(
 }
 
 function operator(provider: RpcProvider): Observable<OperatorState> {
-  const initialState = new OperatorState(); // load from storage
+  const initialState = new OperatorState(); // TODO: load from storage
 
-  const l2BridgeContractAddress = '';
+  const l2BridgeContractAddress = ''; // TODO: add configuration
 
   return operatorMain(
     // events
@@ -75,25 +73,29 @@ function operator(provider: RpcProvider): Observable<OperatorState> {
       ]).pipe(map(l2EventToEvent))
       // add l1Events
     ),
+    // transactions from state
     (state: OperatorState) => {
       return mapSet(getAllL2Txs(state), l2TxHashAndStatusToTransaction);
       // add l1 transactions
     },
+    // transaction status
     (tx: Transaction) => {
       switch (tx.type) {
         case 'l2tx':
           return l2TransactionStatus(provider, tx);
         case 'l1tx':
-          throw new Error('not implemented'); // add l1 transactions
+          throw new Error('not implemented'); // TODO: add l1 transactions
         default:
           const _exhaustive: never = tx;
           return _exhaustive;
       }
     },
+    // state transitions
     applyChange,
+    // initial state
     initialState
   ).pipe(
     distinctUntilChanged(_.isEqual)
-    //save state to storage
+    // TODO: save state to storage
   );
 }
