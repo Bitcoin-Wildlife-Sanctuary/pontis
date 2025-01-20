@@ -1,7 +1,9 @@
 import { assert, ByteString, FixedArray, method, sha256, SmartContractLib, toByteString } from "scrypt-ts";
 
 
+export const MAX_INPUT = 6;
 export const MAX_OUTPUT = 6;
+
 export type SpentSPKs = FixedArray<ByteString, typeof MAX_OUTPUT>
 
 
