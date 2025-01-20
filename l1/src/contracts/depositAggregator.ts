@@ -21,7 +21,7 @@ import { MerklePath } from './merklePath'
 
 
 export type DepositData = {
-    // todo: confirm address length
+    // todo: confirm address length? 32 bytes?
     address: ByteString
     amount: bigint
 }
@@ -116,6 +116,10 @@ export class DepositAggregator extends SmartContract {
         if (level == 0n) {
             // If prev txns are leaves, check that the hash in their state
             // OP_RETURN output corresponds to the data passed in as witnesses.
+
+            // todo: confirm address length? 32 bytes?
+            assert(depositData0.address.length == 32)
+            assert(depositData1.address.length == 32)
             const hashData0 = DepositAggregator.hashDepositData(level, depositData0.address, depositData0.amount)
             const hashData1 = DepositAggregator.hashDepositData(level, depositData1.address, depositData1.amount)
 
