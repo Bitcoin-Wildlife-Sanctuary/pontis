@@ -5,3 +5,5 @@ target/
 .snfoundry_cache
 build/
 node_modules/
+artifacts/
+.eslintcache
