@@ -10,6 +10,7 @@ import {
     prop,
     ByteString,
     Sha256,
+    int2ByteString,
 } from 'scrypt-ts'
 import { SHPreimage, SigHashUtils } from './sigHashUtils'
 import { AggregatorTransaction, AggregatorUtils } from './aggregatorUtils'
@@ -31,6 +32,7 @@ export type BridgeTransaction = {
     // bridge contract state
     batchesRoot: Sha256 // the hash of the batches, stored in OP_RETURN output
     depositAggregatorSPK: ByteString     // Aggregator SPK's are separated from the script 
+    changeOutput: ByteString // the change output, optional, if exists.
     locktime: ByteString
 }
 
@@ -39,6 +41,8 @@ export const MAX_INPUTS = 6;
 
 
 export class Bridge extends SmartContract {
+
+    
     @prop()
     operator: PubKey
 
@@ -63,7 +67,9 @@ export class Bridge extends SmartContract {
         fundingPrevout: ByteString,
 
         batchHash: Sha256,
-        batchProof: MerkleProof
+        batchProof: MerkleProof,
+
+        changeOutput: ByteString
     ) {
         // Check sighash preimage.
         const s = SigHashUtils.checkSHPreimage(shPreimage)
@@ -116,7 +122,8 @@ export class Bridge extends SmartContract {
         // Enforce outputs.
         const hashOutputs = sha256(
             contractOut +
-            conractStateOut
+            conractStateOut +
+            changeOutput
         )
         assert(hashOutputs == shPreimage.hashOutputs)
     }
@@ -129,7 +136,9 @@ export class Bridge extends SmartContract {
         fundingPrevout: ByteString,
 
         batchHash: Sha256,
-        batchProof: MerkleProof
+        batchProof: MerkleProof,
+
+        changeOutput: ByteString
     ) {
         // finalizeDepositTx: bridgeInput + feeInput => bridgeOutput + stateOutput
 
@@ -178,7 +187,8 @@ export class Bridge extends SmartContract {
         // Enforce outputs.
         const hashOutputs = sha256(
             contractOut +
-            conractStateOut
+            conractStateOut + 
+            changeOutput
         )
         assert(hashOutputs == shPreimage.hashOutputs)
     }
@@ -191,7 +201,8 @@ export class Bridge extends SmartContract {
         fundingPrevout: ByteString,
 
         expanderRoot: Sha256,
-        sumAmt: bigint
+        sumAmt: bigint,
+        changeOutput: ByteString
     ) {
         // Check sighash preimage.
         const s = SigHashUtils.checkSHPreimage(shPreimage)
@@ -239,7 +250,8 @@ export class Bridge extends SmartContract {
             contractOut +
             bridgeStateOut +
             expanderOut +
-            expanderStateOut
+            expanderStateOut +
+            changeOutput
         )
         assert(hashOutputs == shPreimage.hashOutputs)
     }
@@ -250,7 +262,11 @@ export class Bridge extends SmartContract {
         // depositTx: bridgeInput + depositAggregatorInput => bridgeOutput + stateOutput
         // withdrawTx: bridgeInput + feeInput => bridgeOutput + bridgeStateOutput + expanderOutput + expanderStateOutput;
         // finalizeDepositTx: bridgeInput + feeInput => bridgeOutput + stateOutput
-        const nOutputs = tx.expanderAmt == 0n ? toByteString('02') : toByteString('04')
+        let nOutputs: bigint = tx.expanderAmt == 0n ? 2n : 4n;
+        if (tx.changeOutput != toByteString('')) {
+            nOutputs += 1n;
+        }
+        const nOutputsByteString = int2ByteString(nOutputs, 1n)
 
         const stateHash = Bridge.getStateHash(
             tx.batchesRoot, tx.depositAggregatorSPK
@@ -267,11 +283,12 @@ export class Bridge extends SmartContract {
         return hash256(
             tx.ver +
             tx.inputs +
-            nOutputs +
+            nOutputsByteString +
             GeneralUtils.getContractOutput(tx.contractAmt, tx.contractSPK) +
             GeneralUtils.getStateOutput(stateHash) +
             expanderOut +
             expanderStateOut +
+            tx.changeOutput +
             tx.locktime
         )
     }

@@ -11,6 +11,8 @@ export type AggregatorTransaction = {
     outputContractAmt: bigint // the amount of the deposit aggregator contract output
     outputContractSPK: ByteString // the script pubkey of the deposit aggregator contract output
     hashData: Sha256 // Hash of state data, stored in OP_RETURN output.
+
+    changeOutput: ByteString // the change output, optional, if exists.
     locktime: ByteString // locktime of the transaction
 }
 
@@ -24,20 +26,27 @@ export class AggregatorUtils extends SmartContractLib {
 
         // todo: add an depositInfo opReturn output, which contains the deposit info, convinient for the indexer
 
-        const inputsPrefix = isLeaf ?
+        const nInputs = isLeaf ?
             toByteString('01') :
             (toByteString('03') + tx.inputContract0 + tx.inputContract1)
+
+        const nOutputs = tx.changeOutput == toByteString('') ?
+            toByteString('03') :
+            toByteString('02')
+
         return hash256(
             tx.ver +
-            inputsPrefix +
+            nInputs +
             tx.inputFee +
-            toByteString('02') +
+
+            nOutputs +
             // todo: outputContractSPK may consist of length + scriptpubkey, this may be hard to check is the outputContractSPK is valid/allowed
             GeneralUtils.getContractOutput(tx.outputContractAmt, tx.outputContractSPK) +
             toByteString('000000000000000022') +    // opreturn output:  satoshis + length of script 
             OpCode.OP_RETURN +
             toByteString('20') +    
             tx.hashData +   // todo: add some tag here which is useful for the indexer
+            tx.changeOutput +
             tx.locktime
         )
     }

@@ -9,7 +9,7 @@
       "build": "tsc",
       "deploy": "npx ts-node ./deploy.ts",
       "clean": "rimraf scrypt.index.json && rimraf dist && rimraf artifacts",
-      "compile": "npx scrypt-cli compile && npx ts-node ./postCompile.ts",
+      "compile": "npx scrypt-cli compile",
       "pretest": "npm run build && npm run compile",
       "test": "npm run test:mocha",
       "test:mocha": "cross-env NETWORK=local mocha",
