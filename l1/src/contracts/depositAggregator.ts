@@ -11,7 +11,8 @@ import {
     ByteString,
     Sha256,
     Addr,
-    int2ByteString
+    int2ByteString,
+    len
 } from 'scrypt-ts'
 import { SHPreimage, SigHashUtils } from './sigHashUtils'
 import { AggregatorTransaction, AggregatorUtils } from './aggregatorUtils'
@@ -78,7 +79,8 @@ export class DepositAggregator extends SmartContract {
         fundingPrevout: ByteString,
         isFirstInput: boolean,
         depositData0: DepositData,
-        depositData1: DepositData
+        depositData1: DepositData,
+        changeOutput: ByteString
     ) {
         // Check sighash preimage.
         const s = SigHashUtils.checkSHPreimage(shPreimage)
@@ -118,8 +120,8 @@ export class DepositAggregator extends SmartContract {
             // OP_RETURN output corresponds to the data passed in as witnesses.
 
             // todo: confirm address length? 32 bytes?
-            assert(depositData0.address.length == 32)
-            assert(depositData1.address.length == 32)
+            assert(len(depositData0.address) == 32n)
+            assert(len(depositData1.address) == 32n)
             const hashData0 = DepositAggregator.hashDepositData(level, depositData0.address, depositData0.amount)
             const hashData1 = DepositAggregator.hashDepositData(level, depositData1.address, depositData1.amount)
 
@@ -182,7 +184,7 @@ export class DepositAggregator extends SmartContract {
         )
 
         // Recurse. Send to aggregator with updated hash.
-        const outputs = contractOut + stateOut
+        const outputs = contractOut + stateOut + changeOutput
         assert(
             sha256(outputs) == shPreimage.hashOutputs
         )

@@ -13,6 +13,7 @@ export type ExpanderTransaction = {
     output0Amt: bigint
     output1Amt: bigint
     stateHash: Sha256
+    changeOutput: ByteString
     locktime: ByteString
 }
 
@@ -60,7 +61,8 @@ export class WithdrawalExpander extends SmartContract {
         withdrwalAddresses: FixedArray<Addr, 4>,
         withdrwalAmts: FixedArray<bigint, 4>,
 
-        fundingPrevout: ByteString
+        fundingPrevout: ByteString,
+        changeOutput: ByteString
     ) {
         // check sighash preimage
         const s = SigHashUtils.checkSHPreimage(shPreimage)
@@ -127,6 +129,7 @@ export class WithdrawalExpander extends SmartContract {
             assert(false, 'withdrawal level must be 0, 1 or 2')
         }
 
+        outputs += changeOutput
         assert(sha256(outputs) == shPreimage.hashOutputs)
     }
 
@@ -171,7 +174,9 @@ export class WithdrawalExpander extends SmartContract {
         childExpanderAmt0: bigint,   // always none-zero, if 0, throws
         childExpanderAmt1: bigint,   // if 0, no new expander1 outputs
 
-        fundingPrevout: ByteString
+        fundingPrevout: ByteString,
+
+        changeOutput: ByteString
     ) {
         // Check sighash preimage.
         const s = SigHashUtils.checkSHPreimage(shPreimage)
@@ -236,6 +241,7 @@ export class WithdrawalExpander extends SmartContract {
         }
         let newStateHash = sha256(childExpandNodeHash0 + childExpandNodeHash1)
         outputs += GeneralUtils.getStateOutput(newStateHash)
+        outputs += changeOutput
 
         assert(
             sha256(outputs) == shPreimage.hashOutputs
@@ -273,15 +279,19 @@ export class WithdrawalExpander extends SmartContract {
 
     @method()
     static getTxId(tx: ExpanderTransaction): Sha256 {
+        const nOutputs = tx.changeOutput == toByteString('') ?
+            toByteString('03') :
+            toByteString('02')
         return hash256(
             tx.ver +
             toByteString('02') +
             tx.inputContract +
             tx.inputFee +
-            toByteString('03') +
+            nOutputs +
             GeneralUtils.getContractOutput(tx.output0Amt, tx.contractSPK) +
             GeneralUtils.getContractOutput(tx.output1Amt, tx.contractSPK) +
             GeneralUtils.getStateOutput(tx.stateHash) +
+            tx.changeOutput +
             tx.locktime
         )
     }
