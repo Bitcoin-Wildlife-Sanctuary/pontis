@@ -11,10 +11,10 @@ PRIVATE_KEY="cTE..."
 ```
 
 You may obtain signet funds via these faucets:
+
 - https://signetfaucet.com/
 - https://alt.signetfaucet.com
 - https://x.com/babylon_chain/status/1790787732643643575
-
 
 ## Install Dependencies
 
@@ -49,6 +49,7 @@ Download the Bitcoin Core Inquisition from [GitHub](https://github.com/bitcoin-i
 The Bitcoin client will automatically find nearby relay nodes for broadcasting transactions. However, these nodes may not support the new OP_CAT version and could refuse to broadcast it due to default policies against OP_SUCCESSXX. Thus, we need to configure our node to relay transactions to an inquisition node.
 
 Add the following to the node configuration:
+
 ```
 signet=1
 daemon=1

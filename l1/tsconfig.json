@@ -1,19 +1,35 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "lib": [
-      "ES2020"
-    ],
-    "experimentalDecorators": true,
-    "module": "commonjs",
-    "moduleResolution": "node",
     "outDir": "./dist",
-    "esModuleInterop": true,
+    "rootDir": "./src",
+    "declarationDir": "./dist",
+    "resolveJsonModule": true,
     "strict": false,
+
     "skipLibCheck": true,
-    "sourceMap": true,
+    "baseUrl": ".",
+    // "composite": true,
     "declaration": true,
-    "resolveJsonModule": true
+    "declarationMap": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "lib": ["ESNext"],
+    "module": "CommonJS",
+    "allowJs": true,
+    "moduleResolution": "Node",
+    "noEmitOnError": true,
+    "noFallthroughCasesInSwitch": true,
+    "noImplicitAny": false,
+    "noImplicitReturns": true,
+    // "noUnusedLocals": true,
+    "preserveSymlinks": true,
+    "preserveWatchOutput": true,
+    "pretty": false,
+    "sourceMap": true,
+    "target": "ES2021",
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+    "useUnknownInCatchVariables": false
   },
   "include": ["src/**/*.ts"]
 }
