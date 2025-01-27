@@ -1,345 +1,387 @@
-import { Addr, assert, ByteString, FixedArray, hash256, method, prop, PubKey, sha256, Sha256, Sig, SmartContract, toByteString } from "scrypt-ts";
-import { SHPreimage, SigHashUtils } from "./sigHashUtils";
-import { Bridge, BridgeTransaction } from "./bridge";
-import { GeneralUtils } from "./generalUtils";
-import { MerklePath } from "./merklePath";
-
+import {
+  assert,
+  ByteString,
+  FixedArray,
+  hash256,
+  int2ByteString,
+  len,
+  method,
+  prop,
+  PubKey,
+  sha256,
+  Sha256,
+  Sig,
+  SmartContract,
+  toByteString,
+} from 'scrypt-ts'
+import { SHPreimage, SigHashUtils } from './sigHashUtils'
+import { Bridge, BridgeTransaction } from './bridge'
+import { GeneralUtils } from './generalUtils'
+import { MerklePath } from './merklePath'
 
 export type ExpanderTransaction = {
-    ver: ByteString
-    inputContract: ByteString
-    inputFee: ByteString
-    contractSPK: ByteString
-    output0Amt: bigint
-    output1Amt: bigint
-    stateHash: Sha256
-    changeOutput: ByteString
-    locktime: ByteString
+  ver: ByteString
+  inputs: ByteString
+
+  isCreateWithdrawalTx: boolean
+  // non-empty if prev tx is createWithdrawal tx, otherwise empty
+  bridgeSPK: ByteString
+  bridgeAmt: bigint
+  bridgeStateHash: Sha256
+
+  contractSPK: ByteString
+  output0Amt: bigint  // always non-zero;
+  output1Amt: bigint  // zero when prev tx is createWithdrawal tx or prev tx has no second expander output;
+  stateHash0: Sha256
+  stateHash1: Sha256
+
+  changeOutput: ByteString
+  locktime: ByteString
 }
 
 export type ExpanderState = {
-    withdrawalRoot: Sha256
+  withdrawalRoot: Sha256
 }
 
 export type WithdrawalState = {
-    address: Addr
-    amt: bigint
+  address: ByteString
+  amt: bigint
 }
 
 export class WithdrawalExpander extends SmartContract {
+  @prop()
+  operator: PubKey
 
-    @prop()
-    operator: PubKey
+  constructor(operator: PubKey) {
+    super(...arguments)
+    this.operator = operator
+  }
 
-    constructor(
-        operator: PubKey
-    ) {
-        super(...arguments)
-        this.operator = operator
+  @method()
+  public distribute(
+    shPreimage: SHPreimage,
+    sigOperator: Sig,
+
+    isFirstExpanderOutput: boolean,
+
+    prevLevel: bigint,
+    prevTx: ExpanderTransaction,
+
+    // we support max 4 withdrawals per tx
+    // if prevLevel is 0, 1 withdrawal;
+    // if prevLevel is 1, 1 or 2 withdrawals, allow 1 empty leaf;
+    // if prevLevel is 2, 1, 2 or 3 withdrawals, allow 3 empty leaves;
+    withdrwalAddresses: FixedArray<ByteString, 4>,
+    withdrwalAmts: FixedArray<bigint, 4>,
+
+    fundingPrevout: ByteString,
+    changeOutput: ByteString
+  ) {
+    // check sighash preimage
+    const s = SigHashUtils.checkSHPreimage(shPreimage)
+    assert(this.checkSig(s, SigHashUtils.Gx))
+
+    // check operator sig
+    assert(this.checkSig(sigOperator, this.operator))
+
+    // verify prevTx is trustable
+    const prevTxId = WithdrawalExpander.getTxId(prevTx)
+    const hashPrevouts = WithdrawalExpander.getHashPrevouts(
+      prevTxId,
+      fundingPrevout,
+      prevTx.isCreateWithdrawalTx,
+      isFirstExpanderOutput
+    )
+    assert(hashPrevouts == shPreimage.hashPrevouts)
+    assert(shPreimage.inputNumber == toByteString('00000000'))
+
+    const leafHash0 = WithdrawalExpander.getLeafNodeHash(
+      withdrwalAddresses[0],
+      withdrwalAmts[0]
+    )
+    const leafHash1 = WithdrawalExpander.getLeafNodeHash(
+      withdrwalAddresses[1],
+      withdrwalAmts[1]
+    )
+    const leafHash2 = WithdrawalExpander.getLeafNodeHash(
+      withdrwalAddresses[2],
+      withdrwalAmts[2]
+    )
+    const leafHash3 = WithdrawalExpander.getLeafNodeHash(
+      withdrwalAddresses[3],
+      withdrwalAmts[3]
+    )
+
+    const level1LeftNodeHash = WithdrawalExpander.getNodeHash(
+      1n,
+      withdrwalAmts[0],
+      leafHash0,
+      withdrwalAmts[1],
+      leafHash1
+    )
+    const level1RightNodeHash = WithdrawalExpander.getNodeHash(
+      1n,
+      withdrwalAmts[2],
+      leafHash2,
+      withdrwalAmts[3],
+      leafHash3
+    )
+    const level2NodeHash = WithdrawalExpander.getNodeHash(
+      2n,
+      withdrwalAmts[0] + withdrwalAmts[1],
+      level1LeftNodeHash,
+      withdrwalAmts[2] + withdrwalAmts[3],
+      level1RightNodeHash
+    )
+
+
+    const stateHash = isFirstExpanderOutput ? prevTx.stateHash0 : prevTx.stateHash1
+    // verify withdrawal address and amt are trustable
+    if (prevLevel == 0n) {
+      assert(stateHash == leafHash0)
+    } else if (prevLevel == 1n) {
+      assert(stateHash == level1LeftNodeHash)
+    } else if (prevLevel == 2n) {
+      assert(stateHash == level2NodeHash)
+    } else {
+      assert(false, 'withdrawal level must be 0, 1 or 2')
     }
 
-    @method()
-    public distribute(
-        shPreimage: SHPreimage,
-        sigOperator: Sig,
-
-        isExpandingPrevTxFirstOutput: boolean,
-        isPrevTxBridge: boolean,
-
-        prevLevel: bigint,
-
-        prevTxBridge: BridgeTransaction,
-        prevTxExpander: ExpanderTransaction,
-
-        prevStateHash0: Sha256,
-        prevStateHash1: Sha256,
-        
-        // we support max 4 withdrawals per tx
-        // if prevLevel is 0, 1 withdrawal; 
-        // if prevLevel is 1, 1 or 2 withdrawals, allow 1 empty leaf;
-        // if prevLevel is 2, 1, 2 or 3 withdrawals, allow 3 empty leaves;
-        withdrwalAddresses: FixedArray<Addr, 4>,
-        withdrwalAmts: FixedArray<bigint, 4>,
-
-        fundingPrevout: ByteString,
-        changeOutput: ByteString
-    ) {
-        // check sighash preimage
-        const s = SigHashUtils.checkSHPreimage(shPreimage)
-        assert(this.checkSig(s, SigHashUtils.Gx))
-
-        // check operator sig
-        assert(this.checkSig(sigOperator, this.operator))
-
-        let prevTxId = Sha256(toByteString(''))
-        if (isPrevTxBridge) {
-            prevTxId = WithdrawalExpander.getBridgeTxId(prevTxBridge)
-        } else {
-            prevTxId = WithdrawalExpander.getTxId(prevTxExpander)
-        }
-        const hashPrevouts = WithdrawalExpander.getHashPrevouts(
-            prevTxId,
-            fundingPrevout,
-            isPrevTxBridge,
-            isExpandingPrevTxFirstOutput
+    // verify outputs are correct
+    let outputs = toByteString('')
+    for (let i = 0; i < 4; i++) {
+      if (withdrwalAmts[i] > 0n) {
+        outputs += WithdrawalExpander.getAddressOutput(
+          withdrwalAddresses[i],
+          GeneralUtils.padAmt(withdrwalAmts[i])
         )
-        assert(hashPrevouts == shPreimage.hashPrevouts);
-        assert(shPreimage.inputNumber == toByteString('00000000'));
-
-        let stateHash = toByteString('')
-        if (isPrevTxBridge) {
-            stateHash = prevTxBridge.expanderStateHash
-        } else {
-            stateHash = prevTxExpander.stateHash
-        }
-        // verify prevStateHash0 and prevStateHash1 are correct
-        assert(stateHash == sha256(prevStateHash0 + prevStateHash1));
-
-
-        let leafHash0 = WithdrawalExpander.getLeafNodeHash(withdrwalAddresses[0], withdrwalAmts[0]);
-        let leafHash1 = WithdrawalExpander.getLeafNodeHash(withdrwalAddresses[1], withdrwalAmts[1]);
-        let leafHash2 = WithdrawalExpander.getLeafNodeHash(withdrwalAddresses[2], withdrwalAmts[2]);
-        let leafHash3 = WithdrawalExpander.getLeafNodeHash(withdrwalAddresses[3], withdrwalAmts[3]);
-
-        let leftChildNodeHash = WithdrawalExpander.getNodeHash(1n, withdrwalAmts[0], leafHash0, withdrwalAmts[1], leafHash1);
-        let rightChildNodeHash = WithdrawalExpander.getNodeHash(1n, withdrwalAmts[2], leafHash2, withdrwalAmts[3], leafHash3);
-        let nodeHash = WithdrawalExpander.getNodeHash(
-            2n,
-            withdrwalAmts[0] + withdrwalAmts[1],
-            leftChildNodeHash, 
-            withdrwalAmts[2] + withdrwalAmts[3], 
-            rightChildNodeHash
-        );
-
-        let outputs = toByteString('');
-        for (let i = 0; i < 4; i++) {
-            if (withdrwalAmts[i] > 0n) {
-                outputs += WithdrawalExpander.getP2WPKHOut(GeneralUtils.padAmt(withdrwalAmts[i]), withdrwalAddresses[i]);
-            }
-        }
-
-        let prevStateHash = isExpandingPrevTxFirstOutput ? prevStateHash0 : prevStateHash1;
-        if (prevLevel == 0n) {
-            assert(prevStateHash == leafHash0)
-        } else if (prevLevel == 1n) {
-            assert(prevStateHash == leftChildNodeHash)
-        } else if (prevLevel == 2n) {
-            assert(prevStateHash == nodeHash)
-        } else {
-            assert(false, 'withdrawal level must be 0, 1 or 2')
-        }
-
-        outputs += changeOutput
-        assert(sha256(outputs) == shPreimage.hashOutputs)
+      }
     }
+    outputs += changeOutput
+    assert(sha256(outputs) == shPreimage.hashOutputs)
+  }
 
-    /**
-     * Expands current node of exapnsion tree into further two nodes or leaves.
-     * 
-     * @param shPreimage - Sighash preimage of the currently executing transaction.
-     * @param sigOperator - Signature of bridge operator.
-     * @param isExpandingPrevTxFirstOutput - Indicates wether expanding first or second output (i.e. branch).
-     * @param isPrevTxBridge - Indicates wether prev tx is the bridge.
-     * @param prevTxBridge - Previous bridge tx data. Ignored if prev tx not bridge.
-     * @param prevTxExpander - Previous expander tx data. Ignored if prev tx is bridge.
-     * @param prevAggregationData - Aggregation data of previous transaction.
-     * @param currentAggregationData  - Aggregation data of current trnasaction.
-     * @param nextAggregationData0 - Subsequent aggregation data of first branch.
-     * @param nextAggregationData1 - Subsequent aggregation data of second branch.
-     * @param isExpandingLeaves - Indicates wether we're exapnding into leaves.
-     * @param withdrawalData0 - Withdrawal data of fist leaf. Ignored if not expanding into leaves.
-     * @param withdrawalData1 - Withdrawal data of second leaf. Ignored if not expanding into leaves.
-     * @param isLastAggregationLevel - Indicates wether we're on the last level of the aggregation tree (one above leaves).
-     * @param fundingPrevout - The prevout for the funding UTXO.
-     */
-    @method()
-    public expand(
-        shPreimage: SHPreimage,
-        sigOperator: Sig,
+  /**
+   * Expands current node of exapnsion tree into further two nodes or leaves.
+   *
+   * @param shPreimage - Sighash preimage of the currently executing transaction.
+   * @param sigOperator - Signature of bridge operator.
+   * @param isExpandingPrevTxFirstOutput - Indicates wether expanding first or second output (i.e. branch).
+   * @param isPrevTxBridge - Indicates wether prev tx is the bridge.
+   * @param prevTxBridge - Previous bridge tx data. Ignored if prev tx not bridge.
+   * @param prevTxExpander - Previous expander tx data. Ignored if prev tx is bridge.
+   * @param prevAggregationData - Aggregation data of previous transaction.
+   * @param currentAggregationData  - Aggregation data of current trnasaction.
+   * @param nextAggregationData0 - Subsequent aggregation data of first branch.
+   * @param nextAggregationData1 - Subsequent aggregation data of second branch.
+   * @param isExpandingLeaves - Indicates wether we're exapnding into leaves.
+   * @param withdrawalData0 - Withdrawal data of fist leaf. Ignored if not expanding into leaves.
+   * @param withdrawalData1 - Withdrawal data of second leaf. Ignored if not expanding into leaves.
+   * @param isLastAggregationLevel - Indicates wether we're on the last level of the aggregation tree (one above leaves).
+   * @param fundingPrevout - The prevout for the funding UTXO.
+   */
+  @method()
+  public expand(
+    shPreimage: SHPreimage,
+    sigOperator: Sig,
 
-        isExpandingPrevTxFirstOutput: boolean,
-        isPrevTxBridge: boolean,
+    isFirstExpanderOutput: boolean,  // if expanding first or second output
 
-        prevLevel: bigint,
+    prevLevel: bigint,
+    prevTx: ExpanderTransaction,
 
-        prevTxBridge: BridgeTransaction,
-        prevTxExpander: ExpanderTransaction,
+    childExpandNodeHash0: Sha256,
+    childExpandNodeHash1: Sha256,
 
-        prevStateHash0: Sha256,
-        prevStateHash1: Sha256,
+    childExpanderAmt0: bigint, // always none-zero, if 0, throws
+    childExpanderAmt1: bigint, // if 0, no new expander1 outputs
 
-        childExpandNodeHash0: Sha256,
-        childExpandNodeHash1: Sha256,
+    fundingPrevout: ByteString,
 
-        childExpanderAmt0: bigint,   // always none-zero, if 0, throws
-        childExpanderAmt1: bigint,   // if 0, no new expander1 outputs
+    changeOutput: ByteString
+  ) {
+    // Check sighash preimage.
+    const s = SigHashUtils.checkSHPreimage(shPreimage)
+    assert(this.checkSig(s, SigHashUtils.Gx))
 
-        fundingPrevout: ByteString,
+    // Check operator sig.
+    assert(this.checkSig(sigOperator, this.operator))
 
-        changeOutput: ByteString
-    ) {
-        // Check sighash preimage.
-        const s = SigHashUtils.checkSHPreimage(shPreimage)
-        assert(this.checkSig(s, SigHashUtils.Gx))
+    // Construct prev tx ID.
+    const prevTxId = WithdrawalExpander.getTxId(prevTx)
 
-        // Check operator sig.
-        assert(this.checkSig(sigOperator, this.operator))
+    // Check passed prev tx is actually unlocked by the currently executing tx.
+    const hashPrevouts = WithdrawalExpander.getHashPrevouts(
+      prevTxId,
+      fundingPrevout,
+      prevTx.isCreateWithdrawalTx,
+      isFirstExpanderOutput
+    )
+    assert(hashPrevouts == shPreimage.hashPrevouts)
 
-        // Construct prev tx ID.
-        let prevTxId = Sha256(toByteString(''))
-        if (isPrevTxBridge) {
-            prevTxId = WithdrawalExpander.getBridgeTxId(prevTxBridge)
-        } else {
-            prevTxId = WithdrawalExpander.getTxId(prevTxExpander)
-        }
+    // Check we're unlocking contract UTXO via the first input.
+    assert(shPreimage.inputNumber == toByteString('00000000'))
 
-        // Check passed prev tx is actually unlocked by the currently executing tx.
-        const hashPrevouts = WithdrawalExpander.getHashPrevouts(
-            prevTxId,
-            fundingPrevout,
-            isPrevTxBridge,
-            isExpandingPrevTxFirstOutput
-        )
-        assert(hashPrevouts == shPreimage.hashPrevouts)
+    // verify stateHash is correct
+    const nodeHash = WithdrawalExpander.getNodeHash(
+      prevLevel,
+      childExpanderAmt0,
+      childExpandNodeHash0,
+      childExpanderAmt1,
+      childExpandNodeHash1
+    )
 
-        // Check we're unlocking contract UTXO via the first input.
-        assert(shPreimage.inputNumber == toByteString('00000000'))
-
-        
-        // Get root hash from prev txns state output.
-        let stateHash = toByteString('')
-        let expanderSPK = toByteString('')
-        if (isPrevTxBridge) {
-            stateHash = prevTxBridge.expanderStateHash
-            expanderSPK = prevTxBridge.expanderSPK
-        } else {
-            stateHash = prevTxExpander.stateHash
-            expanderSPK = prevTxExpander.contractSPK
-        }
-        // verify prevStateHash0 and prevStateHash1 are correct
-        assert(stateHash == sha256(prevStateHash0 + prevStateHash1))
+    const stateHash = isFirstExpanderOutput
+      ? prevTx.stateHash0
+      : prevTx.stateHash1
+    assert(stateHash == nodeHash)
 
 
-        // verify stateHash is correct 
-        const nodeHash0 = WithdrawalExpander.getNodeHash(
-            prevLevel,
-            childExpanderAmt0,
-            childExpandNodeHash0,
-            childExpanderAmt1,
-            childExpandNodeHash1
-        )
-        if (isExpandingPrevTxFirstOutput) {
-            assert(nodeHash0 == prevStateHash0)
-        } else {
-            assert(nodeHash0 == prevStateHash1)
-        }
-        
-        let outputs = toByteString('')
-        outputs += GeneralUtils.getContractOutput(childExpanderAmt0, prevTxExpander.contractSPK)
-        if (childExpanderAmt1 > 0n) {
-            outputs += GeneralUtils.getContractOutput(childExpanderAmt1, prevTxExpander.contractSPK)
-        }
-        let newStateHash = sha256(childExpandNodeHash0 + childExpandNodeHash1)
-        outputs += GeneralUtils.getStateOutput(newStateHash)
-        outputs += changeOutput
+    let outputs = toByteString('')
+    // first expander output and state output
+    outputs += GeneralUtils.getContractOutput(
+      childExpanderAmt0,
+      prevTx.contractSPK
+    )
+    outputs += GeneralUtils.getStateOutput(childExpandNodeHash0)
 
-        assert(
-            sha256(outputs) == shPreimage.hashOutputs
-        )
+    // second expander output and state output
+    if (childExpanderAmt1 > 0n) {
+      outputs += GeneralUtils.getContractOutput(
+        childExpanderAmt1,
+        prevTx.contractSPK
+      )
+      outputs += GeneralUtils.getStateOutput(childExpandNodeHash1)
+    }
+    // change output
+    outputs += changeOutput
+
+    assert(sha256(outputs) == shPreimage.hashOutputs)
+  }
+
+  @method()
+  static getLeafNodeHash(address: ByteString, amt: bigint): Sha256 {
+    // sha256(address) to avoid issue with dynamic address length
+    return sha256(
+      MerklePath.levelToByteString(0n) +
+      sha256(sha256(address) + GeneralUtils.padAmt(amt))
+    )
+  }
+
+  // @method()
+  // static getEmptyLeafHash(): Sha256 {
+  //   return Sha256(
+  //     MerklePath.levelToByteString(0n) +
+  //     sha256(sha256(toByteString('')) + GeneralUtils.padAmt(0n))
+  //   )
+  // }
+
+  @method()
+  static getNodeHash(
+    level: bigint,
+    leftAmt: bigint,
+    leftChild: Sha256,
+    rightAmt: bigint,
+    rightChild: Sha256
+  ): Sha256 {
+    return sha256(
+      MerklePath.levelToByteString(level) +
+      GeneralUtils.padAmt(leftAmt) +
+      leftChild +
+      GeneralUtils.padAmt(rightAmt) +
+      rightChild
+    )
+  }
+
+  /**
+   *
+   * @param batchesRoot
+   * @param depositAggregatorSPK
+   * @returns
+   */
+  static getStateHash(batchesRoot: Sha256, depositAggregatorSPK: ByteString): Sha256 {
+    return sha256(batchesRoot + depositAggregatorSPK)
+  }
+
+  @method()
+  static getTxId(tx: ExpanderTransaction): Sha256 {
+    let nOutputs = 2n;
+    if (tx.isCreateWithdrawalTx || tx.output1Amt > 0n) {
+      nOutputs = 4n;
+    }
+    if (tx.changeOutput != toByteString('')) {
+      nOutputs = nOutputs + 1n;
     }
 
 
-    @method()
-    static getLeafNodeHash(address: Addr, amt: bigint): Sha256 {
-        // todo check address length;
-        // todo check amt >= 0n
-        return sha256(MerklePath.levelToByteString(0n) + sha256(address + GeneralUtils.padAmt(amt)))
+    const bridgeOutputs = tx.isCreateWithdrawalTx
+      ? GeneralUtils.getContractOutput(tx.bridgeAmt, tx.bridgeSPK) +
+      GeneralUtils.getStateOutput(tx.bridgeStateHash)
+      : toByteString('')
+
+    let expanderOutputs = GeneralUtils.getContractOutput(tx.output0Amt, tx.contractSPK) +
+      GeneralUtils.getStateOutput(tx.stateHash0);
+
+    if (tx.output1Amt > 0n) {
+      expanderOutputs += GeneralUtils.getContractOutput(tx.output1Amt, tx.contractSPK) +
+        GeneralUtils.getStateOutput(tx.stateHash1)
     }
 
-    @method()
-    static getNodeHash(level: bigint, leftAmt: bigint, leftChild: Sha256, rightAmt: bigint, rightChild: Sha256): Sha256 {
-        return sha256(
-            MerklePath.levelToByteString(level) + 
-            GeneralUtils.padAmt(leftAmt) + 
-            leftChild + 
-            GeneralUtils.padAmt(rightAmt) + 
-            rightChild
-        )
+    return hash256(
+      tx.ver +
+      tx.inputs +
+      int2ByteString(nOutputs) +
+
+      bridgeOutputs +
+      expanderOutputs +
+
+      tx.changeOutput +
+      tx.locktime
+    )
+  }
+
+  @method()
+  static getBridgeTxId(tx: BridgeTransaction): Sha256 {
+    const stateHash = Bridge.getStateHash(
+      tx.batchesRoot,
+      tx.depositAggregatorSPK
+    )
+
+    return hash256(
+      tx.ver +
+      tx.inputs +
+      toByteString('04') +
+      GeneralUtils.getContractOutput(tx.contractAmt, tx.contractSPK) +
+      GeneralUtils.getStateOutput(stateHash) +
+      GeneralUtils.getContractOutput(tx.expanderAmt, tx.expanderSPK) +
+      GeneralUtils.getStateOutput(tx.expanderStateHash) +
+      tx.locktime
+    )
+  }
+
+  @method()
+  static getHashPrevouts(
+    prevTxId: Sha256,
+    feePrevout: ByteString,
+    isCreateWithdrawalTx: boolean,
+    isExpandingPrevTxFirstOutput: boolean
+  ): Sha256 {
+    // prevTx is expander tx, and prevout is the first output
+    let contractOutIdx = toByteString('00000000')
+
+
+    if (isCreateWithdrawalTx) {
+      // prevTx is createWithdrawal tx, and prevout is the third output
+      contractOutIdx = toByteString('02000000')
+    } else if (!isExpandingPrevTxFirstOutput) {
+      // prevTx is expander tx, and prevout is the second output
+      contractOutIdx = toByteString('01000000')
     }
+    return sha256(prevTxId + contractOutIdx + feePrevout)
+  }
 
-    /**
-     * 
-     * @param nodeHash1 nodeHash1
-     * @param nodeHash2 nodeHash2, empty if only one child
-     * @returns 
-     */
-    static getStateHash(nodeHash1: Sha256, nodeHash2: Sha256): Sha256 {
-        return sha256(nodeHash1 + nodeHash2)
-    }
-
-    @method()
-    static getTxId(tx: ExpanderTransaction): Sha256 {
-        const nOutputs = tx.changeOutput == toByteString('') ?
-            toByteString('03') :
-            toByteString('02')
-        return hash256(
-            tx.ver +
-            toByteString('02') +
-            tx.inputContract +
-            tx.inputFee +
-            nOutputs +
-            GeneralUtils.getContractOutput(tx.output0Amt, tx.contractSPK) +
-            GeneralUtils.getContractOutput(tx.output1Amt, tx.contractSPK) +
-            GeneralUtils.getStateOutput(tx.stateHash) +
-            tx.changeOutput +
-            tx.locktime
-        )
-    }
-
-    @method()
-    static getBridgeTxId(tx: BridgeTransaction): Sha256 {
-        const stateHash = Bridge.getStateHash(
-            tx.batchesRoot, tx.depositAggregatorSPK
-        )
-
-        return hash256(
-            tx.ver +
-            tx.inputs +
-            toByteString('04') +
-            GeneralUtils.getContractOutput(tx.contractAmt, tx.contractSPK) +
-            GeneralUtils.getStateOutput(stateHash) +
-            GeneralUtils.getContractOutput(tx.expanderAmt, tx.expanderSPK) +
-            GeneralUtils.getStateOutput(tx.expanderStateHash) +
-            tx.locktime
-        )
-    }
-
-    @method()
-    static getHashPrevouts(
-        txId: Sha256,
-        feePrevout: ByteString,
-        isPrevTxBridge: boolean,
-        isExpandingPrevTxFirstOutput: boolean
-    ): Sha256 {
-        let contractOutIdx = toByteString('00000000')
-        if (isPrevTxBridge) {
-            contractOutIdx = toByteString('02000000')
-        } else if (!isExpandingPrevTxFirstOutput) {
-            contractOutIdx = toByteString('01000000')
-        }
-        return sha256(
-            txId +
-            contractOutIdx +
-            feePrevout
-        )
-    }
-
-    @method()
-    static getP2WPKHOut(
-        amount: ByteString,
-        addr: ByteString
-    ): ByteString {
-        return amount + toByteString('160014') + addr
-    }
-
+  @method()
+  static getAddressOutput(addressScript: ByteString, satoshis: ByteString): ByteString {
+    return satoshis + int2ByteString(len(addressScript)) + addressScript
+  }
 }
