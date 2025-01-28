@@ -1,6 +1,14 @@
 import { Provider, ReceiptTx, RpcProvider } from 'starknet';
-import { L2TxHashAndStatus, OperatorState } from '../state';
+import { L1TxHashAndStatus, L2TxHashAndStatus, OperatorState } from '../state';
 import { filter, from, interval, map, Observable, switchMap } from 'rxjs';
+
+export function getAllL1Txs(state: OperatorState): Set<L1TxHashAndStatus> {
+  const results: Set<L1TxHashAndStatus> = new Set();
+
+  // TODO: implement
+
+  return results;
+}
 
 export function getAllL2Txs(state: OperatorState): Set<L2TxHashAndStatus> {
   const results: Set<L2TxHashAndStatus> = new Set();
@@ -10,8 +18,6 @@ export function getAllL2Txs(state: OperatorState): Set<L2TxHashAndStatus> {
       case 'SUBMITTED_TO_L2':
         results.add(depositBatch.depositTx);
         break;
-      // default:
-      //   break;
     }
   }
 
@@ -34,7 +40,7 @@ export function l2TransactionStatus<T extends L2TxHashAndStatus>(
   return interval(5000).pipe(
     switchMap(() => from(provider.waitForTransaction(tx.hash))),
     map((status) => ({ ...tx, status })),
-    filter((recentTx) => recentTx != tx)
+    filter((recentTx) => recentTx !== tx)
     // finish when tx is accepted
     // takeWhile(tx) => tx.status.statusReceipt
   );

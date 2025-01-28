@@ -1,11 +1,4 @@
-import {
-  Provider,
-  events,
-  CallData,
-  AbiEvent,
-  ParsedEvents,
-  ParsedEvent,
-} from 'starknet';
+import { Provider, events, CallData, ParsedEvent } from 'starknet';
 import { Observable, interval, from } from 'rxjs';
 import { switchMap, scan, distinctUntilChanged } from 'rxjs/operators';
 import { EVENT } from 'starknet-types-07/dist/types/api/components';

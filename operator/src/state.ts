@@ -1,36 +1,36 @@
-import {
-  ReceiptTx,
-  TransactionStatus,
-  GetTransactionReceiptResponse,
-} from 'starknet';
+import { ReceiptTx } from 'starknet';
 import { L2Event } from './l2/events';
 import { Observable, of } from 'rxjs';
 import { assert } from 'console';
+import { cloneDeep } from 'lodash';
 
-type L1Address = `0x${string}`; // or bigint?
-type L2Address = `0x${string}`; // or bigint?
+type L1Address = `0x${string}`;
+type L2Address = `0x${string}`;
 
-type L1TxHash = `0x${string}`; // or bigint?
-type L2TxHash = `0x${string}`; // or bigint?
+type L1TxHash = `0x${string}`;
+type L2TxHash = `0x${string}`;
 
 // TODO: everything about L1 is very WIP, should be checked with sCrypt team
-export type L1TxStatus = 'Unconfirmed' | 'Confirmed' | 'Spent'; // Orphaned, Droped?
+export type L1TxStatus = 'Unconfirmed' | 'Confirmed' | 'Mined'; // Orphaned, Droped?
 export type L1TxHashAndStatus = {
+  type: 'l1tx';
   hash: L1TxHash;
   status: L1TxStatus;
   blockNumber: number;
+  timestamp: number;
 };
 export type L2TxHashAndStatus = {
+  type: 'l2tx';
   hash: L2TxHash;
   status: ReceiptTx;
   blockNumber: bigint;
 };
 
-export interface Deposit {
+export type Deposit = {
   amount: bigint;
   recipient: L2Address;
   origin: L1TxHashAndStatus;
-}
+};
 
 type DepositBatchCommon = {
   deposits: Deposit[];
@@ -64,29 +64,25 @@ type DepositBatch =
       depositTx: L2TxHashAndStatus;
     } & DepositBatchCommon)
   | ({
-<<<<<<< Updated upstream
-      status: 'SUBMITTED_FOR_VERIFICATION';
-=======
       status: 'SUBMITTED_FOR_COMPLETION';
->>>>>>> Stashed changes
       aggregationTxs: L1TxHashAndStatus[][];
       stateUpdateTx: L1TxHashAndStatus;
       depositTx: L2TxHashAndStatus;
       verifyTx: L1TxHashAndStatus;
     } & DepositBatchCommon)
   | ({
-      status: 'VERIFIED';
+      status: 'COMPLETED';
       aggregationTxs: L1TxHashAndStatus[][];
       stateUpdateTx: L1TxHashAndStatus;
       depositTx: L2TxHashAndStatus;
       verifyTx: L1TxHashAndStatus;
     } & DepositBatchCommon);
 
-interface Withdrawal {
+type Withdrawal = {
   amount: bigint;
   recipient: L1Address;
   origin: L2TxHash;
-}
+};
 
 type WithdrawalBatchCommon = {
   id: bigint;
@@ -112,11 +108,7 @@ type WithdrawalBatch =
       closeWithdrawalBatchTx: L2TxHashAndStatus;
     } & WithdrawalBatchCommon)
   | ({
-<<<<<<< Updated upstream
-      status: 'SUBMITTED_FOR_VERIFICATION';
-=======
       status: 'SUBMITTED_FOR_EXPANSION';
->>>>>>> Stashed changes
       withdrawals: Withdrawal[];
       hash: bigint;
       closeWithdrawalBatchTx: L2TxHashAndStatus;
@@ -139,38 +131,35 @@ type WithdrawalBatch =
       expansionTxs: L1TxHashAndStatus[][];
     } & WithdrawalBatchCommon);
 
-export class OperatorState {
-  l1BlockNumber: number = 0;
-  l2BlockNumber: number = 0;
-  total: bigint = 0n;
-  pendingDeposits: Deposit[] = [];
-  depositBatches: DepositBatch[] = [];
-  withdrawalBatches: WithdrawalBatch[] = [];
-}
+export type OperatorState = {
+  l1BlockNumber: number;
+  l2BlockNumber: number;
+  total: bigint;
+  pendingDeposits: Deposit[];
+  depositBatches: DepositBatch[];
+  withdrawalBatches: WithdrawalBatch[];
+};
 
-export type Event =
-  | ({ type: 'l2event' } & L2Event)
-  | ({ type: 'deposits'; blockNumber: number } & Deposit[]); // add blocknumber, etc
+export type Deposits = {
+  type: 'deposits';
+  blockNumber: number;
+  deposits: Deposit[];
+};
 
-export type Transaction =
-  | ({ type: 'l2tx' } & L2TxHashAndStatus)
-  | ({ type: 'l1tx' } & L1TxHashAndStatus);
+export type BridgeEvent = ({ type: 'l2event' } & L2Event) | Deposits;
 
-export function l2TxHashAndStatusToTransaction(
-  tx: L2TxHashAndStatus
-): Transaction {
-  return { type: 'l2tx', ...tx };
-}
+export type Transaction = L1TxHashAndStatus | L2TxHashAndStatus;
 
-export function l2EventToEvent(e: L2Event): Event {
+export function l2EventToEvent(e: L2Event): BridgeEvent {
   return { type: 'l2event', ...e };
 }
 
 export function applyChange(
   state: OperatorState,
-  change: Event | Transaction
+  change: BridgeEvent | Transaction
 ): Observable<OperatorState> {
-  let newState = { ...state };
+  const newState = cloneDeep(state);
+
   // update recent block numbers, etc
   switch (change.type) {
     case 'l2event': {
@@ -181,21 +170,7 @@ export function applyChange(
       break;
     }
     case 'deposits': {
-      assert(change.blockNumber >= newState.l1BlockNumber);
-      newState.l1BlockNumber = change.blockNumber;
-      newState.pendingDeposits.push(...change);
-      if (newState.pendingDeposits.length >= 10) {
-        // TODO: add actual criteria to close the batch
-        const deposits = newState.pendingDeposits.splice(0, 10);
-        newState.pendingDeposits = newState.pendingDeposits.slice(10);
-        // TODO: send aggregation transactions, handle asyncronity
-        const aggregationTxs: L1TxHashAndStatus[][] = [];
-        newState.depositBatches.push({
-          status: 'BEING_AGGREGATED',
-          deposits,
-          aggregationTxs,
-        });
-      }
+      handleDeposits(newState, change);
       break;
     }
     case 'l2tx': {
@@ -205,10 +180,6 @@ export function applyChange(
         switch (depositBatch.status) {
           case 'SUBMITTED_TO_L2':
             if (depositBatch.depositTx.hash === change.hash) {
-<<<<<<< Updated upstream
-              depositBatch.depositTx = change;
-=======
->>>>>>> Stashed changes
               if (change.status.isSuccess()) {
                 // TODO: finality?
                 newState.depositBatches[i] = {
@@ -227,15 +198,54 @@ export function applyChange(
       break;
     }
     case 'l1tx': {
-      // TODO: handle l1tx
-      console.log('Handling L1Tx:', change);
-      throw new Error('not implemented');
+      handleL1Tx(newState, change);
+      break;
     }
     default: {
       const _exhaustiveCheck: never = change;
       return _exhaustiveCheck;
     }
   }
-
   return of(newState);
+}
+
+function handleL1Tx(newState: OperatorState, change: L1TxHashAndStatus) {
+  throw new Error('Function not implemented.');
+}
+
+const DEPOSIT_BATCH_SIZE = 4;
+const MAX_DEPOSIT_PENDIND = 30 * 60; // 30 minutes
+
+function handleDeposits(state: OperatorState, change: Deposits) {
+  // console.log('Handling deposits:', change);
+  assert(change.blockNumber >= state.l1BlockNumber);
+  state.l1BlockNumber = change.blockNumber;
+  state.pendingDeposits.push(...change.deposits);
+  aggregateDeposits(state);
+}
+
+function aggregateDeposits(state: OperatorState) {
+  while (
+    state.pendingDeposits.length >= DEPOSIT_BATCH_SIZE ||
+    waitedLongEnough(state.pendingDeposits)
+  ) {
+    const deposits = state.pendingDeposits.splice(0, DEPOSIT_BATCH_SIZE);
+    state.pendingDeposits = state.pendingDeposits.slice(DEPOSIT_BATCH_SIZE);
+    // TODO: send aggregation transactions, handle asynchronicity
+    const aggregationTxs: L1TxHashAndStatus[][] = [];
+    state.depositBatches.push({
+      status: 'BEING_AGGREGATED',
+      deposits,
+      aggregationTxs,
+    });
+  }
+}
+
+function waitedLongEnough(pendingDeposits: Deposit[]): boolean {
+  for (const deposit of pendingDeposits) {
+    if (deposit.origin.timestamp + MAX_DEPOSIT_PENDIND > Date.now()) {
+      return true;
+    }
+  }
+  return false;
 }

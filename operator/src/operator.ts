@@ -1,4 +1,7 @@
 import {
+  asapScheduler,
+  asyncScheduler,
+  BehaviorSubject,
   distinctUntilChanged,
   from,
   map,
@@ -6,22 +9,33 @@ import {
   mergeMap,
   mergeScan,
   Observable,
+  observeOn,
   of,
+  pipe,
   scan,
+  shareReplay,
   Subject,
   tap,
+  UnaryFunction,
 } from 'rxjs';
 import {
   applyChange,
+  BridgeEvent,
+  L1TxHashAndStatus,
   l2EventToEvent,
-  l2TxHashAndStatusToTransaction,
+  L2TxHashAndStatus,
   OperatorState,
   Transaction,
 } from './state';
 import { RpcProvider } from 'starknet';
-import { l2Events } from './l2/events';
-import { getAllL2Txs, l2TransactionStatus } from './l2/transactions';
+import { L2Event, l2Events } from './l2/events';
+import {
+  getAllL1Txs,
+  getAllL2Txs,
+  l2TransactionStatus,
+} from './l2/transactions';
 import * as _ from 'lodash';
+import { isEqual } from 'lodash';
 
 function diff<T>(a: Set<T>, b: Set<T>): Set<T> {
   const result = new Set<T>();
@@ -37,65 +51,68 @@ function mapSet<T, U>(input: Set<T>, fn: (item: T) => U): Set<U> {
   return new Set(Array.from(input, fn));
 }
 
-function operatorMain<E, T, S>(
+function stateToTransactions<S, T>(
+  transactionsFromState: (state: S) => Set<T>,
+  transactionStatus: (tx: T) => Observable<T>
+) {
+  return pipe(
+    map(transactionsFromState),
+    scan(
+      ([allTxs, _], currentTxs) => [currentTxs, diff(currentTxs, allTxs)],
+      [new Set<T>(), new Set<T>()]
+    ),
+    map(([_, newTxs]) => newTxs),
+    mergeMap(txs => from(txs)),
+    mergeMap(transactionStatus)
+  );
+}
+
+function operatorLoop<E, T, S>(
   events: Observable<E>,
-  transactions: (state: S) => Set<T>,
+  transactionsFromState: (state: S) => Set<T>,
   transactionStatus: (tx: T) => Observable<T>,
   applyChange: (state: S, change: E | T) => Observable<S>,
   initialState: S
 ): Observable<S> {
-  const s = new Subject<S>();
-  return merge(
-    events,
-    s.pipe(
-      map(transactions),
-      scan(
-        ([allTxs, _], currentTxs) => [currentTxs, diff(currentTxs, allTxs)],
-        [new Set(), new Set()]
-      ),
-      map(([_, newTxs]) => newTxs),
-      mergeMap(from),
-      mergeMap(transactionStatus)
-    )
-  ).pipe(mergeScan(applyChange, initialState, 1), tap(s));
+  const state = new BehaviorSubject<S>(initialState);
+  const transactions = state.pipe(
+    stateToTransactions(transactionsFromState, transactionStatus)
+  );
+  return merge(events, transactions).pipe(
+    mergeScan(applyChange, initialState, 1),
+    tap(state)
+  );
 }
 
-function operator(provider: RpcProvider): Observable<OperatorState> {
-  const initialState = new OperatorState(); // TODO: load from storage
+export function setupOperator(
+  initialState: OperatorState,
+  l1Events: Observable<BridgeEvent>,
+  l2Events: Observable<BridgeEvent>,
+  l1TxStatus: (tx: L1TxHashAndStatus) => Observable<L1TxHashAndStatus>,
+  l2TxStatus: (tx: L2TxHashAndStatus) => Observable<L2TxHashAndStatus>,
+  saveState: (state: OperatorState) => void
+): Observable<OperatorState> {
+  function transactionsFromState(state: OperatorState): Set<Transaction> {
+    return new Set([...getAllL1Txs(state), ...getAllL2Txs(state)]);
+  }
 
-  const l2BridgeContractAddress = ''; // TODO: add configuration
+  function transactionStatus(tx: Transaction): Observable<Transaction> {
+    switch (tx.type) {
+      case 'l1tx':
+        return l1TxStatus(tx);
+      case 'l2tx':
+        return l2TxStatus(tx);
+      default:
+        const _exhaustive: never = tx;
+        return _exhaustive;
+    }
+  }
 
-  return operatorMain(
-    // events
-    merge(
-      l2Events(provider, initialState.l2BlockNumber, [
-        l2BridgeContractAddress,
-      ]).pipe(map(l2EventToEvent))
-      // add l1Events
-    ),
-    // transactions from state
-    (state: OperatorState) => {
-      return mapSet(getAllL2Txs(state), l2TxHashAndStatusToTransaction);
-      // add l1 transactions
-    },
-    // transaction status
-    (tx: Transaction) => {
-      switch (tx.type) {
-        case 'l2tx':
-          return l2TransactionStatus(provider, tx);
-        case 'l1tx':
-          throw new Error('not implemented'); // TODO: add l1 transactions
-        default:
-          const _exhaustive: never = tx;
-          return _exhaustive;
-      }
-    },
-    // state transitions
+  return operatorLoop(
+    merge(l1Events, l2Events),
+    transactionsFromState,
+    transactionStatus,
     applyChange,
-    // initial state
     initialState
-  ).pipe(
-    distinctUntilChanged(_.isEqual)
-    // TODO: save state to storage
-  );
+  ).pipe(distinctUntilChanged(isEqual), tap(saveState));
 }
