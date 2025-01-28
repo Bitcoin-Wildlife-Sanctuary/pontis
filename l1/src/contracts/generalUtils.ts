@@ -22,20 +22,20 @@ export class GeneralUtils extends SmartContractLib {
   static padAmt(amt: bigint): ByteString {
     // todo: here only allow max 0.167 BTC, otherwise it thows
     // todo: add support for more than 0.167 BTC
-    let res = int2ByteString(amt)
-    if (res == toByteString('')) {
-      res = toByteString('0000000000000000')
-    } else if (amt < 0x0100n) {
-      res += toByteString('00000000000000')
-    } else if (amt < 0x010000n) {
-      res += toByteString('000000000000')
-    } else if (amt < 0x01000000n) {
-      res += toByteString('0000000000')
-    } else if (amt <= 0x7fffffffn) {
-      res += toByteString('00000000')
-    } else {
-      assert(false)
-    }
+    const res = int2ByteString(amt, 8n)
+    // if (res == toByteString('')) {
+    //   res = toByteString('0000000000000000')
+    // } else if (amt < 0x0100n) {
+    //   res += toByteString('00000000000000')
+    // } else if (amt < 0x010000n) {
+    //   res += toByteString('000000000000')
+    // } else if (amt < 0x01000000n) {
+    //   res += toByteString('0000000000')
+    // } else if (amt <= 0x7fffffffn) {
+    //   res += toByteString('00000000')
+    // } else {
+    //   assert(false)
+    // }
     return res
   }
 

@@ -6,10 +6,17 @@ import { Bridge, BridgeTransaction } from '../contracts/bridge'
 import { AggregatorTransaction } from '../contracts/aggregatorUtils'
 import { BridgeUtxo, ChainProvider } from '../lib/provider'
 import { Transaction } from '@scrypt-inc/bitcoinjs-lib'
-import { createEmptySha256, inputToByteString, locktimeToByteString, outputToByteString, splitHashFromStateOutput, versionToByteString } from '../lib/txTools'
+import {
+  createEmptySha256,
+  inputToByteString,
+  isTxHashEqual,
+  locktimeToByteString,
+  outputToByteString,
+  splitHashFromStateOutput,
+  versionToByteString,
+} from '../lib/txTools'
 import { InputCtx, SubContractCall } from '../lib/extPsbt'
 import { BatchMerkleTree, BridgeMerkle } from '../util/merkleUtils'
-
 
 export type BridgeState = {
   batchesRoot: Sha256
@@ -22,18 +29,18 @@ export type InputTrace = {
 }
 
 export interface TracedBridge {
-  covenant: BridgeCovenant,
+  covenant: BridgeCovenant
   trace: InputTrace
 }
 
 export interface TraceableBridgeUtxo extends BridgeUtxo {
-  operator: PubKey,
+  operator: PubKey
   expanderSPK: ByteString
 }
 
 export class BridgeCovenant extends Covenant<BridgeState> {
   // locked bridge artifact md5 hash
-  static readonly LOCKED_ASM_VERSION = 'f090e7f0ad9b82a93f5460f6345e1a17'
+  static readonly LOCKED_ASM_VERSION = '52e930c6c8992a9ac68522a2ff553fc4'
 
   constructor(
     readonly operator: PubKey,
@@ -79,12 +86,18 @@ export class BridgeCovenant extends Covenant<BridgeState> {
     replacedNodeIndex: number,
 
     prevTx: BridgeTransaction,
-    fundingPrevout: ByteString,
+    fundingPrevout: ByteString
   ): SubContractCall {
-    const proof = BridgeMerkle.getMerkleProof(this.state.merkleTree, replacedNodeIndex);
-    const batchId = this.state.merkleTree[replacedNodeIndex];
+    const proof = BridgeMerkle.getMerkleProof(
+      this.state.merkleTree,
+      replacedNodeIndex
+    )
+    const batchId = this.state.merkleTree[replacedNodeIndex]
 
-    if (BridgeMerkle.calcMerkleRoot(this.state.merkleTree) !== this.state.batchesRoot) {
+    if (
+      BridgeMerkle.calcMerkleRoot(this.state.merkleTree) !==
+      this.state.batchesRoot
+    ) {
       throw new Error('Invalid merkle tree')
     }
 
@@ -99,7 +112,7 @@ export class BridgeCovenant extends Covenant<BridgeState> {
           shPreimage,
           () => {
             return self.getSig(inputIndex, {
-              publicKey: this.operator.toString()
+              publicKey: this.operator.toString(),
             })
           },
           prevTx,
@@ -109,8 +122,8 @@ export class BridgeCovenant extends Covenant<BridgeState> {
           proof,
           self.getChangeOutput(),
         ]
-        return args;
-      }
+        return args
+      },
     }
     return subCall
   }
@@ -123,12 +136,11 @@ export class BridgeCovenant extends Covenant<BridgeState> {
     fundingPrevout: ByteString,
 
     expanderRoot: Sha256,
-    sumAmt: bigint,
+    sumAmt: bigint
   ): SubContractCall {
     const subCall: SubContractCall = {
       method: 'createWithdrawal',
       argsBuilder: (self, _tapLeafContract) => {
-
         const { shPreimage } = inputCtxs.get(inputIndex)
         if (!shPreimage) {
           throw new Error('Input context is not available')
@@ -138,7 +150,7 @@ export class BridgeCovenant extends Covenant<BridgeState> {
           shPreimage,
           () => {
             return self.getSig(inputIndex, {
-              publicKey: this.operator.toString()
+              publicKey: this.operator.toString(),
             })
           },
           prevTx,
@@ -148,7 +160,7 @@ export class BridgeCovenant extends Covenant<BridgeState> {
           sumAmt,
           self.getChangeOutput(),
         ]
-      }
+      },
     }
     return subCall
   }
@@ -162,11 +174,17 @@ export class BridgeCovenant extends Covenant<BridgeState> {
     prevTx: BridgeTransaction,
     aggregatorTx: AggregatorTransaction,
     isLevel0Aggregator: boolean,
-    fundingPrevout: ByteString,
+    fundingPrevout: ByteString
   ): SubContractCall {
-    const proof = BridgeMerkle.getMerkleProof(this.state.merkleTree, replacedNodeIndex);
+    const proof = BridgeMerkle.getMerkleProof(
+      this.state.merkleTree,
+      replacedNodeIndex
+    )
 
-    if (BridgeMerkle.calcMerkleRoot(this.state.merkleTree) !== this.state.batchesRoot) {
+    if (
+      BridgeMerkle.calcMerkleRoot(this.state.merkleTree) !==
+      this.state.batchesRoot
+    ) {
       throw new Error('Invalid merkle tree')
     }
 
@@ -181,7 +199,7 @@ export class BridgeCovenant extends Covenant<BridgeState> {
           shPreimage,
           () => {
             return self.getSig(inputIndex, {
-              publicKey: this.operator.toString()
+              publicKey: this.operator.toString(),
             })
           },
           prevTx,
@@ -191,8 +209,8 @@ export class BridgeCovenant extends Covenant<BridgeState> {
           proof,
           self.getChangeOutput(),
         ]
-        return args;
-      }
+        return args
+      },
     }
     return subCall
   }
@@ -201,10 +219,14 @@ export class BridgeCovenant extends Covenant<BridgeState> {
     utxo: TraceableBridgeUtxo,
     chainProvider: ChainProvider
   ): Promise<TracedBridge> {
-    const prevTxId = utxo.utxo.txId;
+    const prevTxId = utxo.utxo.txId
     const rawtx = await chainProvider.getRawTransaction(prevTxId)
     const tx = Transaction.fromHex(rawtx)
-    const covenant = new BridgeCovenant(utxo.operator, utxo.expanderSPK, utxo.state)
+    const covenant = new BridgeCovenant(
+      utxo.operator,
+      utxo.expanderSPK,
+      utxo.state
+    )
     const contractSPK = covenant.lockingScriptHex
 
     // todo: verify utxo.state.batchesRoot from utxo.state.merkleTree
@@ -215,8 +237,9 @@ export class BridgeCovenant extends Covenant<BridgeState> {
 
     // createWithdrawal: outs.length == 4/5, optional changeOutput
     // other: outs.length == 2/3, optional changeOutput
-    const isPrevTxCreateWithdrawal = tx.outs.length === 4 || tx.outs.length === 5;
-    let expanderAmt = 0n;
+    const isPrevTxCreateWithdrawal =
+      tx.outs.length === 4 || tx.outs.length === 5
+    let expanderAmt = 0n
     let expanderStateHash: Sha256 = createEmptySha256()
     let expanderSPK = ''
     if (isPrevTxCreateWithdrawal) {
@@ -224,17 +247,23 @@ export class BridgeCovenant extends Covenant<BridgeState> {
       expanderAmt = tx.outs[2].value
       // the 4th output is expander state output
       expanderStateHash = Sha256(splitHashFromStateOutput(tx, 3))
-      expanderSPK = utxo.expanderSPK;
+      expanderSPK = utxo.expanderSPK
     }
     let changeOutput: ByteString = ''
-    const hasChangeOutput = isPrevTxCreateWithdrawal ? tx.outs.length === 5 : tx.outs.length === 3;
+    const hasChangeOutput = isPrevTxCreateWithdrawal
+      ? tx.outs.length === 5
+      : tx.outs.length === 3
     if (hasChangeOutput) {
       changeOutput = outputToByteString(tx, tx.outs.length - 1)
     }
 
     const prevTx: BridgeTransaction = {
       ver: versionToByteString(tx),
-      inputs: int2ByteString(BigInt(tx.ins.length), 1n) + tx.ins.map((_, inputIndex) => inputToByteString(tx, inputIndex)).reduce((prev, cur) => prev + cur, ''),
+      inputs:
+        int2ByteString(BigInt(tx.ins.length), 1n) +
+        tx.ins
+          .map((_, inputIndex) => inputToByteString(tx, inputIndex))
+          .reduce((prev, cur) => prev + cur, ''),
 
       contractSPK,
       contractAmt: tx.outs[0].value,
@@ -247,11 +276,14 @@ export class BridgeCovenant extends Covenant<BridgeState> {
       changeOutput,
       locktime: locktimeToByteString(tx),
     }
+    if (!isTxHashEqual(tx, Bridge.getTxId(prevTx, expanderSPK))) {
+      throw new Error('prevTx txid mismatch')
+    }
     return {
       covenant,
       trace: {
         prevTx,
-      }
+      },
     }
   }
 }

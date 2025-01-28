@@ -5,8 +5,7 @@ import { DepositAggregatorState } from '../covenants/depositAggregatorCovenant'
 import { BridgeState } from '../covenants/bridgeCovenant'
 import { WithdrawalExpanderState } from '../covenants/withdrawalExpanderCovenant'
 
-
-export interface DepositAggregatorUtxo  {
+export interface DepositAggregatorUtxo {
   state: DepositAggregatorState
   utxo: UTXO
 }
@@ -14,7 +13,7 @@ export interface DepositAggregatorUtxo  {
 export interface WithdrawalExpanderUtxo {
   state: WithdrawalExpanderState
   utxo: UTXO
-}   
+}
 
 export interface BridgeUtxo {
   state: BridgeState

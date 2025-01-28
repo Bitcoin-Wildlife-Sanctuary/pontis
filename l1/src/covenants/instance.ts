@@ -6,17 +6,17 @@ import { WithdrawalExpanderCovenant } from './withdrawalExpanderCovenant'
 export function getScriptPubKeys(operatorPubKey: PubKey) {
   const withdrawExpander = new WithdrawalExpanderCovenant(
     operatorPubKey,
-    WithdrawalExpanderCovenant.createEmptyState(),
+    WithdrawalExpanderCovenant.createEmptyState()
   )
   const bridge = new BridgeCovenant(
     operatorPubKey,
     withdrawExpander.lockingScriptHex,
-    BridgeCovenant.createEmptyState(''),
+    BridgeCovenant.createEmptyState('')
   )
   const depositAggregator = new DepositAggregatorCovenant(
     operatorPubKey,
     bridge.lockingScriptHex,
-    DepositAggregatorCovenant.createEmptyState(),
+    DepositAggregatorCovenant.createEmptyState()
   )
   return {
     withdrawExpander: withdrawExpander.lockingScriptHex,

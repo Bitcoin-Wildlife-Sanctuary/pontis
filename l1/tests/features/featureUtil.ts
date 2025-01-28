@@ -9,135 +9,172 @@ import { Bridge } from '../../src/contracts/bridge'
 
 import * as depositFeature from '../../src/features/deposit'
 import * as bridgeFeature from '../../src/features/bridge'
+import * as withdrawFeature from '../../src/features/withdraw'
 
 import { TraceableBridgeUtxo } from '../../src/covenants/bridgeCovenant'
 import { Withdrawal } from '../../src/util/merkleUtils'
+import { TraceableWithdrawalExpanderUtxo } from '../../src/covenants'
 
 export const FEE_RATE = 10
 export const ALLOWED_SIZE_DIFF = 40
 
-
 export function loadArtifacts() {
-    Bridge.loadArtifact()
-    WithdrawalExpander.loadArtifact()
-    DepositAggregator.loadArtifact()
+  Bridge.loadArtifact()
+  WithdrawalExpander.loadArtifact()
+  DepositAggregator.loadArtifact()
 }
 
 export async function deposit(
-    utxoProvider: UtxoProvider,
-    chainProvider: ChainProvider,
+  utxoProvider: UtxoProvider,
+  chainProvider: ChainProvider,
 
-    l2Address: string,
-    depositAmt: bigint,
+  l2Address: string,
+  depositAmt: bigint,
 
-    network: SupportedNetwork,
+  network: SupportedNetwork
 ) {
-    const operatorPubKey = await testOperatorSigner.getPublicKey();
-    const deposit = await depositFeature.createDeposit(
-        PubKey(operatorPubKey),
-        testOperatorSigner,
+  const operatorPubKey = await testOperatorSigner.getPublicKey()
+  const deposit = await depositFeature.createDeposit(
+    PubKey(operatorPubKey),
+    testOperatorSigner,
 
-        utxoProvider,
-        chainProvider,
+    utxoProvider,
+    chainProvider,
 
-        l2Address,
-        depositAmt,
+    l2Address,
+    depositAmt,
 
-        network,
-        FEE_RATE,
-    )
-    return deposit;
+    network,
+    FEE_RATE
+  )
+  return deposit
 }
 
 export async function aggregate(
-    utxoProvider: UtxoProvider,
-    chainProvider: ChainProvider,
+  utxoProvider: UtxoProvider,
+  chainProvider: ChainProvider,
 
-    aggregatorUtxo0: TraceableDepositAggregatorUtxo,
-    aggregatorUtxo1: TraceableDepositAggregatorUtxo,
+  aggregatorUtxo0: TraceableDepositAggregatorUtxo,
+  aggregatorUtxo1: TraceableDepositAggregatorUtxo
 ) {
+  return await depositFeature.aggregateDeposit(
+    testOperatorSigner,
+    utxoProvider,
+    chainProvider,
 
-    return await depositFeature.aggregateDeposit(
-        testOperatorSigner,
-        utxoProvider,
-        chainProvider,
+    aggregatorUtxo0,
+    aggregatorUtxo1,
 
-        aggregatorUtxo0,
-        aggregatorUtxo1,
-
-        FEE_RATE,
-    )
+    FEE_RATE
+  )
 }
 
 export async function finalizeL1Deposit(
-    utxoProvider: UtxoProvider,
-    chainProvider: ChainProvider,
+  utxoProvider: UtxoProvider,
+  chainProvider: ChainProvider,
 
-    bridgeUtxo: TraceableBridgeUtxo,
-    depositAggregatorUtxo: TraceableDepositAggregatorUtxo,
-
+  bridgeUtxo: TraceableBridgeUtxo,
+  depositAggregatorUtxo: TraceableDepositAggregatorUtxo
 ) {
-    return await bridgeFeature.finalizeL1Deposit(
-        testOperatorSigner,
-        utxoProvider,
-        chainProvider,
+  return await bridgeFeature.finalizeL1Deposit(
+    testOperatorSigner,
+    utxoProvider,
+    chainProvider,
 
-        bridgeUtxo,
-        depositAggregatorUtxo,
+    bridgeUtxo,
+    depositAggregatorUtxo,
 
-        FEE_RATE,
-    )
+    FEE_RATE
+  )
 }
 
 export async function finalizeL2Deposit(
-    utxoProvider: UtxoProvider,
-    chainProvider: ChainProvider,
+  utxoProvider: UtxoProvider,
+  chainProvider: ChainProvider,
 
-    finalizedBatchId: Sha256,
+  finalizedBatchId: Sha256,
 
-    bridgeUtxo: TraceableBridgeUtxo,
+  bridgeUtxo: TraceableBridgeUtxo
 ) {
-    return await bridgeFeature.finalizeL2Deposit(
-        testUserSigner,
-        utxoProvider,
-        chainProvider,
+  return await bridgeFeature.finalizeL2Deposit(
+    testUserSigner,
+    utxoProvider,
+    chainProvider,
 
-        finalizedBatchId,
-        bridgeUtxo,
+    finalizedBatchId,
+    bridgeUtxo,
 
-        FEE_RATE,
-    )
+    FEE_RATE
+  )
 }
 
 export async function deployBridge(
-    utxoProvider: UtxoProvider,
-    chainProvider: ChainProvider,
+  utxoProvider: UtxoProvider,
+  chainProvider: ChainProvider
 ) {
-    const operatorPubKey = await testOperatorSigner.getPublicKey();
-    return await bridgeFeature.deployBridge(
-        PubKey(operatorPubKey),
-        testOperatorSigner,
-        utxoProvider,
-        chainProvider,
-        FEE_RATE
-    )
+  const operatorPubKey = await testOperatorSigner.getPublicKey()
+  return await bridgeFeature.deployBridge(
+    PubKey(operatorPubKey),
+    testOperatorSigner,
+    utxoProvider,
+    chainProvider,
+    FEE_RATE
+  )
 }
 
 export async function createWithdrawal(
-    utxoProvider: UtxoProvider,
-    chainProvider: ChainProvider,
+  utxoProvider: UtxoProvider,
+  chainProvider: ChainProvider,
 
-    bridgeUtxo: TraceableBridgeUtxo,
-    withdrawals: Withdrawal[],
+  bridgeUtxo: TraceableBridgeUtxo,
+  withdrawals: Withdrawal[]
 ) {
-    return await bridgeFeature.createWithdrawalExpander(
-        testUserSigner,
-        utxoProvider,
-        chainProvider,
+  return await bridgeFeature.createWithdrawalExpander(
+    testUserSigner,
+    utxoProvider,
+    chainProvider,
 
-        bridgeUtxo,
-        withdrawals,
+    bridgeUtxo,
+    withdrawals,
 
-        FEE_RATE,
-    )
+    FEE_RATE
+  )
+}
+
+export async function distributeWithdrawals(
+  utxoProvider: UtxoProvider,
+  chainProvider: ChainProvider,
+
+  withdrawExpanderUtxo: TraceableWithdrawalExpanderUtxo,
+  allWithdrawals: Withdrawal[]
+) {
+  return await withdrawFeature.distributeWithdrawals(
+    testOperatorSigner,
+    utxoProvider,
+    chainProvider,
+
+    withdrawExpanderUtxo,
+    allWithdrawals,
+
+    FEE_RATE
+  )
+}
+
+export async function expandWithdrawal(
+  utxoProvider: UtxoProvider,
+  chainProvider: ChainProvider,
+
+  withdrawExpanderUtxo: TraceableWithdrawalExpanderUtxo,
+  withdrawals: Withdrawal[]
+) {
+  return await withdrawFeature.expandWithdrawal(
+    testOperatorSigner,
+    utxoProvider,
+    chainProvider,
+
+    withdrawExpanderUtxo,
+    withdrawals,
+
+    FEE_RATE
+  )
 }

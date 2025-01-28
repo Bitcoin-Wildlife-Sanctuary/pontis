@@ -2,11 +2,13 @@ import { Signer } from '../lib/signer'
 import { UtxoProvider } from '../lib/provider'
 import { ChainProvider } from '../lib/provider'
 import { PubKey, Sha256, toByteString, UTXO } from 'scrypt-ts'
-import { DepositAggregatorCovenant, TraceableDepositAggregatorUtxo, TracedDepositAggregator } from '../covenants'
-import { Postage, SupportedNetwork } from '../lib/constants'
 import {
-  getDummyUtxo,
-} from '../lib/utils'
+  DepositAggregatorCovenant,
+  TraceableDepositAggregatorUtxo,
+  TracedDepositAggregator,
+} from '../covenants'
+import { Postage, SupportedNetwork } from '../lib/constants'
+import { getDummyUtxo } from '../lib/utils'
 import { DUST_LIMIT, ExtPsbt } from '../lib/extPsbt'
 import { getScriptPubKeys } from '../covenants/instance'
 import { pickLargeFeeUtxo } from './utils/pick'
@@ -39,13 +41,8 @@ export async function createDeposit(
     network
   )
 
-  const est = estimateCreateDepositTxVSize(
-    depositAggregatorCovenant,
-    l1address
-  )
-  const total =
-    BigInt(Math.ceil(feeRate * est.vSize)) +
-    depositAmt
+  const est = estimateCreateDepositTxVSize(depositAggregatorCovenant, l1address)
+  const total = BigInt(Math.ceil(feeRate * est.vSize)) + depositAmt
 
   const utxos = await utxoProvider.getUtxos(l1address, { total: Number(total) })
   if (utxos.length === 0) {
@@ -71,7 +68,6 @@ export async function createDeposit(
   const tx = txPsbt.extractTransaction()
   await chainProvider.broadcast(tx.toHex())
   markSpent(utxoProvider, tx)
-
 
   return {
     psbt: txPsbt,
@@ -134,9 +130,14 @@ export async function aggregateDeposit(
   feeRate: number,
   estimatedVSize?: number
 ) {
-
-  const tracedDepositAggregator0 = await DepositAggregatorCovenant.backtrace(aggregatorUtxo0, chainProvider)
-  const tracedDepositAggregator1 = await DepositAggregatorCovenant.backtrace(aggregatorUtxo1, chainProvider)
+  const tracedDepositAggregator0 = await DepositAggregatorCovenant.backtrace(
+    aggregatorUtxo0,
+    chainProvider
+  )
+  const tracedDepositAggregator1 = await DepositAggregatorCovenant.backtrace(
+    aggregatorUtxo1,
+    chainProvider
+  )
 
   const outputAggregator = new DepositAggregatorCovenant(
     aggregatorUtxo0.operator,
@@ -145,10 +146,10 @@ export async function aggregateDeposit(
       aggregatorUtxo0.state.level + 1n,
       Sha256(tracedDepositAggregator0.covenant.serializedState()),
       Sha256(tracedDepositAggregator1.covenant.serializedState())
-    ),
+    )
   )
 
-  const changeAddress = await signer.getAddress();
+  const changeAddress = await signer.getAddress()
 
   const estSize = estimateAggregateDepositTxVSize(
     getDummyUtxo(changeAddress),
@@ -160,12 +161,14 @@ export async function aggregateDeposit(
     changeAddress,
     feeRate
   )
-  const total = feeRate * estSize + Postage.DEPOSIT_AGGREGATOR_POSTAGE;
-  const utxos = await utxoProvider.getUtxos(changeAddress, { total: Number(total) });
+  const total = feeRate * estSize + Postage.DEPOSIT_AGGREGATOR_POSTAGE
+  const utxos = await utxoProvider.getUtxos(changeAddress, {
+    total: Number(total),
+  })
   if (utxos.length === 0) {
     throw new Error('Insufficient satoshis input amount')
   }
-  const feeUtxo = pickLargeFeeUtxo(utxos);
+  const feeUtxo = pickLargeFeeUtxo(utxos)
 
   const aggregateTx = buildAggregateDepositTx(
     feeUtxo,
@@ -199,7 +202,6 @@ export async function aggregateDeposit(
 }
 
 function buildAggregateDepositTx(
-
   feeUtxo: UTXO,
   aggregatorUtxo0: TraceableDepositAggregatorUtxo,
   aggregatorUtxo1: TraceableDepositAggregatorUtxo,
@@ -212,7 +214,6 @@ function buildAggregateDepositTx(
   feeRate: number,
   estimatedVSize?: number
 ) {
-
   tracedDepositAggregator0.covenant.bindToUtxo(aggregatorUtxo0.utxo)
   tracedDepositAggregator1.covenant.bindToUtxo(aggregatorUtxo1.utxo)
 
@@ -220,7 +221,10 @@ function buildAggregateDepositTx(
     .addCovenantInput(tracedDepositAggregator0.covenant)
     .addCovenantInput(tracedDepositAggregator1.covenant)
     .addFeeInputs([feeUtxo])
-    .addCovenantOutput(outputAggregator, aggregatorUtxo0.utxo.satoshis + aggregatorUtxo1.utxo.satoshis)
+    .addCovenantOutput(
+      outputAggregator,
+      aggregatorUtxo0.utxo.satoshis + aggregatorUtxo1.utxo.satoshis
+    )
     .addStateOutput(outputAggregator)
     .change(changeAddress, feeRate, estimatedVSize)
 
@@ -243,7 +247,7 @@ function buildAggregateDepositTx(
       inputToPrevout(aggregateTx.unsignedTx, 2),
       true,
       tracedDepositAggregator0.covenant.depositData,
-      tracedDepositAggregator1.covenant.depositData,
+      tracedDepositAggregator1.covenant.depositData
     )
   )
   aggregateTx.updateCovenantInput(
@@ -263,7 +267,7 @@ function buildAggregateDepositTx(
       inputToPrevout(aggregateTx.unsignedTx, 2),
       false,
       tracedDepositAggregator0.covenant.depositData,
-      tracedDepositAggregator1.covenant.depositData,
+      tracedDepositAggregator1.covenant.depositData
     )
   )
 
@@ -280,7 +284,7 @@ function estimateAggregateDepositTxVSize(
 
   outputAggregator: DepositAggregatorCovenant,
   changeAddress: string,
-  feeRate: number,
+  feeRate: number
 ) {
   return buildAggregateDepositTx(
     feeUtxo,
@@ -290,6 +294,6 @@ function estimateAggregateDepositTxVSize(
     tracedDepositAggregator1,
     outputAggregator,
     changeAddress,
-    feeRate,
+    feeRate
   ).estimateVSize()
 }
