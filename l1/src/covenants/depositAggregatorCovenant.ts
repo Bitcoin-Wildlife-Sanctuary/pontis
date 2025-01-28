@@ -3,11 +3,22 @@ import { Covenant } from '../lib/covenant'
 import { SupportedNetwork } from '../lib/constants'
 import { DepositAggregator, DepositData } from '../contracts/depositAggregator'
 import { InputCtx, SubContractCall } from '../lib/extPsbt'
-import { AggregatorTransaction } from '../contracts/aggregatorUtils'
+import {
+  AggregatorTransaction,
+  AggregatorUtils,
+} from '../contracts/aggregatorUtils'
 import { ChainProvider, DepositAggregatorUtxo } from '../lib/provider'
 import { Transaction } from '@scrypt-inc/bitcoinjs-lib'
 import { getTxId } from '../lib/utils'
-import { createEmptySha256, inputToByteString, locktimeToByteString, outputToByteString, splitHashFromStateOutput, versionToByteString } from '../lib/txTools'
+import {
+  createEmptySha256,
+  inputToByteString,
+  isTxHashEqual,
+  locktimeToByteString,
+  outputToByteString,
+  splitHashFromStateOutput,
+  versionToByteString,
+} from '../lib/txTools'
 import * as tools from 'uint8array-tools'
 import { BatchID } from '../util/merkleUtils'
 
@@ -24,8 +35,22 @@ export type DepositAggregatorState = {
   prevHashData1: Sha256
 }
 
-export function stateToBatchID(state: DepositAggregatorState, prevTxid: string): BatchID {
-  const hash = state.level === 0n ? DepositAggregator.hashDepositData(0n, state.depositAddress, state.depositAmt) : DepositAggregator.hashAggregatedDepositData(state.level, state.prevHashData0, state.prevHashData1)
+export function stateToBatchID(
+  state: DepositAggregatorState,
+  prevTxid: string
+): BatchID {
+  const hash =
+    state.level === 0n
+      ? DepositAggregator.hashDepositData(
+          0n,
+          state.depositAddress,
+          state.depositAmt
+        )
+      : DepositAggregator.hashAggregatedDepositData(
+          state.level,
+          state.prevHashData0,
+          state.prevHashData1
+        )
   /// add prevTxid to the hash to make it unique
   return sha256(prevTxid + hash)
 }
@@ -69,7 +94,6 @@ export type TracedDepositAggregator = {
     ancestorTx0: string
     ancestorTx1: string
   }
-
 }
 
 export interface TraceableDepositAggregatorUtxo extends DepositAggregatorUtxo {
@@ -78,7 +102,7 @@ export interface TraceableDepositAggregatorUtxo extends DepositAggregatorUtxo {
 }
 
 export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> {
-  static readonly LOCKED_ASM_VERSION = '7ab83e8e5922a893a3bba7336e87b9bb'
+  static readonly LOCKED_ASM_VERSION = '9b59ad39a2c6227f6fefc7cb8244b5bc'
 
   constructor(
     readonly operator: PubKey,
@@ -125,7 +149,7 @@ export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> 
     ancestorTx0: AggregatorTransaction,
     ancestorTx1: AggregatorTransaction,
     bridgeTxId: Sha256,
-    fundingPrevout: ByteString,
+    fundingPrevout: ByteString
   ): SubContractCall {
     const subCall: SubContractCall = {
       method: 'finalizeL1',
@@ -150,9 +174,9 @@ export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> 
           fundingPrevout,
         ]
         return args
-      }
+      },
     }
-    return subCall;
+    return subCall
   }
 
   aggregate(
@@ -172,12 +196,9 @@ export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> 
     depositData0: DepositData,
     depositData1: DepositData
   ): SubContractCall {
-
-
     const subCall: SubContractCall = {
       method: 'aggregate',
       argsBuilder: (self, _tapLeafContract) => {
-
         const { shPreimage } = inputCtxs.get(inputIndex)
         if (!shPreimage) {
           throw new Error('Input context is not available')
@@ -209,15 +230,21 @@ export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> 
     return subCall
   }
 
-  private static getAggregatorTransaction(tx: Transaction, level: bigint): AggregatorTransaction {
-
+  private static getAggregatorTransaction(
+    tx: Transaction,
+    level: bigint
+  ): AggregatorTransaction {
     if (level === 0n) {
       if (tx.ins.length !== 1) {
-        throw new Error('Invalid deposit aggregator tx: leaf tx must only have one input')
+        throw new Error(
+          'Invalid deposit aggregator tx: leaf tx must only have one input'
+        )
       }
     } else {
       if (tx.ins.length !== 3) {
-        throw new Error('Invalid deposit aggregator tx: non-leaf tx must have three inputs')
+        throw new Error(
+          'Invalid deposit aggregator tx: non-leaf tx must have three inputs'
+        )
       }
     }
 
@@ -225,7 +252,8 @@ export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> 
       ver: versionToByteString(tx),
       inputContract0: level === 0n ? '' : inputToByteString(tx, 0),
       inputContract1: level === 0n ? '' : inputToByteString(tx, 1),
-      inputFee: level === 0n ? inputToByteString(tx, 0) : inputToByteString(tx, 2),
+      inputFee:
+        level === 0n ? inputToByteString(tx, 0) : inputToByteString(tx, 2),
 
       // the contract output is always the first output
       // the hash data output is always the second output
@@ -270,7 +298,7 @@ export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> 
     utxo: TraceableDepositAggregatorUtxo,
     chainProvider: ChainProvider
   ): Promise<TracedDepositAggregator> {
-    const level = utxo.state.level;
+    const level = utxo.state.level
 
     const covenant = new DepositAggregatorCovenant(
       utxo.operator,
@@ -281,44 +309,93 @@ export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> 
       throw new Error('invalid deposit aggregator utxo')
     }
 
-    const prevRawtx = await chainProvider.getRawTransaction(utxo.utxo.txId);
+    const prevRawtx = await chainProvider.getRawTransaction(utxo.utxo.txId)
     const prevTx = Transaction.fromHex(prevRawtx)
+
+    const prevTxInContract = DepositAggregatorCovenant.getAggregatorTransaction(
+      prevTx,
+      level
+    )
+    if (
+      !isTxHashEqual(
+        prevTx,
+        AggregatorUtils.getTxId(prevTxInContract, level === 0n)
+      )
+    ) {
+      throw new Error('prevTx txid mismatch')
+    }
 
     if (level === 0n) {
       return {
         covenant,
         trace: {
-          prevTx: DepositAggregatorCovenant.getAggregatorTransaction(prevTx, 0n),
-          ancestorTx0: DepositAggregatorCovenant.createEmptyAggregatorTransaction(),
-          ancestorTx1: DepositAggregatorCovenant.createEmptyAggregatorTransaction(),
+          prevTx: prevTxInContract,
+          ancestorTx0:
+            DepositAggregatorCovenant.createEmptyAggregatorTransaction(),
+          ancestorTx1:
+            DepositAggregatorCovenant.createEmptyAggregatorTransaction(),
         },
         rawtx: {
           prevTx: prevRawtx,
           ancestorTx0: '',
-          ancestorTx1: ''
-        }
+          ancestorTx1: '',
+        },
       }
     } else {
       if (prevTx.ins.length !== 3) {
-        throw new Error('Invalid depost aggregator tx: non-leaf tx must have three inputs')
+        throw new Error(
+          'Invalid depost aggregator tx: non-leaf tx must have three inputs'
+        )
       }
-      const ancestorRawtx0 = await chainProvider.getRawTransaction(getTxId(prevTx.ins[0]))
-      const ancestorRawtx1 = await chainProvider.getRawTransaction(getTxId(prevTx.ins[1]))
+      const ancestorRawtx0 = await chainProvider.getRawTransaction(
+        getTxId(prevTx.ins[0])
+      )
+      const ancestorRawtx1 = await chainProvider.getRawTransaction(
+        getTxId(prevTx.ins[1])
+      )
       const ancestorTx0 = Transaction.fromHex(ancestorRawtx0)
       const ancestorTx1 = Transaction.fromHex(ancestorRawtx1)
+
+      const ancestorTx0InContract =
+        DepositAggregatorCovenant.getAggregatorTransaction(
+          ancestorTx0,
+          level - 1n
+        )
+      const ancestorTx1InContract =
+        DepositAggregatorCovenant.getAggregatorTransaction(
+          ancestorTx1,
+          level - 1n
+        )
+
+      if (
+        !isTxHashEqual(
+          ancestorTx0,
+          AggregatorUtils.getTxId(ancestorTx0InContract, level - 1n === 0n)
+        )
+      ) {
+        throw new Error('ancestorTx0 txid mismatch')
+      }
+      if (
+        !isTxHashEqual(
+          ancestorTx1,
+          AggregatorUtils.getTxId(ancestorTx1InContract, level - 1n === 0n)
+        )
+      ) {
+        throw new Error('ancestorTx1 txid mismatch')
+      }
 
       return {
         covenant,
         trace: {
-          prevTx: DepositAggregatorCovenant.getAggregatorTransaction(prevTx, level),
-          ancestorTx0: DepositAggregatorCovenant.getAggregatorTransaction(ancestorTx0, level - 1n),
-          ancestorTx1: DepositAggregatorCovenant.getAggregatorTransaction(ancestorTx1, level - 1n),
+          prevTx: prevTxInContract,
+          ancestorTx0: ancestorTx0InContract,
+          ancestorTx1: ancestorTx1InContract,
         },
         rawtx: {
           prevTx: prevRawtx,
           ancestorTx0: ancestorRawtx0,
           ancestorTx1: ancestorRawtx1,
-        }
+        },
       }
     }
   }

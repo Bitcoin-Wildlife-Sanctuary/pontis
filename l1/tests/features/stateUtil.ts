@@ -32,4 +32,4 @@ export class StateStore implements Store {
   }
 }
 
-export const stateStore = new StateStore();
+export const stateStore = new StateStore()

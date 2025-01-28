@@ -1,6 +1,6 @@
 // used outside of contract
 
-import { ByteString, hash256, Sha256, Addr } from 'scrypt-ts'
+import { ByteString, hash256, Sha256, toByteString } from 'scrypt-ts'
 import { MerklePath, Node, NodePos } from '../contracts/merklePath'
 import { WithdrawalExpander } from '../contracts/withdrawalExpander'
 import { cloneDeep } from 'lodash-es'
@@ -25,6 +25,7 @@ function calcMerkleRoot(hashList: Array<Sha256>): Sha256 {
     throw new Error('hashList length must be a power of 2')
   }
 
+  // eslint-disable-next-line no-constant-condition
   while (true) {
     const newHashList = []
     for (let i = 0; i < hashList.length; i += 2) {
@@ -39,19 +40,22 @@ function calcMerkleRoot(hashList: Array<Sha256>): Sha256 {
   }
 }
 
-function calcMerkleProof(hashList: Array<Sha256>, nodeIndex: number): MerkleProof {
-  const proof: MerkleProof = [];
+function calcMerkleProof(
+  hashList: Array<Sha256>,
+  nodeIndex: number
+): MerkleProof {
+  const proof: MerkleProof = []
 
   if (nodeIndex >= hashList.length) {
     throw new Error('nodeIndex out of bounds')
   }
-  const treeHeight = Math.log2(hashList.length);
+  const treeHeight = Math.log2(hashList.length)
   if (treeHeight % 1 != 0 || treeHeight < 1) {
     throw new Error('hashList length must be a power of 2')
   }
 
-  let targetHash = hashList[nodeIndex];
-  let layerHashes = [...hashList];
+  let targetHash = hashList[nodeIndex]
+  let layerHashes = [...hashList]
   for (let i = 0; i < treeHeight; i++) {
     const nextLayerHashes = []
     for (let j = 0; j < layerHashes.length; j += 2) {
@@ -74,11 +78,9 @@ function calcMerkleProof(hashList: Array<Sha256>, nodeIndex: number): MerkleProo
   return proof
 }
 
-
-export type BatchID = string;
+export type BatchID = string
 export type BatchMerkleTree = Array<BatchID> & { length: 16 }
 export class BridgeMerkle {
-
   static readonly EMPTY_BATCH_ID: BatchID = Sha256(MerklePath.NULL_NODE)
 
   static getEmptyTree(): BatchMerkleTree {
@@ -116,106 +118,147 @@ export type Withdrawal = {
 export type WithdrawalNode = {
   hash: Sha256
   amt: bigint
+  level: bigint
+  withdrawals: Array<Withdrawal>
 }
 // todo: add a hash prefix to avoid tree collision
 export class WithdrawalMerkle {
-  private static calculateMerkleRoot(
-    withdrawalList: Array<Withdrawal>,
-    startLevel: bigint = 0n,
-  ): { root: Sha256, levels: WithdrawalNode[][] } {
-    if (startLevel < 0n) {
-      throw new Error('startLevel must be greater or equal than 0')
-    }
+  private static calculateMerkle(withdrawalList: Array<Withdrawal>): {
+    root: Sha256
+    levels: WithdrawalNode[][]
+  } {
+    let startLevel = 0n
     if (withdrawalList.length == 0) {
       throw new Error('withdrawalList length must be greater than 0')
     }
     if (withdrawalList.length === 1) {
       return {
-        root: WithdrawalExpander.getLeafNodeHash(withdrawalList[0].l1Address, withdrawalList[0].amt),
+        root: WithdrawalExpander.getLeafNodeHash(
+          withdrawalList[0].l1Address,
+          withdrawalList[0].amt
+        ),
         levels: [
           [
             {
-              hash: WithdrawalExpander.getLeafNodeHash(withdrawalList[0].l1Address, withdrawalList[0].amt),
+              hash: WithdrawalExpander.getLeafNodeHash(
+                withdrawalList[0].l1Address,
+                withdrawalList[0].amt
+              ),
               amt: withdrawalList[0].amt,
+              level: startLevel,
+              withdrawals: [withdrawalList[0]],
             },
           ],
         ],
       }
     }
 
-    const treeHeight = Math.log2(withdrawalList.length);
+    const treeHeight = Math.log2(withdrawalList.length)
     if (treeHeight % 1 != 0) {
       throw new Error('withdrawalList length must be a power of 2')
     }
 
-
     let leafHashes: Array<WithdrawalNode> = withdrawalList.map((withdrawal) => {
       return {
-        hash: WithdrawalExpander.getLeafNodeHash(withdrawal.l1Address, withdrawal.amt),
+        hash: WithdrawalExpander.getLeafNodeHash(
+          withdrawal.l1Address,
+          withdrawal.amt
+        ),
         amt: withdrawal.amt,
-      };
-    });
+        level: startLevel,
+        withdrawals: [withdrawal],
+      }
+    })
 
-    const levels: WithdrawalNode[][] = [];
-    levels.unshift(leafHashes);
+    const levels: WithdrawalNode[][] = []
+    levels.unshift(leafHashes)
 
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      startLevel += 1n;
-      const newLeafHashes: Array<WithdrawalNode> = [];
+      startLevel += 1n
+      const newLeafHashes: Array<WithdrawalNode> = []
 
       for (let i = 0; i < leafHashes.length; i += 2) {
-        const left = leafHashes[i];
-        const right = leafHashes[i + 1];
+        const left = leafHashes[i]
+        const right = leafHashes[i + 1]
         newLeafHashes.push({
-          hash: WithdrawalExpander.getNodeHash(startLevel, left.amt, left.hash, right.amt, right.hash),
+          hash: WithdrawalExpander.getNodeHash(
+            startLevel,
+            left.amt,
+            left.hash,
+            right.amt,
+            right.hash
+          ),
           amt: left.amt + right.amt,
-        });
+          level: startLevel,
+          withdrawals: [...left.withdrawals, ...right.withdrawals],
+        })
       }
-      levels.unshift(newLeafHashes);
+      levels.unshift(newLeafHashes)
       if (newLeafHashes.length === 1) {
         return {
           root: newLeafHashes[0].hash,
           levels: levels,
         }
       }
-      leafHashes = newLeafHashes;
+      leafHashes = newLeafHashes
     }
     throw new Error('should not reach here')
   }
 
   static getMerkleRoot(withdrawals: Withdrawal[]) {
-    withdrawals = cloneDeep(withdrawals);
+    withdrawals = cloneDeep(withdrawals)
     if (withdrawals.length == 0) {
       throw new Error('withdrawals length must be greater than 0')
     }
-    const treeHeight = Math.ceil(Math.log2(withdrawals.length));
-    const totalLeafCount = 1 << treeHeight;
+    const treeHeight = Math.ceil(Math.log2(withdrawals.length))
+    const totalLeafCount = 1 << treeHeight
     // padRight empty leafHashes
     while (totalLeafCount > withdrawals.length) {
       withdrawals.push({
-        l1Address: Addr(''),
+        l1Address: toByteString(''),
         amt: 0n,
-      });
+      })
     }
-    return this.calculateMerkleRoot(withdrawals).root;
+    return this.calculateMerkle(withdrawals).root
   }
 
   static getMerkleLevels(withdrawals: Withdrawal[]) {
-    withdrawals = cloneDeep(withdrawals);
+    withdrawals = cloneDeep(withdrawals)
     if (withdrawals.length == 0) {
       throw new Error('withdrawals length must be greater than 0')
     }
-    const treeHeight = Math.ceil(Math.log2(withdrawals.length));
-    const totalLeafCount = 1 << treeHeight;
+    const treeHeight = Math.ceil(Math.log2(withdrawals.length))
+    const totalLeafCount = 1 << treeHeight
     // padRight empty leafHashes
     while (totalLeafCount > withdrawals.length) {
       withdrawals.push({
-        l1Address: Addr(''),
+        l1Address: toByteString(''),
         amt: 0n,
-      });
+      })
     }
-    return this.calculateMerkleRoot(withdrawals).levels
+    return this.calculateMerkle(withdrawals).levels
+  }
+
+  static getHashChildren(allWithdrawals: Withdrawal[], currentHash: Sha256) {
+    const levels = this.getMerkleLevels(allWithdrawals).flat()
+    const currentIndex = levels.findIndex((node) => node.hash === currentHash)
+    if (currentIndex === -1) {
+      throw new Error('currentHash not found in any level')
+    }
+    const currentNode = levels[currentIndex]
+    if (currentNode.withdrawals.length == 1) {
+      throw new Error('currentNode can not be leaf node')
+    }
+
+    // for an node at index i, its children are at index 2i+1 and 2i+2
+    // https://www.geeksforgeeks.org/binary-heap/
+    const leftChild = levels[currentIndex * 2 + 1]
+    const rightChild = levels[currentIndex * 2 + 2]
+    return {
+      leftChild,
+      rightChild,
+    }
   }
 
   static checkWithdrawalValid(withdrawal: Withdrawal) {
@@ -225,7 +268,6 @@ export class WithdrawalMerkle {
     }
   }
 }
-
 
 /**
 

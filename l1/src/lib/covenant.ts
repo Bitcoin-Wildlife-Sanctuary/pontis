@@ -33,7 +33,6 @@ export abstract class Covenant<StateT = undefined> {
       network?: SupportedNetwork
     }
   ) {
-
     // const isDeposite = typeof (this as any).aggregate === 'function'
 
     const tapLeafContracts: Record<string, TapLeafSmartContract> = {}
@@ -96,7 +95,8 @@ export abstract class Covenant<StateT = undefined> {
   bindToUtxo(utxo: Optional<UTXO, 'script'>): this {
     if (utxo.script && this.lockingScript.toHex() !== utxo.script) {
       throw new Error(
-        `Different script, can not bind covenant '${this.constructor.name
+        `Different script, can not bind covenant '${
+          this.constructor.name
         }' to this UTXO: ${JSON.stringify(utxo)}!`
       )
     }

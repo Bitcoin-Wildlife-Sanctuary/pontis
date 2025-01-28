@@ -73,5 +73,4 @@ export type BacktraceInfo = {
   ancestorTx: ByteString
 }
 
-export class Backtrace extends SmartContractLib {
-}
+export class Backtrace extends SmartContractLib {}

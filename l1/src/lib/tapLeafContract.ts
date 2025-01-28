@@ -17,7 +17,10 @@ export class TapLeafSmartContract {
 
   constructor(contract: SmartContract) {
     const contractScript = contract.lockingScript
-    const tapScript = Tap.encodeScript(contractScript.toBuffer(), LEAF_VERSION_TAPSCRIPT)
+    const tapScript = Tap.encodeScript(
+      contractScript.toBuffer(),
+      LEAF_VERSION_TAPSCRIPT
+    )
     const [tpubkey, cblock] = Tap.getPubKey(TAPROOT_ONLY_SCRIPT_SPENT_KEY, {
       target: tapScript,
       version: LEAF_VERSION_TAPSCRIPT,

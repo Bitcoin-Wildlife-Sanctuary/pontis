@@ -23,7 +23,7 @@ export class TxUtils extends SmartContractLib {
   ): boolean {
     let mergedSPKs = toByteString('')
     for (let i = 0; i < MAX_OUTPUT; i++) {
-      mergedSPKs +=  int2ByteString(len(spentScripts[i])) + spentScripts[i]
+      mergedSPKs += int2ByteString(len(spentScripts[i])) + spentScripts[i]
     }
     assert(hashSpentScripts == sha256(mergedSPKs))
     return true

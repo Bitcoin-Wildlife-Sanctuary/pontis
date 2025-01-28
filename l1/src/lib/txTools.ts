@@ -10,12 +10,15 @@ import {
   toByteString,
   toHex,
   UTXO,
-
 } from 'scrypt-ts'
 import { SpentSPKs } from '../contracts/txUtil'
 import { SHPreimage } from '../contracts/sigHashUtils'
 import { btc } from './btc'
-import { Transaction, BufferWriter, varSliceSize } from '@scrypt-inc/bitcoinjs-lib'
+import {
+  Transaction,
+  BufferWriter,
+  varSliceSize,
+} from '@scrypt-inc/bitcoinjs-lib'
 import * as tools from 'uint8array-tools'
 
 const curve = ecurve.getCurveByName('secp256k1')
@@ -288,11 +291,14 @@ export function getSHPreimageMulti(
   return rList
 }
 
-export function inputToByteString(tx: Transaction, inputIndex: number): ByteString {
+export function inputToByteString(
+  tx: Transaction,
+  inputIndex: number
+): ByteString {
   // 40 = 32(txhash) + 4(index) + 4(sequence)
   const len = 40 + varSliceSize(tx.ins[inputIndex].script)
-  const buffer = new Uint8Array(len);
-  const bufferWriter = new BufferWriter(buffer);
+  const buffer = new Uint8Array(len)
+  const bufferWriter = new BufferWriter(buffer)
   bufferWriter.writeSlice(tx.ins[inputIndex].hash)
   bufferWriter.writeUInt32(tx.ins[inputIndex].index)
   bufferWriter.writeVarSlice(tx.ins[inputIndex].script)
@@ -300,11 +306,14 @@ export function inputToByteString(tx: Transaction, inputIndex: number): ByteStri
   return tools.toHex(buffer)
 }
 
-export function outputToByteString(tx: Transaction, outputIndex: number): ByteString {
+export function outputToByteString(
+  tx: Transaction,
+  outputIndex: number
+): ByteString {
   // 8 = 8(outputSatoshis)
   const len = 8 + varSliceSize(tx.outs[outputIndex].script)
-  const buffer = new Uint8Array(len);
-  const bufferWriter = new BufferWriter(buffer);
+  const buffer = new Uint8Array(len)
+  const bufferWriter = new BufferWriter(buffer)
   bufferWriter.writeUInt64(tx.outs[outputIndex].value)
   bufferWriter.writeVarSlice(tx.outs[outputIndex].script)
   return tools.toHex(buffer)
@@ -315,11 +324,14 @@ export function outputToUtxo(tx: Transaction, outputIndex: number): UTXO {
     txId: tx.getId(),
     outputIndex: outputIndex,
     script: tools.toHex(tx.outs[outputIndex].script),
-    satoshis: Number(tx.outs[outputIndex].value)
+    satoshis: Number(tx.outs[outputIndex].value),
   }
 }
 
-export function splitHashFromStateOutput(tx: Transaction, outputIndex: number): ByteString {
+export function splitHashFromStateOutput(
+  tx: Transaction,
+  outputIndex: number
+): ByteString {
   // state output script = 1(op return) + 1(op push 32) + 32(hash)
   if (tx.outs[outputIndex].script.length !== 34) {
     throw new Error('Invalid state output script length')
@@ -329,21 +341,24 @@ export function splitHashFromStateOutput(tx: Transaction, outputIndex: number): 
   return hash
 }
 
-export function inputToPrevout(tx: Transaction, inputIndex: number): ByteString {
+export function inputToPrevout(
+  tx: Transaction,
+  inputIndex: number
+): ByteString {
   // 36 = 32(txhash) + 4(index)
-  const buffer = new Uint8Array(36);
-  const bufferWriter = new BufferWriter(buffer);
+  const buffer = new Uint8Array(36)
+  const bufferWriter = new BufferWriter(buffer)
   bufferWriter.writeSlice(tx.ins[inputIndex].hash)
   bufferWriter.writeUInt32(tx.ins[inputIndex].index)
   return tools.toHex(buffer)
 }
 
 export function scriptWithLength(script: Buffer): Buffer {
-  const len = script.length;
-  const buffer = new Uint8Array(len + 1);
-  buffer[0] = len;
-  buffer.set(script, 1);
-  return Buffer.from(buffer);
+  const len = script.length
+  const buffer = new Uint8Array(len + 1)
+  buffer[0] = len
+  buffer.set(script, 1)
+  return Buffer.from(buffer)
 }
 
 export function versionToByteString(tx: Transaction): ByteString {
@@ -360,4 +375,8 @@ export function reverseTxId(txId: ByteString): ByteString {
 
 export function createEmptySha256(): Sha256 {
   return toByteString('') as Sha256
+}
+
+export function isTxHashEqual(tx: Transaction, txhash: string): boolean {
+  return tools.toHex(tx.getHash()) === txhash
 }

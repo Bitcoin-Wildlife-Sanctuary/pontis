@@ -60,32 +60,30 @@ export class SigHashUtils extends SmartContractLib {
   static checkSHPreimage(shPreimage: SHPreimage): Sig {
     const sigHash = sha256(
       SigHashUtils.preimagePrefix +
-      shPreimage.txVer +
-      shPreimage.nLockTime +
-      shPreimage.hashPrevouts +
-      shPreimage.hashSpentAmounts +
-      shPreimage.hashSpentScripts +
-      shPreimage.hashSequences +
-      shPreimage.hashOutputs +
-      shPreimage.spendType +
-      shPreimage.inputNumber +
-      shPreimage.hashTapLeaf +
-      shPreimage.keyVer +
-      shPreimage.codeSeparator
-  )
+        shPreimage.txVer +
+        shPreimage.nLockTime +
+        shPreimage.hashPrevouts +
+        shPreimage.hashSpentAmounts +
+        shPreimage.hashSpentScripts +
+        shPreimage.hashSequences +
+        shPreimage.hashOutputs +
+        shPreimage.spendType +
+        shPreimage.inputNumber +
+        shPreimage.hashTapLeaf +
+        shPreimage.keyVer +
+        shPreimage.codeSeparator
+    )
 
-  const e = sha256(SigHashUtils.ePreimagePrefix + sigHash)
-  assert(shPreimage.eSuffix < 127n, 'invalid value of _e')
-  const eLastByte =
+    const e = sha256(SigHashUtils.ePreimagePrefix + sigHash)
+    assert(shPreimage.eSuffix < 127n, 'invalid value of _e')
+    const eLastByte =
       shPreimage.eSuffix == 0n
-          ? toByteString('00')
-          : int2ByteString(shPreimage.eSuffix)
-  assert(e == shPreimage._e + eLastByte, 'invalid value of _e')
-  const s =
-      SigHashUtils.Gx +
-      shPreimage._e +
-      int2ByteString(shPreimage.eSuffix + 1n)
-  //assert(this.checkSig(Sig(s), SigHashUtils.Gx)) TODO (currently done outside)
-  return Sig(s)
+        ? toByteString('00')
+        : int2ByteString(shPreimage.eSuffix)
+    assert(e == shPreimage._e + eLastByte, 'invalid value of _e')
+    const s =
+      SigHashUtils.Gx + shPreimage._e + int2ByteString(shPreimage.eSuffix + 1n)
+    //assert(this.checkSig(Sig(s), SigHashUtils.Gx)) TODO (currently done outside)
+    return Sig(s)
   }
 }

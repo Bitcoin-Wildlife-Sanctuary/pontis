@@ -1,10 +1,20 @@
-import { Addr, ByteString, int2ByteString, PubKey, Sha256 } from 'scrypt-ts'
+import { ByteString, int2ByteString, PubKey, Sha256 } from 'scrypt-ts'
 import { Covenant } from '../lib/covenant'
 import { SupportedNetwork } from '../lib/constants'
-import { ExpanderTransaction, WithdrawalExpander } from '../contracts/withdrawalExpander'
+import {
+  ExpanderTransaction,
+  WithdrawalExpander,
+} from '../contracts/withdrawalExpander'
 import { InputCtx, SubContractCall } from '../lib/extPsbt'
-import { BridgeTransaction } from '../contracts/bridge'
-import { createEmptySha256, inputToByteString, locktimeToByteString, outputToByteString, splitHashFromStateOutput, versionToByteString } from '../lib/txTools'
+import {
+  createEmptySha256,
+  inputToByteString,
+  isTxHashEqual,
+  locktimeToByteString,
+  outputToByteString,
+  splitHashFromStateOutput,
+  versionToByteString,
+} from '../lib/txTools'
 import { ChainProvider, WithdrawalExpanderUtxo } from '../lib/provider'
 import { Transaction } from '@scrypt-inc/bitcoinjs-lib'
 import * as tools from 'uint8array-tools'
@@ -23,7 +33,8 @@ export type WithdrawalExpanderState = {
   rightAmt: bigint
 }
 
-export interface TraceableWithdrawalExpanderUtxo extends WithdrawalExpanderUtxo {
+export interface TraceableWithdrawalExpanderUtxo
+  extends WithdrawalExpanderUtxo {
   operator: PubKey
 }
 
@@ -38,7 +49,7 @@ export type TracedWithdrawalExpander = {
 }
 
 export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState> {
-  static readonly LOCKED_ASM_VERSION = '83551b4a5998c0ee8f57ca99f999b9f2'
+  static readonly LOCKED_ASM_VERSION = 'd3a800a2b377c663b0fa9538a8cce450'
 
   constructor(
     readonly operator: PubKey,
@@ -63,17 +74,23 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
     inputIndex: number,
     inputCtxs: Map<number, InputCtx>,
 
-    isExpandingPrevTxFirstOutput: boolean,
+    isFirstExpanderOutput: boolean,
     prevLevel: bigint,
 
-    prevBridgeTx: BridgeTransaction,  // empty when isExpandingPrevTxFirstOutput = false
     prevTx: ExpanderTransaction,
 
-    withdrawalAddresses: Array<Addr>,
+    withdrawalAddresses: Array<ByteString>,
     withdrawalAmts: Array<bigint>,
 
-    fundingPrevout: ByteString,
+    fundingPrevout: ByteString
   ): SubContractCall {
+    if (withdrawalAddresses.length !== 4) {
+      throw new Error('withdrawalAddresses length should be 4')
+    }
+    if (withdrawalAmts.length !== 4) {
+      throw new Error('withdrawalAmts length should be 4')
+    }
+
     const subCall: SubContractCall = {
       method: 'distribute',
       argsBuilder: (self, _tapLeafContract) => {
@@ -81,39 +98,73 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
         if (!shPreimage) {
           throw new Error('Input context is not available')
         }
+
         return [
           shPreimage,
           () => {
             return self.getSig(inputIndex, {
-              publicKey: this.operator.toString()
+              publicKey: this.operator.toString(),
             })
           },
-          isExpandingPrevTxFirstOutput,
+
+          isFirstExpanderOutput,
+
           prevLevel,
-          prevBridgeTx,
           prevTx,
+
           withdrawalAddresses,
           withdrawalAmts,
+
           fundingPrevout,
           self.getChangeOutput(),
         ]
-      }
+      },
     }
     return subCall
   }
-
 
   expand(
     inputIndex: number,
     inputCtxs: Map<number, InputCtx>,
 
     isFirstExpanderOutput: boolean,
+
+    prevTx: ExpanderTransaction,
+
+    fundingPrevout: ByteString
   ): SubContractCall {
+    const state = this.state!
     const subCall: SubContractCall = {
       method: 'expand',
       argsBuilder: (self, _tapLeafContract) => {
-        return []
-      }
+        const { shPreimage } = inputCtxs.get(inputIndex)
+        if (!shPreimage) {
+          throw new Error('Input context is not available')
+        }
+
+        return [
+          shPreimage,
+          () => {
+            return self.getSig(inputIndex, {
+              publicKey: this.operator.toString(),
+            })
+          },
+
+          isFirstExpanderOutput,
+
+          state.level,
+          prevTx,
+
+          state.leftChildRootHash,
+          state.rightChildRootHash,
+
+          state.leftAmt,
+          state.rightAmt,
+
+          fundingPrevout,
+          self.getChangeOutput(),
+        ]
+      },
     }
     return subCall
   }
@@ -122,67 +173,78 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
     utxo: TraceableWithdrawalExpanderUtxo,
     chainProvider: ChainProvider
   ): Promise<TracedWithdrawalExpander> {
-
-    const covenant = new WithdrawalExpanderCovenant(
-      utxo.operator,
-      utxo.state
-    )
+    const covenant = new WithdrawalExpanderCovenant(utxo.operator, utxo.state)
     if (utxo.utxo.script !== covenant.lockingScriptHex) {
       throw new Error('invalid withdrawal expander utxo')
     }
 
-    const prevRawtx = await chainProvider.getRawTransaction(utxo.utxo.txId);
+    const prevRawtx = await chainProvider.getRawTransaction(utxo.utxo.txId)
     const prevTx = Transaction.fromHex(prevRawtx)
+
+    const prevTxInContract =
+      WithdrawalExpanderCovenant.getExpanderTransaction(prevTx)
+    const txid = WithdrawalExpander.getTxId(prevTxInContract)
+    if (!isTxHashEqual(prevTx, txid)) {
+      throw new Error('txid mismatch')
+    }
 
     return {
       covenant,
       trace: {
-        prevTx: WithdrawalExpanderCovenant.getExpanderTransaction(prevTx),
+        prevTx: prevTxInContract,
       },
       rawtx: {
         prevTx: prevRawtx,
-      }
+      },
     }
   }
 
-  private static getExpanderTransaction(
-    tx: Transaction,
-  ): ExpanderTransaction {
-
-    const isSingleExpanderOutput = tx.outs.length <= 3;
-    let isCreateWithdrawalTx = false;
+  private static getExpanderTransaction(tx: Transaction): ExpanderTransaction {
+    const isSingleExpanderOutput = tx.outs.length <= 3
+    let isCreateWithdrawalTx = false
     if (!isSingleExpanderOutput) {
-      isCreateWithdrawalTx = tools.compare(tx.outs[0].script, tx.outs[2].script) != 0;
+      isCreateWithdrawalTx =
+        tools.compare(tx.outs[0].script, tx.outs[2].script) != 0
     }
 
     let bridgeSPK = ''
-    let bridgeAmt = 0n;
-    let bridgeStateHash = createEmptySha256();
+    let bridgeAmt = 0n
+    let bridgeStateHash = createEmptySha256()
     if (isCreateWithdrawalTx) {
-      bridgeSPK = tools.toHex(tx.outs[0].script);
-      bridgeAmt = tx.outs[0].value;
-      bridgeStateHash = Sha256(splitHashFromStateOutput(tx, 1));
+      bridgeSPK = tools.toHex(tx.outs[0].script)
+      bridgeAmt = tx.outs[0].value
+      bridgeStateHash = Sha256(splitHashFromStateOutput(tx, 1))
     }
 
-    const contractSPK = isCreateWithdrawalTx ? tools.toHex(tx.outs[2].script) : tools.toHex(tx.outs[0].script);
-    const output0Amt = isCreateWithdrawalTx ? tx.outs[2].value : tx.outs[0].value;
-    const stateHash0 = isCreateWithdrawalTx ? Sha256(splitHashFromStateOutput(tx, 2)) : createEmptySha256();
+    const contractSPK = isCreateWithdrawalTx
+      ? tools.toHex(tx.outs[2].script)
+      : tools.toHex(tx.outs[0].script)
+    const output0Amt = isCreateWithdrawalTx
+      ? tx.outs[2].value
+      : tx.outs[0].value
+    const stateHash0 = isCreateWithdrawalTx
+      ? Sha256(splitHashFromStateOutput(tx, 3))
+      : Sha256(splitHashFromStateOutput(tx, 1))
 
-    let output1Amt = 0n;
-    let stateHash1 = createEmptySha256();
+    let output1Amt = 0n
+    let stateHash1 = createEmptySha256()
     if (!isCreateWithdrawalTx && !isSingleExpanderOutput) {
-      output1Amt = tx.outs[2].value;
-      stateHash1 = Sha256(splitHashFromStateOutput(tx, 3));
+      output1Amt = tx.outs[2].value
+      stateHash1 = Sha256(splitHashFromStateOutput(tx, 3))
     }
 
-    let changeOutput = '';
+    let changeOutput = ''
     if (tx.outs.length === 3 || tx.outs.length === 5) {
-      changeOutput = outputToByteString(tx, tx.outs.length - 1);
+      changeOutput = outputToByteString(tx, tx.outs.length - 1)
     }
 
-    return {
+    const res = {
       ver: versionToByteString(tx),
-      inputs: int2ByteString(BigInt(tx.ins.length)) + tx.ins.map((_, inputIndex) => inputToByteString(tx, inputIndex)).join(''),
+      inputs:
+        int2ByteString(BigInt(tx.ins.length)) +
+        tx.ins
+          .map((_, inputIndex) => inputToByteString(tx, inputIndex))
+          .join(''),
 
       isCreateWithdrawalTx,
 
@@ -200,6 +262,7 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
       changeOutput,
       locktime: locktimeToByteString(tx),
     }
+    return res
   }
 
   serializedState(): ByteString {
@@ -224,7 +287,7 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
     leftChildRootHash: Sha256,
     rightChildRootHash: Sha256,
     leftAmt: bigint,
-    rightAmt: bigint,
+    rightAmt: bigint
   ): WithdrawalExpanderState {
     return {
       level,
@@ -239,7 +302,7 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
 
   static createLeafState(
     withdrawAddressScript: ByteString,
-    withdrawAmt: bigint,
+    withdrawAmt: bigint
   ): WithdrawalExpanderState {
     return {
       level: 0n,

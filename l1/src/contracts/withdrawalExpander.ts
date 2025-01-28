@@ -30,8 +30,8 @@ export type ExpanderTransaction = {
   bridgeStateHash: Sha256
 
   contractSPK: ByteString
-  output0Amt: bigint  // always non-zero;
-  output1Amt: bigint  // zero when prev tx is createWithdrawal tx or prev tx has no second expander output;
+  output0Amt: bigint // always non-zero;
+  output1Amt: bigint // zero when prev tx is createWithdrawal tx or prev tx has no second expander output;
   stateHash0: Sha256
   stateHash1: Sha256
 
@@ -134,8 +134,9 @@ export class WithdrawalExpander extends SmartContract {
       level1RightNodeHash
     )
 
-
-    const stateHash = isFirstExpanderOutput ? prevTx.stateHash0 : prevTx.stateHash1
+    const stateHash = isFirstExpanderOutput
+      ? prevTx.stateHash0
+      : prevTx.stateHash1
     // verify withdrawal address and amt are trustable
     if (prevLevel == 0n) {
       assert(stateHash == leafHash0)
@@ -185,7 +186,7 @@ export class WithdrawalExpander extends SmartContract {
     shPreimage: SHPreimage,
     sigOperator: Sig,
 
-    isFirstExpanderOutput: boolean,  // if expanding first or second output
+    isFirstExpanderOutput: boolean, // if expanding first or second output
 
     prevLevel: bigint,
     prevTx: ExpanderTransaction,
@@ -222,6 +223,9 @@ export class WithdrawalExpander extends SmartContract {
     // Check we're unlocking contract UTXO via the first input.
     assert(shPreimage.inputNumber == toByteString('00000000'))
 
+    // verify prevLevel is greater than 2n
+    assert(prevLevel > 2n)
+
     // verify stateHash is correct
     const nodeHash = WithdrawalExpander.getNodeHash(
       prevLevel,
@@ -235,7 +239,6 @@ export class WithdrawalExpander extends SmartContract {
       ? prevTx.stateHash0
       : prevTx.stateHash1
     assert(stateHash == nodeHash)
-
 
     let outputs = toByteString('')
     // first expander output and state output
@@ -264,7 +267,7 @@ export class WithdrawalExpander extends SmartContract {
     // sha256(address) to avoid issue with dynamic address length
     return sha256(
       MerklePath.levelToByteString(0n) +
-      sha256(sha256(address) + GeneralUtils.padAmt(amt))
+        sha256(sha256(address) + GeneralUtils.padAmt(amt))
     )
   }
 
@@ -286,10 +289,10 @@ export class WithdrawalExpander extends SmartContract {
   ): Sha256 {
     return sha256(
       MerklePath.levelToByteString(level) +
-      GeneralUtils.padAmt(leftAmt) +
-      leftChild +
-      GeneralUtils.padAmt(rightAmt) +
-      rightChild
+        GeneralUtils.padAmt(leftAmt) +
+        leftChild +
+        GeneralUtils.padAmt(rightAmt) +
+        rightChild
     )
   }
 
@@ -299,44 +302,46 @@ export class WithdrawalExpander extends SmartContract {
    * @param depositAggregatorSPK
    * @returns
    */
-  static getStateHash(batchesRoot: Sha256, depositAggregatorSPK: ByteString): Sha256 {
+  static getStateHash(
+    batchesRoot: Sha256,
+    depositAggregatorSPK: ByteString
+  ): Sha256 {
     return sha256(batchesRoot + depositAggregatorSPK)
   }
 
   @method()
   static getTxId(tx: ExpanderTransaction): Sha256 {
-    let nOutputs = 2n;
+    let nOutputs = 2n
     if (tx.isCreateWithdrawalTx || tx.output1Amt > 0n) {
-      nOutputs = 4n;
+      nOutputs = 4n
     }
     if (tx.changeOutput != toByteString('')) {
-      nOutputs = nOutputs + 1n;
+      nOutputs = nOutputs + 1n
     }
-
 
     const bridgeOutputs = tx.isCreateWithdrawalTx
       ? GeneralUtils.getContractOutput(tx.bridgeAmt, tx.bridgeSPK) +
-      GeneralUtils.getStateOutput(tx.bridgeStateHash)
+        GeneralUtils.getStateOutput(tx.bridgeStateHash)
       : toByteString('')
 
-    let expanderOutputs = GeneralUtils.getContractOutput(tx.output0Amt, tx.contractSPK) +
-      GeneralUtils.getStateOutput(tx.stateHash0);
+    let expanderOutputs =
+      GeneralUtils.getContractOutput(tx.output0Amt, tx.contractSPK) +
+      GeneralUtils.getStateOutput(tx.stateHash0)
 
     if (tx.output1Amt > 0n) {
-      expanderOutputs += GeneralUtils.getContractOutput(tx.output1Amt, tx.contractSPK) +
+      expanderOutputs +=
+        GeneralUtils.getContractOutput(tx.output1Amt, tx.contractSPK) +
         GeneralUtils.getStateOutput(tx.stateHash1)
     }
 
     return hash256(
       tx.ver +
-      tx.inputs +
-      int2ByteString(nOutputs) +
-
-      bridgeOutputs +
-      expanderOutputs +
-
-      tx.changeOutput +
-      tx.locktime
+        tx.inputs +
+        int2ByteString(nOutputs) +
+        bridgeOutputs +
+        expanderOutputs +
+        tx.changeOutput +
+        tx.locktime
     )
   }
 
@@ -349,13 +354,13 @@ export class WithdrawalExpander extends SmartContract {
 
     return hash256(
       tx.ver +
-      tx.inputs +
-      toByteString('04') +
-      GeneralUtils.getContractOutput(tx.contractAmt, tx.contractSPK) +
-      GeneralUtils.getStateOutput(stateHash) +
-      GeneralUtils.getContractOutput(tx.expanderAmt, tx.expanderSPK) +
-      GeneralUtils.getStateOutput(tx.expanderStateHash) +
-      tx.locktime
+        tx.inputs +
+        toByteString('04') +
+        GeneralUtils.getContractOutput(tx.contractAmt, tx.contractSPK) +
+        GeneralUtils.getStateOutput(stateHash) +
+        GeneralUtils.getContractOutput(tx.expanderAmt, tx.expanderSPK) +
+        GeneralUtils.getStateOutput(tx.expanderStateHash) +
+        tx.locktime
     )
   }
 
@@ -367,21 +372,19 @@ export class WithdrawalExpander extends SmartContract {
     isExpandingPrevTxFirstOutput: boolean
   ): Sha256 {
     // prevTx is expander tx, and prevout is the first output
-    let contractOutIdx = toByteString('00000000')
+    const contractOutIdx =
+      !isCreateWithdrawalTx && isExpandingPrevTxFirstOutput
+        ? toByteString('00000000')
+        : toByteString('02000000')
 
-
-    if (isCreateWithdrawalTx) {
-      // prevTx is createWithdrawal tx, and prevout is the third output
-      contractOutIdx = toByteString('02000000')
-    } else if (!isExpandingPrevTxFirstOutput) {
-      // prevTx is expander tx, and prevout is the second output
-      contractOutIdx = toByteString('01000000')
-    }
     return sha256(prevTxId + contractOutIdx + feePrevout)
   }
 
   @method()
-  static getAddressOutput(addressScript: ByteString, satoshis: ByteString): ByteString {
+  static getAddressOutput(
+    addressScript: ByteString,
+    satoshis: ByteString
+  ): ByteString {
     return satoshis + int2ByteString(len(addressScript)) + addressScript
   }
 }

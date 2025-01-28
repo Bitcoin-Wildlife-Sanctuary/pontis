@@ -3,7 +3,7 @@ import { DummyProvider, TestWallet, sha256, toByteString } from 'scrypt-ts'
 import * as dotenv from 'dotenv'
 import { toBtcTransaction } from '../../src/lib/utils'
 import * as bitcoinjs from '@scrypt-inc/bitcoinjs-lib'
-import {btc} from '../../src/lib/btc'
+import { btc } from '../../src/lib/btc'
 
 // Load the .env file
 dotenv.config()

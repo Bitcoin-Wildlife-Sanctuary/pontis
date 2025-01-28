@@ -76,7 +76,10 @@ export class Bridge extends SmartContract {
 
     // Construct prev txids.
     const prevTxId = Bridge.getTxId(prevTx, this.expanderSPK)
-    const aggregatorTxId = AggregatorUtils.getTxId(aggregatorTx, isLevel0Aggregator)
+    const aggregatorTxId = AggregatorUtils.getTxId(
+      aggregatorTx,
+      isLevel0Aggregator
+    )
 
     // Check this transaction unlocks specified outputs in the correct order.
     const hashPrevouts = Bridge.getHashDepositTxPrevouts(
@@ -96,10 +99,11 @@ export class Bridge extends SmartContract {
     // Check that the previous leaf is null
     assert(
       MerklePath.calcMerkleRoot(MerklePath.NULL_NODE, batchProof) ==
-      prevTx.batchesRoot
+        prevTx.batchesRoot
     )
 
     // Construct new batches root
+    // todo: change txid => outpoint to  avoid replaying issue.
     const batchID = sha256(aggregatorTxId + aggregatorTx.hashData)
     const batchesRootNew: Sha256 = MerklePath.calcMerkleRoot(
       batchID,
@@ -160,9 +164,7 @@ export class Bridge extends SmartContract {
     assert(shPreimage.inputNumber == toByteString('00000000'))
 
     // Check that the previous leaf
-    assert(
-      MerklePath.calcMerkleRoot(batchId, batchProof) == prevTx.batchesRoot
-    )
+    assert(MerklePath.calcMerkleRoot(batchId, batchProof) == prevTx.batchesRoot)
 
     // Construct new batches root, delete the batch leaf
     const batchesRootNew: Sha256 = MerklePath.calcMerkleRoot(
@@ -231,7 +233,7 @@ export class Bridge extends SmartContract {
       prevTx.batchesRoot,
       prevTx.depositAggregatorSPK
     )
-    const expanderStateHash = sha256(expanderRoot)
+    const expanderStateHash = expanderRoot
 
     const bridgeStateOut = GeneralUtils.getStateOutput(bridgeStateHash)
 
@@ -242,10 +244,10 @@ export class Bridge extends SmartContract {
     // Enforce outputs.
     const hashOutputs = sha256(
       contractOut +
-      bridgeStateOut +
-      expanderOut +
-      expanderStateOut +
-      changeOutput
+        bridgeStateOut +
+        expanderOut +
+        expanderStateOut +
+        changeOutput
     )
     assert(hashOutputs == shPreimage.hashOutputs)
   }
@@ -253,7 +255,7 @@ export class Bridge extends SmartContract {
   @method()
   static getTxId(tx: BridgeTransaction, expanderSPK: ByteString): Sha256 {
     // deployContract: feeInput => bridgeOutput + stateOutput + changeOutput
-    // finalizeL1Deposit  : bridgeInput + depositAggregatorInput => bridgeOutput + stateOutput + changeOutput 
+    // finalizeL1Deposit  : bridgeInput + depositAggregatorInput => bridgeOutput + stateOutput + changeOutput
     // finalizeL2Deposit: bridgeInput + feeInput => bridgeOutput + stateOutput + changeOutput
     // withdrawTx: bridgeInput + feeInput => bridgeOutput + bridgeStateOutput + expanderOutput + expanderStateOutput + changeOutput
     let nOutputs: bigint = tx.expanderAmt == 0n ? 2n : 4n
@@ -280,14 +282,14 @@ export class Bridge extends SmartContract {
 
     return hash256(
       tx.ver +
-      tx.inputs +
-      nOutputsByteString +
-      GeneralUtils.getContractOutput(tx.contractAmt, tx.contractSPK) +
-      GeneralUtils.getStateOutput(stateHash) +
-      expanderOut +
-      expanderStateOut +
-      tx.changeOutput +
-      tx.locktime
+        tx.inputs +
+        nOutputsByteString +
+        GeneralUtils.getContractOutput(tx.contractAmt, tx.contractSPK) +
+        GeneralUtils.getStateOutput(stateHash) +
+        expanderOut +
+        expanderStateOut +
+        tx.changeOutput +
+        tx.locktime
     )
   }
 
@@ -299,10 +301,10 @@ export class Bridge extends SmartContract {
   ): Sha256 {
     return sha256(
       prevStateTxId +
-      toByteString('00000000') +
-      aggregatorTxId +
-      toByteString('00000000') +
-      feePrevout
+        toByteString('00000000') +
+        aggregatorTxId +
+        toByteString('00000000') +
+        feePrevout
     )
   }
 

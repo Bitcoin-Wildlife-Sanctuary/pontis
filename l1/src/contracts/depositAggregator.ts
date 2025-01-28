@@ -78,6 +78,8 @@ export class DepositAggregator extends SmartContract {
     depositData1: DepositData,
     changeOutput: ByteString
   ) {
+    // todo check two aggregator same level
+
     // Check sighash preimage.
     const s = SigHashUtils.checkSHPreimage(shPreimage)
     assert(this.checkSig(s, SigHashUtils.Gx))
@@ -144,21 +146,21 @@ export class DepositAggregator extends SmartContract {
       // Input structure: ancestorTxId + output index (0000000000) + nSequence (ffffffff)
       assert(
         prevTx0.inputContract0 ==
-        ancestorTxId0 + toByteString('0000000000ffffffff')
+          ancestorTxId0 + toByteString('0000000000ffffffff')
       )
       assert(
         prevTx0.inputContract1 ==
-        ancestorTxId1 + toByteString('0000000000ffffffff')
+          ancestorTxId1 + toByteString('0000000000ffffffff')
       )
 
       // Check prevTx1 unlocks ancestorTx2 and ancestorTx3.
       assert(
         prevTx1.inputContract0 ==
-        ancestorTxId2 + toByteString('0000000000ffffffff')
+          ancestorTxId2 + toByteString('0000000000ffffffff')
       )
       assert(
         prevTx1.inputContract1 ==
-        ancestorTxId3 + toByteString('0000000000ffffffff')
+          ancestorTxId3 + toByteString('0000000000ffffffff')
       )
 
       // Check ancestors have same contract SPK as prev txns.
@@ -256,24 +258,30 @@ export class DepositAggregator extends SmartContract {
 
     if (prevTxLevel !== 0n) {
       // Construct ancestor TX IDs.
-      const ancestorTxId0 = AggregatorUtils.getTxId(ancestorTx0, prevTxLevel === 1n)
-      const ancestorTxId1 = AggregatorUtils.getTxId(ancestorTx1, prevTxLevel === 1n)
+      const ancestorTxId0 = AggregatorUtils.getTxId(
+        ancestorTx0,
+        prevTxLevel === 1n
+      )
+      const ancestorTxId1 = AggregatorUtils.getTxId(
+        ancestorTx1,
+        prevTxLevel === 1n
+      )
 
       // Check prevTx unlocks ancestorTx0 and ancestorTx1.
       assert(
         prevTx.inputContract0 ==
-        ancestorTxId0 + toByteString('0000000000ffffffff')
+          ancestorTxId0 + toByteString('0000000000ffffffff')
       )
       assert(
         prevTx.inputContract1 ==
-        ancestorTxId1 + toByteString('0000000000ffffffff')
+          ancestorTxId1 + toByteString('0000000000ffffffff')
       )
 
       // Check ancestors have same contract SPK as prev tx.
       assert(prevTx.outputContractSPK == ancestorTx0.outputContractSPK)
       assert(prevTx.outputContractSPK == ancestorTx1.outputContractSPK)
     }
-    assert(true);
+    assert(true)
   }
 
   @method()
@@ -284,7 +292,7 @@ export class DepositAggregator extends SmartContract {
   ): Sha256 {
     return hash256(
       MerklePath.levelToByteString(level) +
-      sha256(depositAddress + GeneralUtils.padAmt(depositAmt))
+        sha256(depositAddress + GeneralUtils.padAmt(depositAmt))
     )
   }
 

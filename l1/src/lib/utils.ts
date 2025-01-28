@@ -2,7 +2,14 @@ import { Tap } from '@cmdcode/tapscript'
 import { btc, LEAF_VERSION_TAPSCRIPT } from './btc'
 import { SupportedNetwork, TAPROOT_ONLY_SCRIPT_SPENT_KEY } from './constants'
 import * as btcSigner from '@scure/btc-signer'
-import { Network, networks, payments, Psbt, TxInput } from '@scrypt-inc/bitcoinjs-lib'
+import {
+  Network,
+  networks,
+  payments,
+  Psbt,
+  TxInput,
+  address as bitcoinjsAddress,
+} from '@scrypt-inc/bitcoinjs-lib'
 import { randomBytes } from 'crypto'
 import {
   ByteString,
@@ -15,11 +22,10 @@ import {
 import { encodingLength, encode } from 'varuint-bitcoin'
 import * as tools from 'uint8array-tools'
 import * as bitcoinjs from '@scrypt-inc/bitcoinjs-lib'
-import * as ecc from '@bitcoinerlab/secp256k1';
-import ECPairFactory from 'ecpair';
+import * as ecc from '@bitcoinerlab/secp256k1'
+import ECPairFactory from 'ecpair'
 
-const ECPair = ECPairFactory(ecc);
-
+const ECPair = ECPairFactory(ecc)
 
 export type Optional<T, K extends keyof T> = Omit<T, K> & Partial<T>
 
@@ -136,11 +142,11 @@ export function getUnfinalizedTxId(psbt: Psbt): string {
 }
 
 export function getDummyAddress(): string {
-  const privateKey = ECPair.makeRandom().publicKey.subarray(1, 33);
+  const privateKey = ECPair.makeRandom().publicKey.subarray(1, 33)
   const { address } = payments.p2tr({
     internalPubkey: privateKey,
   })
-  return address;
+  return address
 }
 
 export function getDummyPubKey(): PubKey {
@@ -160,7 +166,7 @@ export function getDummyLengthedScript(): ByteString {
 }
 
 export function getDummyUtxo(address?: string, satoshis?: number): UTXO {
-  address = address || getDummyAddress();
+  address = address || getDummyAddress()
   const addr = btc.Address.fromString(address)
   return {
     // address: addr.toString(),
@@ -378,8 +384,12 @@ export function script2Addr(script: Buffer) {
   }
 }
 
+export function addressToScript(address: string) {
+  const buf = bitcoinjsAddress.toOutputScript(address)
+  return tools.toHex(buf)
+}
 export function btcToSatoshis(btc: number): bigint {
-  const sat = btc * 1e8;
+  const sat = btc * 1e8
   if (Math.round(sat) !== sat) {
     throw new Error('invalid btc value, decimal exceed 8')
   }

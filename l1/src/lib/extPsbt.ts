@@ -317,9 +317,9 @@ export class ExtPsbt extends Psbt {
     return toSignInputs.length === 0
       ? undefined
       : {
-        autoFinalized,
-        toSignInputs,
-      }
+          autoFinalized,
+          toSignInputs,
+        }
   }
 
   setInputFinalizer(inputIndex: InputIndex, finalizer: AsyncFinalizer): this {
@@ -382,13 +382,13 @@ export class ExtPsbt extends Psbt {
         const tapleafHashMatch =
           !options.tapLeafHashToSign ||
           Buffer.from(tapScriptSig.leafHash).toString('hex') ===
-          options.tapLeafHashToSign
+            options.tapLeafHashToSign
         const pubKeyMatch =
           !options.publicKey ||
           Buffer.from(tapScriptSig.pubkey).toString('hex') ===
-          toXOnly(options.publicKey, true) ||
+            toXOnly(options.publicKey, true) ||
           Buffer.from(tapScriptSig.pubkey).toString('hex') ===
-          toXOnly(options.publicKey, false)
+            toXOnly(options.publicKey, false)
         return tapleafHashMatch && pubKeyMatch
       })
       if (tsSig) {

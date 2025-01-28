@@ -32,7 +32,7 @@ export class TestChainProvider implements ChainProvider {
 
 export class TestUtxoProvider implements UtxoProvider {
   constructor() {}
-  markSpent(_txId: string,   _vout: number): void {}
+  markSpent(_txId: string, _vout: number): void {}
   addNewUTXO(_utxo: UTXO): void {}
 
   async getUtxos(
