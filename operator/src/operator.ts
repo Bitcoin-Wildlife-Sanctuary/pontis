@@ -62,7 +62,7 @@ function stateToTransactions<S, T>(
       [new Set<T>(), new Set<T>()]
     ),
     map(([_, newTxs]) => newTxs),
-    mergeMap(txs => from(txs)),
+    mergeMap((txs) => from(txs)),
     mergeMap(transactionStatus)
   );
 }
