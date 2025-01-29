@@ -1,14 +1,19 @@
 import { filter, Observable, Subject } from 'rxjs';
 import {
   BridgeEvent,
+  ClockEvent,
   L1TxHashAndStatus,
   L2TxHashAndStatus,
   Transaction,
 } from './state';
 
-export type MockEvent = { delay: number; event: BridgeEvent | Transaction };
+export type MockEvent = {
+  delay: number;
+  event: BridgeEvent | Transaction | ClockEvent;
+};
 
 export type MockedOperatorEnvironment = {
+  clock: Observable<ClockEvent>;
   l1Events: Observable<BridgeEvent>;
   l2Events: Observable<BridgeEvent>;
   l1TxStatus: (tx: L1TxHashAndStatus) => Observable<L1TxHashAndStatus>;
@@ -17,6 +22,7 @@ export type MockedOperatorEnvironment = {
 };
 
 export function mocked(events: MockEvent[]): MockedOperatorEnvironment {
+  const clock = new Subject<ClockEvent>();
   const l1Events = new Subject<BridgeEvent>();
   const l2Events = new Subject<BridgeEvent>();
   const l1TxStatus = new Subject<L1TxHashAndStatus>();
@@ -26,6 +32,9 @@ export function mocked(events: MockEvent[]): MockedOperatorEnvironment {
     for (const { delay, event } of events) {
       await sleep(delay);
       switch (event.type) {
+        case 'clock':
+          clock.next(event);
+          break;
         case 'l2event':
           l2Events.next(event);
           break;
@@ -47,6 +56,7 @@ export function mocked(events: MockEvent[]): MockedOperatorEnvironment {
   }
 
   return {
+    clock,
     l2Events,
     l1Events,
     l1TxStatus: (tx: L1TxHashAndStatus) =>

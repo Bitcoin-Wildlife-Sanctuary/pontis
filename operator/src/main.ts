@@ -52,6 +52,13 @@ async function mockedOperator() {
     {
       delay: 0,
       event: {
+        type: 'clock',
+        timestamp: 1000,
+      },
+    },
+    {
+      delay: 0,
+      event: {
         type: 'deposits',
         blockNumber: 1,
         deposits: [
@@ -110,6 +117,13 @@ async function mockedOperator() {
       },
     },
     {
+      delay: 1000,
+      event: {
+        type: 'clock',
+        timestamp: 3000 + 30 * 60000,
+      },
+    },
+    {
       delay: 100,
       event: {
         type: 'deposits',
@@ -123,7 +137,7 @@ async function mockedOperator() {
               hash: '0xabe',
               status: 'Mined',
               blockNumber: 3,
-              timestamp: 4000,
+              timestamp: 4000 + 30 * 60000,
             },
           },
         ],
@@ -132,6 +146,7 @@ async function mockedOperator() {
   ];
 
   const initialState: OperatorState = {
+    timestamp: 0,
     l1BlockNumber: 0,
     l2BlockNumber: 0,
     total: 0n,
@@ -142,10 +157,12 @@ async function mockedOperator() {
 
   function saveState(state: OperatorState) {}
 
-  const { l1Events, l2Events, l1TxStatus, l2TxStatus, start } = mocked(events);
+  const { clock, l1Events, l2Events, l1TxStatus, l2TxStatus, start } =
+    mocked(events);
 
   const operator = setupOperator(
     initialState,
+    clock,
     l1Events,
     l2Events,
     l1TxStatus,

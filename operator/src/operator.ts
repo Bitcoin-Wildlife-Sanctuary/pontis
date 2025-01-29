@@ -16,11 +16,13 @@ import {
   shareReplay,
   Subject,
   tap,
+  timer,
   UnaryFunction,
 } from 'rxjs';
 import {
   applyChange,
   BridgeEvent,
+  ClockEvent,
   L1TxHashAndStatus,
   l2EventToEvent,
   L2TxHashAndStatus,
@@ -67,25 +69,34 @@ function stateToTransactions<S, T>(
   );
 }
 
-function operatorLoop<E, T, S>(
+function operatorLoop<C, E, T, S>(
+  clock: Observable<C>,
   events: Observable<E>,
   transactionsFromState: (state: S) => Set<T>,
   transactionStatus: (tx: T) => Observable<T>,
-  applyChange: (state: S, change: E | T) => Observable<S>,
+  applyChange: (state: S, change: C | E | T) => Observable<S>,
   initialState: S
 ): Observable<S> {
   const state = new BehaviorSubject<S>(initialState);
   const transactions = state.pipe(
     stateToTransactions(transactionsFromState, transactionStatus)
   );
-  return merge(events, transactions).pipe(
+  return merge(clock, events, transactions).pipe(
     mergeScan(applyChange, initialState, 1),
     tap(state)
   );
 }
 
+export function clock(): Observable<ClockEvent> {
+  return timer(0, 1000).pipe(
+    map(() => Date.now()),
+    map((timestamp) => ({ type: 'clock', timestamp }))
+  );
+}
+
 export function setupOperator(
   initialState: OperatorState,
+  clock: Observable<ClockEvent>,
   l1Events: Observable<BridgeEvent>,
   l2Events: Observable<BridgeEvent>,
   l1TxStatus: (tx: L1TxHashAndStatus) => Observable<L1TxHashAndStatus>,
@@ -109,6 +120,7 @@ export function setupOperator(
   }
 
   return operatorLoop(
+    clock,
     merge(l1Events, l2Events),
     transactionsFromState,
     transactionStatus,

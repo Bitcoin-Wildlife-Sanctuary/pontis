@@ -132,6 +132,7 @@ type WithdrawalBatch =
     } & WithdrawalBatchCommon);
 
 export type OperatorState = {
+  timestamp: number;
   l1BlockNumber: number;
   l2BlockNumber: number;
   total: bigint;
@@ -148,6 +149,8 @@ export type Deposits = {
 
 export type BridgeEvent = ({ type: 'l2event' } & L2Event) | Deposits;
 
+export type ClockEvent = { type: 'clock'; timestamp: number };
+
 export type Transaction = L1TxHashAndStatus | L2TxHashAndStatus;
 
 export function l2EventToEvent(e: L2Event): BridgeEvent {
@@ -156,8 +159,10 @@ export function l2EventToEvent(e: L2Event): BridgeEvent {
 
 export function applyChange(
   state: OperatorState,
-  change: BridgeEvent | Transaction
+  change: BridgeEvent | Transaction | ClockEvent
 ): Observable<OperatorState> {
+  console.log('Applying change:', change);
+
   const newState = cloneDeep(state);
 
   // update recent block numbers, etc
@@ -201,6 +206,11 @@ export function applyChange(
       handleL1Tx(newState, change);
       break;
     }
+    case 'clock': {
+      newState.timestamp = change.timestamp;
+      aggregateDeposits(newState);
+      break;
+    }
     default: {
       const _exhaustiveCheck: never = change;
       return _exhaustiveCheck;
@@ -214,7 +224,7 @@ function handleL1Tx(newState: OperatorState, change: L1TxHashAndStatus) {
 }
 
 const DEPOSIT_BATCH_SIZE = 4;
-const MAX_DEPOSIT_PENDIND = 30 * 60; // 30 minutes
+const MAX_DEPOSIT_PENDIND = 30 * 60000; // 30 minutes
 
 function handleDeposits(state: OperatorState, change: Deposits) {
   // console.log('Handling deposits:', change);
@@ -227,7 +237,7 @@ function handleDeposits(state: OperatorState, change: Deposits) {
 function aggregateDeposits(state: OperatorState) {
   while (
     state.pendingDeposits.length >= DEPOSIT_BATCH_SIZE ||
-    waitedLongEnough(state.pendingDeposits)
+    waitedLongEnough(state)
   ) {
     const deposits = state.pendingDeposits.splice(0, DEPOSIT_BATCH_SIZE);
     state.pendingDeposits = state.pendingDeposits.slice(DEPOSIT_BATCH_SIZE);
@@ -241,9 +251,9 @@ function aggregateDeposits(state: OperatorState) {
   }
 }
 
-function waitedLongEnough(pendingDeposits: Deposit[]): boolean {
-  for (const deposit of pendingDeposits) {
-    if (deposit.origin.timestamp + MAX_DEPOSIT_PENDIND > Date.now()) {
+function waitedLongEnough(state: OperatorState): boolean {
+  for (const deposit of state.pendingDeposits) {
+    if (deposit.origin.timestamp + MAX_DEPOSIT_PENDIND < state.timestamp) {
       return true;
     }
   }
