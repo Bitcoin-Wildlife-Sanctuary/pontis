@@ -3,7 +3,7 @@ import { Account, RpcProvider } from 'starknet';
 import { contractEvents } from './l2/events';
 import { init, basicFlow } from './l2/contracts';
 import * as devnet from './l2/devnet';
-import { OperatorState } from './state';
+import { applyChange, OperatorState } from './state';
 import { setupOperator } from './operator';
 import { mocked, MockEvent } from './mock';
 import { tap } from 'rxjs';
@@ -167,6 +167,7 @@ async function mockedOperator() {
     l2Events,
     l1TxStatus,
     l2TxStatus,
+    applyChange,
     saveState
   );
 

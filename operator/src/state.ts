@@ -157,10 +157,12 @@ export function l2EventToEvent(e: L2Event): BridgeEvent {
   return { type: 'l2event', ...e };
 }
 
-export function applyChange(
+export type OperatorChange = BridgeEvent | Transaction | ClockEvent;
+
+export async function applyChange(
   state: OperatorState,
-  change: BridgeEvent | Transaction | ClockEvent
-): Observable<OperatorState> {
+  change: OperatorChange
+): Promise<OperatorState> {
   console.log('Applying change:', change);
 
   const newState = cloneDeep(state);
@@ -216,7 +218,7 @@ export function applyChange(
       return _exhaustiveCheck;
     }
   }
-  return of(newState);
+  return newState;
 }
 
 function handleL1Tx(newState: OperatorState, change: L1TxHashAndStatus) {

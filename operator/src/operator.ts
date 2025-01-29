@@ -26,6 +26,7 @@ import {
   L1TxHashAndStatus,
   l2EventToEvent,
   L2TxHashAndStatus,
+  OperatorChange,
   OperatorState,
   Transaction,
 } from './state';
@@ -101,6 +102,10 @@ export function setupOperator(
   l2Events: Observable<BridgeEvent>,
   l1TxStatus: (tx: L1TxHashAndStatus) => Observable<L1TxHashAndStatus>,
   l2TxStatus: (tx: L2TxHashAndStatus) => Observable<L2TxHashAndStatus>,
+  applyChange: (
+    state: OperatorState,
+    change: OperatorChange
+  ) => Promise<OperatorState>,
   saveState: (state: OperatorState) => void
 ): Observable<OperatorState> {
   function transactionsFromState(state: OperatorState): Set<Transaction> {
@@ -124,7 +129,8 @@ export function setupOperator(
     merge(l1Events, l2Events),
     transactionsFromState,
     transactionStatus,
-    applyChange,
+    (state: OperatorState, change: OperatorChange) =>
+      from(applyChange(state, change)),
     initialState
   ).pipe(distinctUntilChanged(isEqual), tap(saveState));
 }
