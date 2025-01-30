@@ -1,7 +1,7 @@
-import { filter, Observable, Subject } from 'rxjs';
+import { BehaviorSubject, filter, map, Observable, Subject } from 'rxjs';
 import {
   BridgeEvent,
-  ClockEvent,
+  TickEvent,
   L1TxHashAndStatus,
   L2TxHashAndStatus,
   Transaction,
@@ -9,20 +9,22 @@ import {
 
 export type MockEvent = {
   delay: number;
-  event: BridgeEvent | Transaction | ClockEvent;
+  event: BridgeEvent | Transaction | TickEvent;
 };
 
 export type MockedOperatorEnvironment = {
-  clock: Observable<ClockEvent>;
+  clock: Observable<TickEvent>;
   l1Events: Observable<BridgeEvent>;
   l2Events: Observable<BridgeEvent>;
   l1TxStatus: (tx: L1TxHashAndStatus) => Observable<L1TxHashAndStatus>;
   l2TxStatus: (tx: L2TxHashAndStatus) => Observable<L2TxHashAndStatus>;
   start: () => Promise<void>;
+  lastTick: BehaviorSubject<number>;
+  lastL1BlockNumber: BehaviorSubject<number>;
 };
 
 export function mocked(events: MockEvent[]): MockedOperatorEnvironment {
-  const clock = new Subject<ClockEvent>();
+  const clock = new Subject<TickEvent>();
   const l1Events = new Subject<BridgeEvent>();
   const l2Events = new Subject<BridgeEvent>();
   const l1TxStatus = new Subject<L1TxHashAndStatus>();
@@ -32,7 +34,7 @@ export function mocked(events: MockEvent[]): MockedOperatorEnvironment {
     for (const { delay, event } of events) {
       await sleep(delay);
       switch (event.type) {
-        case 'clock':
+        case 'tick':
           clock.next(event);
           break;
         case 'l2event':
@@ -55,15 +57,30 @@ export function mocked(events: MockEvent[]): MockedOperatorEnvironment {
     await sleep(1000);
   }
 
+  const lastTick = new BehaviorSubject<number>(0);
+  clock.pipe(map((tick) => tick.timestamp)).subscribe(lastTick);
+
+  const lastL1BlockNumber = new BehaviorSubject<number>(0);
+  l1TxStatus.pipe(map((tx) => tx.blockNumber)).subscribe(lastL1BlockNumber);
+
   return {
     clock,
     l2Events,
     l1Events,
-    l1TxStatus: (tx: L1TxHashAndStatus) =>
-      l1TxStatus.pipe(filter(({ hash }) => tx.hash === hash)),
-    l2TxStatus: (tx: L2TxHashAndStatus) =>
-      l2TxStatus.pipe(filter(({ hash }) => tx.hash === hash)),
+    l1TxStatus: (initialTx: L1TxHashAndStatus) =>
+      l1TxStatus.pipe(
+        filter((tx) => initialTx.hash === tx.hash),
+        map((tx) => ({
+          ...tx,
+          blockNumber: initialTx.blockNumber,
+          timestamp: initialTx.timestamp,
+        }))
+      ),
+    l2TxStatus: (initialTx: L2TxHashAndStatus) =>
+      l2TxStatus.pipe(filter((tx) => initialTx.hash === tx.hash)),
     start,
+    lastTick,
+    lastL1BlockNumber,
   };
 }
 

@@ -1,6 +1,4 @@
 import {
-  asapScheduler,
-  asyncScheduler,
   BehaviorSubject,
   distinctUntilChanged,
   from,
@@ -9,42 +7,30 @@ import {
   mergeMap,
   mergeScan,
   Observable,
-  observeOn,
-  of,
   pipe,
   scan,
-  shareReplay,
-  Subject,
   tap,
   timer,
-  UnaryFunction,
 } from 'rxjs';
 import {
-  applyChange,
   BridgeEvent,
-  ClockEvent,
+  TickEvent,
+  getAllL1Txs,
   L1TxHashAndStatus,
-  l2EventToEvent,
   L2TxHashAndStatus,
   OperatorChange,
   OperatorState,
   Transaction,
+  BridgeEnvironment,
 } from './state';
-import { RpcProvider } from 'starknet';
-import { L2Event, l2Events } from './l2/events';
-import {
-  getAllL1Txs,
-  getAllL2Txs,
-  l2TransactionStatus,
-} from './l2/transactions';
-import * as _ from 'lodash';
-import { isEqual } from 'lodash';
+import { difference, isEqual, some } from 'lodash';
+import { deepEqual } from 'assert';
 
-function diff<T>(a: Set<T>, b: Set<T>): Set<T> {
-  const result = new Set<T>();
+function diff<T>(a: T[], b: T[]): T[] {
+  const result = [];
   for (const e of a) {
-    if (!b.has(e)) {
-      result.add(e);
+    if (!b.find((x) => isEqual(x, e))) {
+      result.push(e);
     }
   }
   return result;
@@ -55,61 +41,67 @@ function mapSet<T, U>(input: Set<T>, fn: (item: T) => U): Set<U> {
 }
 
 function stateToTransactions<S, T>(
-  transactionsFromState: (state: S) => Set<T>,
+  transactionsFromState: (state: S) => T[],
   transactionStatus: (tx: T) => Observable<T>
 ) {
   return pipe(
     map(transactionsFromState),
     scan(
-      ([allTxs, _], currentTxs) => [currentTxs, diff(currentTxs, allTxs)],
-      [new Set<T>(), new Set<T>()]
+      ([previousAllTxs, _]: T[][], currentAllTxs: T[]) => [
+        currentAllTxs,
+        diff(currentAllTxs, previousAllTxs),
+      ],
+      [[], []]
     ),
+    // tap(([allTxs, newTxs]) => console.log('all:', allTxs, 'new:', newTxs)),
     map(([_, newTxs]) => newTxs),
     mergeMap((txs) => from(txs)),
     mergeMap(transactionStatus)
   );
 }
 
-function operatorLoop<C, E, T, S>(
-  clock: Observable<C>,
+function operatorLoop<E, T, S>(
   events: Observable<E>,
-  transactionsFromState: (state: S) => Set<T>,
+  transactionsFromState: (state: S) => T[],
   transactionStatus: (tx: T) => Observable<T>,
-  applyChange: (state: S, change: C | E | T) => Observable<S>,
+  applyChange: (state: S, change: E | T) => Observable<S>,
   initialState: S
 ): Observable<S> {
   const state = new BehaviorSubject<S>(initialState);
   const transactions = state.pipe(
     stateToTransactions(transactionsFromState, transactionStatus)
   );
-  return merge(clock, events, transactions).pipe(
+  return merge(events, transactions).pipe(
+    tap((change) => console.log('change:', change)),
     mergeScan(applyChange, initialState, 1),
     tap(state)
   );
 }
 
-export function clock(): Observable<ClockEvent> {
+export function clock(): Observable<TickEvent> {
   return timer(0, 1000).pipe(
     map(() => Date.now()),
-    map((timestamp) => ({ type: 'clock', timestamp }))
+    map((timestamp) => ({ type: 'tick', timestamp }))
   );
 }
 
 export function setupOperator(
   initialState: OperatorState,
-  clock: Observable<ClockEvent>,
+  environment: BridgeEnvironment,
+  clock: Observable<TickEvent>,
   l1Events: Observable<BridgeEvent>,
   l2Events: Observable<BridgeEvent>,
   l1TxStatus: (tx: L1TxHashAndStatus) => Observable<L1TxHashAndStatus>,
   l2TxStatus: (tx: L2TxHashAndStatus) => Observable<L2TxHashAndStatus>,
   applyChange: (
+    environment: BridgeEnvironment,
     state: OperatorState,
     change: OperatorChange
   ) => Promise<OperatorState>,
   saveState: (state: OperatorState) => void
 ): Observable<OperatorState> {
-  function transactionsFromState(state: OperatorState): Set<Transaction> {
-    return new Set([...getAllL1Txs(state), ...getAllL2Txs(state)]);
+  function transactionsFromState(state: OperatorState): Transaction[] {
+    return [...getAllL1Txs(state) /*...getAllL2Txs(state) */];
   }
 
   function transactionStatus(tx: Transaction): Observable<Transaction> {
@@ -125,12 +117,11 @@ export function setupOperator(
   }
 
   return operatorLoop(
-    clock,
-    merge(l1Events, l2Events),
+    merge(clock, l1Events, l2Events),
     transactionsFromState,
     transactionStatus,
     (state: OperatorState, change: OperatorChange) =>
-      from(applyChange(state, change)),
+      from(applyChange(environment, state, change)),
     initialState
   ).pipe(distinctUntilChanged(isEqual), tap(saveState));
 }

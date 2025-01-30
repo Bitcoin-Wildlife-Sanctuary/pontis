@@ -41,7 +41,11 @@ async function eventParser(
     events.parseEvents([rawEvent], abiEvents, abiStructs, abiEnums)[0];
 }
 
-export type L2Event = { blockNumber: number; parsedEvent: ParsedEvent };
+export type L2Event = {
+  type: 'l2event';
+  blockNumber: number;
+  parsedEvent: ParsedEvent;
+};
 
 function contractEventsInRange(
   provider: Provider,
@@ -69,7 +73,7 @@ function contractEventsInRange(
           for (const rawEvent of events) {
             const blockNumber = rawEvent.block_number;
             const parsedEvent = parseEvents(rawEvent);
-            subscriber.next({ blockNumber, parsedEvent });
+            subscriber.next({ type: 'l2event', blockNumber, parsedEvent });
           }
           continuationToken = response.continuation_token;
         } while (continuationToken);

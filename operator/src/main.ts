@@ -3,10 +3,17 @@ import { Account, RpcProvider } from 'starknet';
 import { contractEvents } from './l2/events';
 import { init, basicFlow } from './l2/contracts';
 import * as devnet from './l2/devnet';
-import { applyChange, OperatorState } from './state';
+import {
+  applyChange,
+  BridgeEnvironment,
+  L1TxHashAndStatus,
+  OperatorState,
+  TickEvent,
+} from './state';
 import { setupOperator } from './operator';
 import { mocked, MockEvent } from './mock';
-import { tap } from 'rxjs';
+import { BehaviorSubject, finalize, tap } from 'rxjs';
+import { aggregateDeposits, finalizeBatch } from './l1/l1mocks';
 
 async function example1() {
   const provider = new RpcProvider({ nodeUrl: 'http://127.0.0.1:5050/rpc' });
@@ -49,18 +56,19 @@ async function example1() {
 
 async function mockedOperator() {
   const events: MockEvent[] = [
+    // tick
     {
       delay: 0,
       event: {
-        type: 'clock',
+        type: 'tick',
         timestamp: 1000,
       },
     },
+    // first deposit
     {
       delay: 0,
       event: {
         type: 'deposits',
-        blockNumber: 1,
         deposits: [
           {
             amount: 100n,
@@ -76,11 +84,11 @@ async function mockedOperator() {
         ],
       },
     },
+    // second deposit
     {
-      delay: 100,
+      delay: 10,
       event: {
         type: 'deposits',
-        blockNumber: 2,
         deposits: [
           {
             amount: 200n,
@@ -96,11 +104,11 @@ async function mockedOperator() {
         ],
       },
     },
+    // third and fourth deposit
     {
-      delay: 100,
+      delay: 10,
       event: {
         type: 'deposits',
-        blockNumber: 3,
         deposits: [
           {
             amount: 300n,
@@ -113,22 +121,6 @@ async function mockedOperator() {
               timestamp: 3000,
             },
           },
-        ],
-      },
-    },
-    {
-      delay: 1000,
-      event: {
-        type: 'clock',
-        timestamp: 3000 + 30 * 60000,
-      },
-    },
-    {
-      delay: 100,
-      event: {
-        type: 'deposits',
-        blockNumber: 4,
-        deposits: [
           {
             amount: 400n,
             recipient: '0x126',
@@ -136,13 +128,80 @@ async function mockedOperator() {
               type: 'l1tx',
               hash: '0xabe',
               status: 'Mined',
-              blockNumber: 3,
-              timestamp: 4000 + 30 * 60000,
+              blockNumber: 4,
+              timestamp: 6000,
             },
           },
         ],
       },
     },
+    // tick
+    {
+      delay: 10,
+      event: {
+        type: 'tick',
+        timestamp: 6000,
+      },
+    },
+    // fourth deposit
+    {
+      delay: 100,
+      event: {
+        type: 'deposits',
+        deposits: [
+          {
+            amount: 500n,
+            recipient: '0x127',
+            origin: {
+              type: 'l1tx',
+              hash: '0xabe',
+              status: 'Mined',
+              blockNumber: 5,
+              timestamp: 7000,
+            },
+          },
+        ],
+      },
+    },
+    // tick
+    {
+      delay: 10,
+      event: {
+        type: 'tick',
+        timestamp: 15000,
+      },
+    },
+    // tick
+    {
+      delay: 10,
+      event: {
+        type: 'tick',
+        timestamp: 16000,
+      },
+    },
+
+    // // aggregation tx status
+    // {
+    //   delay: 10,
+    //   event: {
+    //     type: 'l1tx',
+    //     hash: '0xabcabd',
+    //     status: 'Confirmed',
+    //     blockNumber: 3,
+    //     timestamp: 1804000,
+    //   },
+    // },
+    // // aggregation tx status
+    // {
+    //   delay: 10,
+    //   event: {
+    //     type: 'l1tx',
+    //     hash: '0xabcabd',
+    //     status: 'Mined',
+    //     blockNumber: 3,
+    //     timestamp: 1804000,
+    //   },
+    // },
   ];
 
   const initialState: OperatorState = {
@@ -157,11 +216,29 @@ async function mockedOperator() {
 
   function saveState(state: OperatorState) {}
 
-  const { clock, l1Events, l2Events, l1TxStatus, l2TxStatus, start } =
-    mocked(events);
+  const {
+    clock,
+    l1Events,
+    l2Events,
+    l1TxStatus,
+    l2TxStatus,
+    start,
+    lastTick,
+    lastL1BlockNumber,
+  } = mocked(events);
+
+  const env: BridgeEnvironment = {
+    DEPOSIT_BATCH_SIZE: 4,
+    MAX_PENDING_DEPOSITS: 4000,
+    aggregateDeposits: async (txs: L1TxHashAndStatus[]) =>
+      aggregateDeposits(txs, lastL1BlockNumber.value, lastTick.value),
+    finalizeBatch: async (tx: L1TxHashAndStatus) =>
+      finalizeBatch(tx, lastL1BlockNumber.value, lastTick.value),
+  };
 
   const operator = setupOperator(
     initialState,
+    env,
     clock,
     l1Events,
     l2Events,
@@ -171,11 +248,9 @@ async function mockedOperator() {
     saveState
   );
 
-  //.pipe(tap((state) => console.dir(state, { depth: null })));
-
   operator.subscribe({
     next: (state) => {
-      console.log('State:');
+      console.log('state:');
       console.dir(state, { depth: null });
     },
     error: console.error,
