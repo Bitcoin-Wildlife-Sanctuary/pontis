@@ -22,11 +22,14 @@ import {
   OperatorState,
   Transaction,
   BridgeEnvironment,
+  TransactionId,
+  L2TxId,
+  L1TxId,
 } from './state';
 import { difference, isEqual, some } from 'lodash';
 import { deepEqual } from 'assert';
 
-function diff<T>(a: T[], b: T[]): T[] {
+function diff<TI>(a: TI[], b: TI[]): TI[] {
   const result = [];
   for (const e of a) {
     if (!b.find((x) => isEqual(x, e))) {
@@ -36,14 +39,14 @@ function diff<T>(a: T[], b: T[]): T[] {
   return result;
 }
 
-function stateToTransactions<S, T>(
-  transactionsFromState: (state: S) => T[],
-  transactionStatus: (tx: T) => Observable<T>
+function stateToTransactions<S, T, TI>(
+  transactionsFromState: (state: S) => TI[],
+  transactionStatus: (tx: TI) => Observable<T>
 ) {
   return pipe(
     map(transactionsFromState),
     scan(
-      ([previousAllTxs, _]: T[][], currentAllTxs: T[]) => [
+      ([previousAllTxs, _]: TI[][], currentAllTxs: TI[]) => [
         currentAllTxs,
         diff(currentAllTxs, previousAllTxs),
       ],
@@ -56,10 +59,10 @@ function stateToTransactions<S, T>(
   );
 }
 
-function operatorLoop<E, T, S>(
+function operatorLoop<E, T, TI, S>(
   events: Observable<E>,
-  transactionsFromState: (state: S) => T[],
-  transactionStatus: (tx: T) => Observable<T>,
+  transactionsFromState: (state: S) => TI[],
+  transactionStatus: (tx: TI) => Observable<T>,
   applyChange: (state: S, change: E | T) => Observable<S>,
   initialState: S
 ): Observable<S> {
@@ -91,8 +94,8 @@ export function setupOperator(
   clock: Observable<TickEvent>,
   l1Events: Observable<BridgeEvent>,
   l2Events: Observable<BridgeEvent>,
-  l1TxStatus: (tx: L1TxHashAndStatus) => Observable<L1TxHashAndStatus>,
-  l2TxStatus: (tx: L2TxHashAndStatus) => Observable<L2TxHashAndStatus>,
+  l1TxStatus: (tx: L1TxId) => Observable<L1TxHashAndStatus>,
+  l2TxStatus: (tx: L2TxId) => Observable<L2TxHashAndStatus>,
   applyChange: (
     environment: BridgeEnvironment,
     state: OperatorState,
@@ -100,11 +103,11 @@ export function setupOperator(
   ) => Promise<OperatorState>,
   saveState: (state: OperatorState) => void
 ): Observable<OperatorState> {
-  function transactionsFromState(state: OperatorState): Transaction[] {
+  function transactionsFromState(state: OperatorState): TransactionId[] {
     return [...getAllL1Txs(state) /*...getAllL2Txs(state) */];
   }
 
-  function transactionStatus(tx: Transaction): Observable<Transaction> {
+  function transactionStatus(tx: TransactionId): Observable<Transaction> {
     switch (tx.type) {
       case 'l1tx':
         return l1TxStatus(tx);

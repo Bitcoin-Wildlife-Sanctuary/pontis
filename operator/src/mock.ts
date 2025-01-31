@@ -5,6 +5,8 @@ import {
   L1TxHashAndStatus,
   L2TxHashAndStatus,
   Transaction,
+  L2TxId,
+  L1TxId,
 } from './state';
 
 export type AdvanceClock = { type: 'advance_clock'; delta: number };
@@ -15,8 +17,8 @@ export type MockedOperatorEnvironment = {
   clock: Observable<TickEvent>;
   l1Events: Observable<BridgeEvent>;
   l2Events: Observable<BridgeEvent>;
-  l1TxStatus: (tx: L1TxHashAndStatus) => Observable<L1TxHashAndStatus>;
-  l2TxStatus: (tx: L2TxHashAndStatus) => Observable<L2TxHashAndStatus>;
+  l1TxStatus: (tx: L1TxId) => Observable<L1TxHashAndStatus>;
+  l2TxStatus: (tx: L2TxId) => Observable<L2TxHashAndStatus>;
   start: () => Promise<void>;
   lastTick: BehaviorSubject<number>;
   lastL1BlockNumber: BehaviorSubject<number>;
@@ -48,9 +50,6 @@ export function mocked(events: MockEvent[]): MockedOperatorEnvironment {
           l1Events.next(event);
           break;
         case 'l1tx':
-          if (event.hash === '0xfff0xabe') {
-            console.log('tx:', event);
-          }
           l1TxStatus.next(event);
           break;
         case 'l2tx':
@@ -81,19 +80,19 @@ export function mocked(events: MockEvent[]): MockedOperatorEnvironment {
     clock,
     l2Events,
     l1Events,
-    l1TxStatus: (initialTx: L1TxHashAndStatus) => {
-      console.log('watching', initialTx.hash);
+    l1TxStatus: (txId: L1TxId) => {
+      console.log('watching', txId.hash);
       return l1TxStatus.pipe(
-        filter((tx) => initialTx.hash === tx.hash),
+        filter((tx) => txId.hash === tx.hash),
         map((tx) => ({
           ...tx,
-          blockNumber: initialTx.blockNumber,
-          timestamp: initialTx.timestamp,
+          // blockNumber: txId.blockNumber,
+          // timestamp: txId.timestamp,
         }))
       );
     },
-    l2TxStatus: (initialTx: L2TxHashAndStatus) =>
-      l2TxStatus.pipe(filter((tx) => initialTx.hash === tx.hash)),
+    l2TxStatus: (txId: L2TxId) =>
+      l2TxStatus.pipe(filter((tx) => txId.hash === tx.hash)),
     start,
     lastTick,
     lastL1BlockNumber,

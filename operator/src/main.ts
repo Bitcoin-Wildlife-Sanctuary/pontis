@@ -1,58 +1,59 @@
-import { Account, RpcProvider } from 'starknet';
+import { Account, constants, RpcProvider } from 'starknet';
 
 import { contractEvents } from './l2/events';
-import { init, basicFlow } from './l2/contracts';
+import { contractFromAddress, init } from './l2/contracts';
 import * as devnet from './l2/devnet';
 import {
   applyChange,
   BridgeEnvironment,
+  Deposit,
+  L1TxHash,
   L1TxHashAndStatus,
+  L2TxHashAndStatus,
   OperatorState,
-  TickEvent,
 } from './state';
 import { setupOperator } from './operator';
 import { mocked, MockEvent } from './mock';
-import { BehaviorSubject, finalize, tap } from 'rxjs';
 import { aggregateDeposits, finalizeBatch } from './l1/l1mocks';
 
-async function example1() {
-  const provider = new RpcProvider({ nodeUrl: 'http://127.0.0.1:5050/rpc' });
-
-  const admin = new Account(
-    provider,
-    devnet.admin.address,
-    devnet.admin.privateKey
-  );
-
-  const alice = new Account(
-    provider,
-    devnet.alice.address,
-    devnet.alice.privateKey
-  );
-
-  const bob = new Account(provider, devnet.bob.address, devnet.bob.privateKey);
-
-  const { btc, bridge } = await init(admin);
-
-  console.log(`BTC: ${btc.address}`);
-  console.log(`Bridge: ${bridge.address}`);
-  // for devnet:
-  // BTC: 0x384aec22c0c63c24461abfcac606a10d178d10e36916a4789f35763c18bd78
-  // Bridge: 0x5c5fb10a5b2c98c04ab60740aacf002ee8443802211db3b8558574c08365293
-
-  const events = contractEvents(provider, bridge.address, 0);
-
-  events.subscribe((event) => {
-    console.log(event);
-  });
-
-  for (let i = 0; i < 10; i++) {
-    await basicFlow(btc, bridge, admin, alice, bob);
-    await new Promise((resolve) =>
-      setTimeout(resolve, Math.floor(Math.random() * 2000))
-    );
-  }
-}
+// async function example1() {
+//   const provider = new RpcProvider({ nodeUrl: 'http://127.0.0.1:5050/rpc' });
+//
+//   const admin = new Account(
+//     provider,
+//     devnet.admin.address,
+//     devnet.admin.privateKey
+//   );
+//
+//   const alice = new Account(
+//     provider,
+//     devnet.alice.address,
+//     devnet.alice.privateKey
+//   );
+//
+//   const bob = new Account(provider, devnet.bob.address, devnet.bob.privateKey);
+//
+//   const { btc, bridge } = await init(admin);
+//
+//   console.log(`BTC: ${btc.address}`);
+//   console.log(`Bridge: ${bridge.address}`);
+//   // for devnet:
+//   // BTC: 0x384aec22c0c63c24461abfcac606a10d178d10e36916a4789f35763c18bd78
+//   // Bridge: 0x5c5fb10a5b2c98c04ab60740aacf002ee8443802211db3b8558574c08365293
+//
+//   const events = contractEvents(provider, bridge.address, 0);
+//
+//   events.subscribe((event) => {
+//     console.log(event);
+//   });
+//
+//   for (let i = 0; i < 10; i++) {
+//     await basicFlow(btc, bridge, admin, alice, bob);
+//     await new Promise((resolve) =>
+//       setTimeout(resolve, Math.floor(Math.random() * 2000))
+//     );
+//   }
+// }
 
 async function mockedOperator() {
   const events: MockEvent[] = [
@@ -262,6 +263,21 @@ async function mockedOperator() {
     lastL1BlockNumber,
   } = mocked(events);
 
+  const provider = new RpcProvider({ nodeUrl: 'http://127.0.0.1:5050/rpc' });
+
+  const admin = new Account(
+    provider,
+    devnet.admin.address,
+    devnet.admin.privateKey,
+    undefined,
+    constants.TRANSACTION_VERSION.V3
+  );
+
+  const btcAddress = `0x77fc1221819b89ddeabd14ba2ca4575a81e8b44adb89f2d3834fdc2c2e550f9`;
+  const bridgeAddress =
+    '0x714134c22c9d88878e4f483c70c77f2bafa938785159acb31b01377454765f2';
+  const bridge = await contractFromAddress(provider, bridgeAddress);
+
   const env: BridgeEnvironment = {
     DEPOSIT_BATCH_SIZE: 4,
     MAX_PENDING_DEPOSITS: 4000,
@@ -269,6 +285,23 @@ async function mockedOperator() {
       aggregateDeposits(txs, lastL1BlockNumber.value, lastTick.value),
     finalizeBatch: async (tx: L1TxHashAndStatus) =>
       finalizeBatch(tx, lastL1BlockNumber.value, lastTick.value),
+    submitDepositsToL2: async (
+      hash: L1TxHash,
+      deposits: Deposit[]
+    ): Promise<L2TxHashAndStatus> => {
+      bridge.connect(admin);
+      const { transaction_hash } = await bridge.deposit(
+        hash,
+        deposits.map((recipient, amount) => [recipient, amount])
+      );
+      const status = await provider.waitForTransaction(transaction_hash);
+      return {
+        type: 'l2tx',
+        hash: transaction_hash,
+        blockNumber: 0n,
+        status,
+      };
+    },
   };
 
   const operator = setupOperator(

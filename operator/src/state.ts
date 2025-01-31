@@ -3,11 +3,11 @@ import { L2Event } from './l2/events';
 import { assert } from 'console';
 import { cloneDeep } from 'lodash';
 
-type L1Address = `0x${string}`;
-type L2Address = `0x${string}`;
+export type L1Address = `0x${string}`;
+export type L2Address = `0x${string}`;
 
-type L1TxHash = `0x${string}`;
-type L2TxHash = `0x${string}`;
+export type L1TxHash = `0x${string}`;
+export type L2TxHash = `0x${string}`;
 
 // TODO: everything about L1 is very WIP, should be checked with sCrypt team
 export type L1TxStatus = 'Unconfirmed' | 'Confirmed' | 'Mined'; // Orphaned, Droped?
@@ -18,11 +18,22 @@ export type L1TxHashAndStatus = {
   blockNumber: number;
   timestamp: number;
 };
+
+export type L1TxId = {
+  type: 'l1tx';
+  hash: L1TxHash;
+};
+
 export type L2TxHashAndStatus = {
   type: 'l2tx';
   hash: L2TxHash;
   status: ReceiptTx;
   blockNumber: bigint;
+};
+
+export type L2TxId = {
+  type: 'l2tx';
+  hash: L1TxHash;
 };
 
 export type Deposit = {
@@ -151,6 +162,8 @@ export type BridgeEvent = L2Event | Deposits | TickEvent;
 
 export type Transaction = L1TxHashAndStatus | L2TxHashAndStatus;
 
+export type TransactionId = L1TxId | L2TxId;
+
 export type OperatorChange = BridgeEvent | Transaction | TickEvent;
 
 export type BridgeEnvironment = {
@@ -158,6 +171,10 @@ export type BridgeEnvironment = {
   MAX_PENDING_DEPOSITS: number;
   aggregateDeposits: (txs: L1TxHashAndStatus[]) => Promise<L1TxHashAndStatus[]>;
   finalizeBatch: (tx: L1TxHashAndStatus) => Promise<L1TxHashAndStatus>;
+  submitDepositsToL2: (
+    hash: L1TxHash,
+    deposits: Deposit[]
+  ) => Promise<L2TxHashAndStatus>;
 };
 
 export async function applyChange(
@@ -295,7 +312,7 @@ function updateL1TxStatus(state: OperatorState, tx: L1TxHashAndStatus) {
   return state;
 }
 
-export function getAllL1Txs(state: OperatorState): Set<L1TxHashAndStatus> {
+export function getAllL1Txs(state: OperatorState): Set<L1TxId> {
   const l1Txs: L1TxHashAndStatus[] = [];
 
   for (const deposit of state.pendingDeposits) {
@@ -346,7 +363,14 @@ export function getAllL1Txs(state: OperatorState): Set<L1TxHashAndStatus> {
     }
   }
 
-  return new Set(l1Txs.filter((tx) => tx.status !== 'Mined'));
+  return new Set(
+    l1Txs
+      .filter((tx) => tx.status !== 'Mined')
+      .map(({ type, hash }) => ({
+        type,
+        hash,
+      }))
+  );
 }
 
 async function initiateAggregation(
@@ -423,13 +447,18 @@ async function manageAggregation(
         }
       }
     }
-    // if( batch.status == 'AGGREGATED' && batch.finalizeBatchTx.status == 'Mined' ) {
-    //   // submit to L2
-    //   // newState.depositBatches[i] = {
-    //   //   ...batch,
-    //   //   status: 'SUBMITTED_TO_L2',
-    //   //   depositTx: await submitToL2(batch.finalizeBatchTx)
-    //   // }
-    // }
+    if (
+      batch.status === 'AGGREGATED' &&
+      batch.finalizeBatchTx.status === 'Mined'
+    ) {
+      newState.depositBatches[i] = {
+        ...batch,
+        status: 'SUBMITTED_TO_L2',
+        depositTx: await env.submitDepositsToL2(
+          batch.finalizeBatchTx.hash,
+          batch.deposits
+        ),
+      };
+    }
   }
 }

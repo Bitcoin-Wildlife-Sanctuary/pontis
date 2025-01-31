@@ -1,4 +1,11 @@
-import { Account, Contract, json, RawArgs } from 'starknet';
+import {
+  Account,
+  BigNumberish,
+  Contract,
+  json,
+  Provider,
+  RawArgs,
+} from 'starknet';
 import * as fs from 'fs';
 
 async function declareAndDeploy(
@@ -32,6 +39,14 @@ async function declareAndDeploy(
   );
 }
 
+export async function contractFromAddress(provider: Provider, address: string) {
+  const { abi } = await provider.getClassAt(address);
+  if (abi === undefined) {
+    throw new Error('no abi.');
+  }
+  return new Contract(abi, address, provider);
+}
+
 export async function init(admin: Account) {
   const btc = await declareAndDeploy(admin, 'BTC', { owner: admin.address });
   const bridge = await declareAndDeploy(admin, 'Bridge', {
@@ -44,25 +59,25 @@ export async function init(admin: Account) {
   return { btc, bridge };
 }
 
-export async function basicFlow(
-  btc: Contract,
-  bridge: Contract,
-  admin: Account,
-  alice: Account,
-  bob: Account
-) {
-  bridge.connect(admin);
-  await bridge.deposit(alice.address, 1000);
-
-  btc.connect(alice);
-  await btc.transfer(bob.address, 500);
-
-  btc.connect(bob);
-  await btc.approve(bridge.address, 500);
-
-  bridge.connect(bob);
-  await bridge.withdraw(bob.address, 500);
-
-  bridge.connect(admin);
-  await bridge.close_withdrawal_batch();
-}
+// export async function basicFlow(
+//   btc: Contract,
+//   bridge: Contract,
+//   admin: Account,
+//   alice: Account,
+//   bob: Account
+// ) {
+//   bridge.connect(admin);
+//   await bridge.deposit(alice.address, 1000);
+//
+//   btc.connect(alice);
+//   await btc.transfer(bob.address, 500);
+//
+//   btc.connect(bob);
+//   await btc.approve(bridge.address, 500);
+//
+//   bridge.connect(bob);
+//   await bridge.withdraw(bob.address, 500);
+//
+//   bridge.connect(admin);
+//   await bridge.close_withdrawal_batch();
+// }
