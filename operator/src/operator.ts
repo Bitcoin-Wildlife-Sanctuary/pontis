@@ -36,10 +36,6 @@ function diff<T>(a: T[], b: T[]): T[] {
   return result;
 }
 
-function mapSet<T, U>(input: Set<T>, fn: (item: T) => U): Set<U> {
-  return new Set(Array.from(input, fn));
-}
-
 function stateToTransactions<S, T>(
   transactionsFromState: (state: S) => T[],
   transactionStatus: (tx: T) => Observable<T>
@@ -73,7 +69,11 @@ function operatorLoop<E, T, S>(
   );
   return merge(events, transactions).pipe(
     tap((change) => console.log('change:', change)),
-    mergeScan(applyChange, initialState, 1),
+    mergeScan(applyChange, initialState),
+    tap((state) => {
+      console.log('state:');
+      console.dir(state, { depth: null });
+    }),
     tap(state)
   );
 }

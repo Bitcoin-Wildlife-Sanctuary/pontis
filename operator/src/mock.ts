@@ -1,4 +1,4 @@
-import { BehaviorSubject, filter, map, Observable, Subject } from 'rxjs';
+import { BehaviorSubject, filter, map, Observable, scan, Subject } from 'rxjs';
 import {
   BridgeEvent,
   TickEvent,
@@ -7,10 +7,9 @@ import {
   Transaction,
 } from './state';
 
-export type MockEvent = {
-  delay: number;
-  event: BridgeEvent | Transaction | TickEvent;
-};
+export type AdvanceClock = { type: 'advance_clock'; delta: number };
+
+export type MockEvent = BridgeEvent | Transaction | AdvanceClock;
 
 export type MockedOperatorEnvironment = {
   clock: Observable<TickEvent>;
@@ -30,13 +29,18 @@ export function mocked(events: MockEvent[]): MockedOperatorEnvironment {
   const l1TxStatus = new Subject<L1TxHashAndStatus>();
   const l2TxStatus = new Subject<L2TxHashAndStatus>();
 
+  let timestamp = 0;
+
   async function start() {
-    for (const { delay, event } of events) {
-      await sleep(delay);
+    clock.next({ type: 'tick', timestamp });
+    for (const event of events) {
+      await sleep(1);
       switch (event.type) {
-        case 'tick':
-          clock.next(event);
+        case 'advance_clock':
+          timestamp += event.delta;
           break;
+        case 'tick':
+          throw new Error('Cannot handle tick events!');
         case 'l2event':
           l2Events.next(event);
           break;
@@ -44,6 +48,9 @@ export function mocked(events: MockEvent[]): MockedOperatorEnvironment {
           l1Events.next(event);
           break;
         case 'l1tx':
+          if (event.hash === '0xfff0xabe') {
+            console.log('tx:', event);
+          }
           l1TxStatus.next(event);
           break;
         case 'l2tx':
@@ -53,29 +60,38 @@ export function mocked(events: MockEvent[]): MockedOperatorEnvironment {
           const _exhaustive: never = event;
           return _exhaustive;
       }
+      await sleep(1);
+      timestamp += 1;
+      clock.next({ type: 'tick', timestamp });
     }
-    await sleep(1000);
   }
 
   const lastTick = new BehaviorSubject<number>(0);
   clock.pipe(map((tick) => tick.timestamp)).subscribe(lastTick);
 
   const lastL1BlockNumber = new BehaviorSubject<number>(0);
-  l1TxStatus.pipe(map((tx) => tx.blockNumber)).subscribe(lastL1BlockNumber);
+  l1TxStatus
+    .pipe(
+      map((tx) => tx.blockNumber),
+      scan((previous, current) => Math.max(previous, current), 0)
+    )
+    .subscribe(lastL1BlockNumber);
 
   return {
     clock,
     l2Events,
     l1Events,
-    l1TxStatus: (initialTx: L1TxHashAndStatus) =>
-      l1TxStatus.pipe(
+    l1TxStatus: (initialTx: L1TxHashAndStatus) => {
+      console.log('watching', initialTx.hash);
+      return l1TxStatus.pipe(
         filter((tx) => initialTx.hash === tx.hash),
         map((tx) => ({
           ...tx,
           blockNumber: initialTx.blockNumber,
           timestamp: initialTx.timestamp,
         }))
-      ),
+      );
+    },
     l2TxStatus: (initialTx: L2TxHashAndStatus) =>
       l2TxStatus.pipe(filter((tx) => initialTx.hash === tx.hash)),
     start,

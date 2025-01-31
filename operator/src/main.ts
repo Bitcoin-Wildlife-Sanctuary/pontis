@@ -56,152 +56,187 @@ async function example1() {
 
 async function mockedOperator() {
   const events: MockEvent[] = [
-    // tick
-    {
-      delay: 0,
-      event: {
-        type: 'tick',
-        timestamp: 1000,
-      },
-    },
     // first deposit
     {
-      delay: 0,
-      event: {
-        type: 'deposits',
-        deposits: [
-          {
-            amount: 100n,
-            recipient: '0x123',
-            origin: {
-              type: 'l1tx',
-              hash: '0xabc',
-              status: 'Mined',
-              blockNumber: 1,
-              timestamp: 1000,
-            },
+      type: 'deposits',
+      deposits: [
+        {
+          amount: 100n,
+          recipient: '0x123',
+          origin: {
+            type: 'l1tx',
+            hash: '0xabc',
+            status: 'Mined',
+            blockNumber: 1,
+            timestamp: 1,
           },
-        ],
-      },
+        },
+      ],
     },
+
     // second deposit
     {
-      delay: 10,
-      event: {
-        type: 'deposits',
-        deposits: [
-          {
-            amount: 200n,
-            recipient: '0x124',
-            origin: {
-              type: 'l1tx',
-              hash: '0xabd',
-              status: 'Mined',
-              blockNumber: 2,
-              timestamp: 2000,
-            },
+      type: 'deposits',
+      deposits: [
+        {
+          amount: 200n,
+          recipient: '0x124',
+          origin: {
+            type: 'l1tx',
+            hash: '0xabd',
+            status: 'Mined',
+            blockNumber: 2,
+            timestamp: 2,
           },
-        ],
-      },
+        },
+      ],
     },
     // third and fourth deposit
     {
-      delay: 10,
-      event: {
-        type: 'deposits',
-        deposits: [
-          {
-            amount: 300n,
-            recipient: '0x125',
-            origin: {
-              type: 'l1tx',
-              hash: '0xabd',
-              status: 'Mined',
-              blockNumber: 3,
-              timestamp: 3000,
-            },
+      type: 'deposits',
+      deposits: [
+        {
+          amount: 300n,
+          recipient: '0x125',
+          origin: {
+            type: 'l1tx',
+            hash: '0xabe',
+            status: 'Mined',
+            blockNumber: 3,
+            timestamp: 3,
           },
-          {
-            amount: 400n,
-            recipient: '0x126',
-            origin: {
-              type: 'l1tx',
-              hash: '0xabe',
-              status: 'Mined',
-              blockNumber: 4,
-              timestamp: 6000,
-            },
+        },
+        {
+          amount: 400n,
+          recipient: '0x126',
+          origin: {
+            type: 'l1tx',
+            hash: '0xabf',
+            status: 'Mined',
+            blockNumber: 4,
+            timestamp: 3,
           },
-        ],
-      },
+        },
+      ],
     },
-    // tick
+    // fifth deposit
     {
-      delay: 10,
-      event: {
-        type: 'tick',
-        timestamp: 6000,
-      },
-    },
-    // fourth deposit
-    {
-      delay: 100,
-      event: {
-        type: 'deposits',
-        deposits: [
-          {
-            amount: 500n,
-            recipient: '0x127',
-            origin: {
-              type: 'l1tx',
-              hash: '0xabe',
-              status: 'Mined',
-              blockNumber: 5,
-              timestamp: 7000,
-            },
+      type: 'deposits',
+      deposits: [
+        {
+          amount: 500n,
+          recipient: '0x127',
+          origin: {
+            type: 'l1tx',
+            hash: '0xabe',
+            status: 'Mined',
+            blockNumber: 5,
+            timestamp: 4,
           },
-        ],
-      },
+        },
+      ],
     },
-    // tick
+    // aggregation tx status
     {
-      delay: 10,
-      event: {
-        type: 'tick',
-        timestamp: 15000,
-      },
+      type: 'l1tx',
+      hash: '0xabcabd',
+      status: 'Confirmed',
+      blockNumber: 0,
+      timestamp: 0,
     },
-    // tick
+    // aggregation tx status
     {
-      delay: 10,
-      event: {
-        type: 'tick',
-        timestamp: 16000,
-      },
+      type: 'l1tx',
+      hash: '0xabeabf',
+      status: 'Confirmed',
+      blockNumber: 0,
+      timestamp: 0,
     },
-
-    // // aggregation tx status
-    // {
-    //   delay: 10,
-    //   event: {
-    //     type: 'l1tx',
-    //     hash: '0xabcabd',
-    //     status: 'Confirmed',
-    //     blockNumber: 3,
-    //     timestamp: 1804000,
-    //   },
-    // },
-    // // aggregation tx status
-    // {
-    //   delay: 10,
-    //   event: {
-    //     type: 'l1tx',
-    //     hash: '0xabcabd',
-    //     status: 'Mined',
-    //     blockNumber: 3,
-    //     timestamp: 1804000,
-    //   },
-    // },
+    // aggregation tx status
+    {
+      type: 'l1tx',
+      hash: '0xabcabd',
+      status: 'Mined',
+      blockNumber: 0,
+      timestamp: 0,
+    },
+    // aggregation tx status
+    {
+      type: 'l1tx',
+      hash: '0xabeabf',
+      status: 'Mined',
+      blockNumber: 0,
+      timestamp: 0,
+    },
+    // aggregation tx status
+    {
+      type: 'l1tx',
+      hash: '0xabcabdabeabf',
+      status: 'Confirmed',
+      blockNumber: 0,
+      timestamp: 0,
+    },
+    // aggregation tx status
+    {
+      type: 'l1tx',
+      hash: '0xabcabdabeabf',
+      status: 'Mined',
+      blockNumber: 0,
+      timestamp: 0,
+    },
+    // finalize tx status
+    {
+      type: 'l1tx',
+      hash: '0xfff0xabe',
+      status: 'Confirmed',
+      blockNumber: 0,
+      timestamp: 0,
+    },
+    // finalize tx status
+    {
+      type: 'l1tx',
+      hash: '0xfff0xabe',
+      status: 'Mined',
+      blockNumber: 0,
+      timestamp: 0,
+    },
+    // advance clock
+    {
+      type: 'advance_clock',
+      delta: 5000,
+    },
+    // finalize tx status
+    {
+      type: 'l1tx',
+      hash: '0xfff0xabcabdabeabf',
+      status: 'Confirmed',
+      blockNumber: 0,
+      timestamp: 0,
+    },
+    // finalize tx status
+    {
+      type: 'l1tx',
+      hash: '0xfff0xabcabdabeabf',
+      status: 'Mined',
+      blockNumber: 0,
+      timestamp: 0,
+    },
+    // finalize tx status
+    {
+      type: 'l1tx',
+      hash: '0xfff0xabe',
+      status: 'Confirmed',
+      blockNumber: 0,
+      timestamp: 0,
+    },
+    // finalize tx status
+    {
+      type: 'l1tx',
+      hash: '0xfff0xabe',
+      status: 'Mined',
+      blockNumber: 0,
+      timestamp: 0,
+    },
   ];
 
   const initialState: OperatorState = {
@@ -248,14 +283,16 @@ async function mockedOperator() {
     saveState
   );
 
-  operator.subscribe({
-    next: (state) => {
-      console.log('state:');
-      console.dir(state, { depth: null });
-    },
-    error: console.error,
-    complete: () => console.log('Complete'),
-  });
+  operator.subscribe((_) => {});
+
+  // operator.subscribe({
+  //   next: (state) => {
+  //     console.log('state:');
+  //     console.dir(state, { depth: null });
+  //   },
+  //   error: console.error,
+  //   complete: () => console.log('Complete'),
+  // });
 
   await start();
 }
