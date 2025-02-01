@@ -33,7 +33,8 @@ async function mockedOperator() {
       deposits: [
         {
           amount: 100n,
-          recipient: '0x123',
+          recipient:
+            '0x078662e7352d062084b0010068b99288486c2d8b914f6e2a55ce945f8792c8b1',
           origin: {
             type: 'l1tx',
             hash: '0xabc',
@@ -50,7 +51,8 @@ async function mockedOperator() {
       deposits: [
         {
           amount: 200n,
-          recipient: '0x124',
+          recipient:
+            '0x049dfb8ce986e21d354ac93ea65e6a11f639c1934ea253e5ff14ca62eca0f38e',
           origin: {
             type: 'l1tx',
             hash: '0xabd',
@@ -66,7 +68,8 @@ async function mockedOperator() {
       deposits: [
         {
           amount: 300n,
-          recipient: '0x125',
+          recipient:
+            '0x04f348398f859a55a0c80b1446c5fdc37edb3a8478a32f10764659fc241027d3',
           origin: {
             type: 'l1tx',
             hash: '0xabe',
@@ -76,7 +79,8 @@ async function mockedOperator() {
         },
         {
           amount: 400n,
-          recipient: '0x126',
+          recipient:
+            '0x00d513de92c16aa42418cf7e5b60f8022dbee1b4dfd81bcf03ebee079cfb5cb5',
           origin: {
             type: 'l1tx',
             hash: '0xabf',
@@ -92,7 +96,8 @@ async function mockedOperator() {
       deposits: [
         {
           amount: 500n,
-          recipient: '0x127',
+          recipient:
+            '0x01e8c6c17efa3a047506c0b1610bd188aa3e3dd6c5d9227549b65428de24de78',
           origin: {
             type: 'l1tx',
             hash: '0xabe',
@@ -173,12 +178,12 @@ async function mockedOperator() {
       hash: '0xfffabe',
       status: 'Confirmed',
     },
-    // // finalize tx status
-    // {
-    //   type: 'l1tx',
-    //   hash: '0xfffabe',
-    //   status: 'Mined',
-    // },
+    // finalize tx status
+    {
+      type: 'l1tx',
+      hash: '0xfffabe',
+      status: 'Mined',
+    },
   ];
 
   const initialState: OperatorState = {
