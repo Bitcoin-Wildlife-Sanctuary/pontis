@@ -16,15 +16,16 @@ import {
   BridgeEvent,
   TickEvent,
   getAllL1Txs,
-  L1TxHashAndStatus,
-  L2TxHashAndStatus,
+  L1TxStatus,
+  L2TxStatus,
   OperatorChange,
   OperatorState,
-  Transaction,
+  TransactionStatus,
   BridgeEnvironment,
   TransactionId,
   L2TxId,
   L1TxId,
+  getAllL2Txs,
 } from './state';
 import { difference, isEqual, some } from 'lodash';
 import { deepEqual } from 'assert';
@@ -39,9 +40,9 @@ function diff<TI>(a: TI[], b: TI[]): TI[] {
   return result;
 }
 
-function stateToTransactions<S, T, TI>(
+function stateToTransactions<S, TI, TS>(
   transactionsFromState: (state: S) => TI[],
-  transactionStatus: (tx: TI) => Observable<T>
+  transactionStatus: (tx: TI) => Observable<TS>
 ) {
   return pipe(
     map(transactionsFromState),
@@ -59,11 +60,11 @@ function stateToTransactions<S, T, TI>(
   );
 }
 
-function operatorLoop<E, T, TI, S>(
+function operatorLoop<E, TI, TS, S>(
   events: Observable<E>,
   transactionsFromState: (state: S) => TI[],
-  transactionStatus: (tx: TI) => Observable<T>,
-  applyChange: (state: S, change: E | T) => Observable<S>,
+  transactionStatus: (tx: TI) => Observable<TS>,
+  applyChange: (state: S, change: E | TS) => Observable<S>,
   initialState: S
 ): Observable<S> {
   const state = new BehaviorSubject<S>(initialState);
@@ -72,7 +73,7 @@ function operatorLoop<E, T, TI, S>(
   );
   return merge(events, transactions).pipe(
     tap((change) => console.log('change:', change)),
-    mergeScan(applyChange, initialState),
+    mergeScan(applyChange, initialState, 1),
     tap((state) => {
       console.log('state:');
       console.dir(state, { depth: null });
@@ -94,8 +95,8 @@ export function setupOperator(
   clock: Observable<TickEvent>,
   l1Events: Observable<BridgeEvent>,
   l2Events: Observable<BridgeEvent>,
-  l1TxStatus: (tx: L1TxId) => Observable<L1TxHashAndStatus>,
-  l2TxStatus: (tx: L2TxId) => Observable<L2TxHashAndStatus>,
+  l1TxStatus: (tx: L1TxId) => Observable<L1TxStatus>,
+  l2TxStatus: (tx: L2TxId) => Observable<L2TxStatus>,
   applyChange: (
     environment: BridgeEnvironment,
     state: OperatorState,
@@ -104,10 +105,10 @@ export function setupOperator(
   saveState: (state: OperatorState) => void
 ): Observable<OperatorState> {
   function transactionsFromState(state: OperatorState): TransactionId[] {
-    return [...getAllL1Txs(state) /*...getAllL2Txs(state) */];
+    return [...getAllL1Txs(state), ...getAllL2Txs(state)];
   }
 
-  function transactionStatus(tx: TransactionId): Observable<Transaction> {
+  function transactionStatus(tx: TransactionId): Observable<TransactionStatus> {
     switch (tx.type) {
       case 'l1tx':
         return l1TxStatus(tx);

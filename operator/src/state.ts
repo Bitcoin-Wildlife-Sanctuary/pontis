@@ -10,36 +10,40 @@ export type L1TxHash = `0x${string}`;
 export type L2TxHash = `0x${string}`;
 
 // TODO: everything about L1 is very WIP, should be checked with sCrypt team
-export type L1TxStatus = 'Unconfirmed' | 'Confirmed' | 'Mined'; // Orphaned, Droped?
-export type L1TxHashAndStatus = {
-  type: 'l1tx';
-  hash: L1TxHash;
-  status: L1TxStatus;
-  blockNumber: number;
-  timestamp: number;
-};
 
 export type L1TxId = {
   type: 'l1tx';
   hash: L1TxHash;
 };
 
-export type L2TxHashAndStatus = {
-  type: 'l2tx';
-  hash: L2TxHash;
-  status: ReceiptTx;
-  blockNumber: bigint;
+export type L1TxStatus = L1TxId & {
+  status: 'Unconfirmed' | 'Confirmed' | 'Mined'; // Orphaned, Droped?;
 };
+
+export type L1Tx = L1TxStatus & {
+  timestamp: number;
+}; // TODO: What else should go into a l1 tx?
 
 export type L2TxId = {
   type: 'l2tx';
   hash: L1TxHash;
 };
 
+export type L2TxStatus = L2TxId &
+  (
+    | { status: 'PENDING' }
+    | {
+        status: 'SUCCEEDED' | 'REJECTED' | 'REVERTED' | 'ERROR';
+        receipt: ReceiptTx;
+      }
+  );
+
+export type L2Tx = L2TxStatus;
+
 export type Deposit = {
   amount: bigint;
   recipient: L2Address;
-  origin: L1TxHashAndStatus;
+  origin: L1Tx;
 };
 
 type DepositBatchCommon = {
@@ -49,43 +53,43 @@ type DepositBatchCommon = {
 type DepositBatch =
   | ({
       status: 'BEING_AGGREGATED';
-      aggregationTxs: L1TxHashAndStatus[][];
+      aggregationTxs: L1Tx[][];
     } & DepositBatchCommon)
   | ({
       status: 'AGGREGATED';
-      aggregationTxs: L1TxHashAndStatus[][];
-      finalizeBatchTx: L1TxHashAndStatus;
+      aggregationTxs: L1Tx[][];
+      finalizeBatchTx: L1Tx;
     } & DepositBatchCommon)
   | ({
       status: 'FINALIZED';
-      aggregationTxs: L1TxHashAndStatus[][];
-      finalizeBatchTx: L1TxHashAndStatus;
+      aggregationTxs: L1Tx[][];
+      finalizeBatchTx: L1Tx;
     } & DepositBatchCommon)
   | ({
       status: 'SUBMITTED_TO_L2';
-      aggregationTxs: L1TxHashAndStatus[][];
-      finalizeBatchTx: L1TxHashAndStatus;
-      depositTx: L2TxHashAndStatus;
+      aggregationTxs: L1Tx[][];
+      finalizeBatchTx: L1Tx;
+      depositTx: L2TxStatus;
     } & DepositBatchCommon)
   | ({
       status: 'DEPOSITED';
-      aggregationTxs: L1TxHashAndStatus[][];
-      finalizeBatchTx: L1TxHashAndStatus;
-      depositTx: L2TxHashAndStatus;
+      aggregationTxs: L1Tx[][];
+      finalizeBatchTx: L1Tx;
+      depositTx: L2TxStatus;
     } & DepositBatchCommon)
   | ({
       status: 'SUBMITTED_FOR_COMPLETION';
-      aggregationTxs: L1TxHashAndStatus[][];
-      finalizeBatchTx: L1TxHashAndStatus;
-      depositTx: L2TxHashAndStatus;
-      verifyTx: L1TxHashAndStatus;
+      aggregationTxs: L1Tx[][];
+      finalizeBatchTx: L1Tx;
+      depositTx: L2TxStatus;
+      verifyTx: L1TxStatus;
     } & DepositBatchCommon)
   | ({
       status: 'COMPLETED';
-      aggregationTxs: L1TxHashAndStatus[][];
-      finalizeBatchTx: L1TxHashAndStatus;
-      depositTx: L2TxHashAndStatus;
-      verifyTx: L1TxHashAndStatus;
+      aggregationTxs: L1Tx[][];
+      finalizeBatchTx: L1Tx;
+      depositTx: L2TxStatus;
+      verifyTx: L1TxStatus;
     } & DepositBatchCommon);
 
 type Withdrawal = {
@@ -109,36 +113,36 @@ type WithdrawalBatch =
       status: 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED';
       withdrawals: Withdrawal[];
       hash: bigint;
-      closeWithdrawalBatchTx: L2TxHashAndStatus;
+      closeWithdrawalBatchTx: L2Tx;
     } & WithdrawalBatchCommon)
   | ({
       status: 'CLOSED';
       withdrawals: Withdrawal[];
       hash: bigint;
-      closeWithdrawalBatchTx: L2TxHashAndStatus;
+      closeWithdrawalBatchTx: L2Tx;
     } & WithdrawalBatchCommon)
   | ({
       status: 'SUBMITTED_FOR_EXPANSION';
       withdrawals: Withdrawal[];
       hash: bigint;
-      closeWithdrawalBatchTx: L2TxHashAndStatus;
-      withdrawBatchTx: L1TxHashAndStatus;
+      closeWithdrawalBatchTx: L2Tx;
+      withdrawBatchTx: L1TxStatus;
     } & WithdrawalBatchCommon)
   | ({
       status: 'BEING_EXPANDED';
       withdrawals: Withdrawal[];
       hash: bigint;
-      closeWithdrawalBatchTx: L2TxHashAndStatus;
-      withdrawBatchTx: L1TxHashAndStatus;
-      expansionTxs: L1TxHashAndStatus[][];
+      closeWithdrawalBatchTx: L2Tx;
+      withdrawBatchTx: L1TxStatus;
+      expansionTxs: L1TxStatus[][];
     } & WithdrawalBatchCommon)
   | ({
       status: 'EXPANDED';
       withdrawals: Withdrawal[];
       hash: bigint;
-      closeWithdrawalBatchTx: L2TxHashAndStatus;
-      withdrawBatchTx: L1TxHashAndStatus;
-      expansionTxs: L1TxHashAndStatus[][];
+      closeWithdrawalBatchTx: L2Tx;
+      withdrawBatchTx: L1TxStatus;
+      expansionTxs: L1TxStatus[][];
     } & WithdrawalBatchCommon);
 
 export type OperatorState = {
@@ -160,21 +164,20 @@ export type TickEvent = { type: 'tick'; timestamp: number };
 
 export type BridgeEvent = L2Event | Deposits | TickEvent;
 
-export type Transaction = L1TxHashAndStatus | L2TxHashAndStatus;
-
 export type TransactionId = L1TxId | L2TxId;
 
-export type OperatorChange = BridgeEvent | Transaction | TickEvent;
+export type TransactionStatus = L1TxStatus | L2TxStatus;
+
+export type Transaction = L1Tx | L2Tx;
+
+export type OperatorChange = BridgeEvent | TransactionStatus | TickEvent;
 
 export type BridgeEnvironment = {
   DEPOSIT_BATCH_SIZE: number;
   MAX_PENDING_DEPOSITS: number;
-  aggregateDeposits: (txs: L1TxHashAndStatus[]) => Promise<L1TxHashAndStatus[]>;
-  finalizeBatch: (tx: L1TxHashAndStatus) => Promise<L1TxHashAndStatus>;
-  submitDepositsToL2: (
-    hash: L1TxHash,
-    deposits: Deposit[]
-  ) => Promise<L2TxHashAndStatus>;
+  aggregateDeposits: (txs: L1Tx[]) => Promise<L1Tx[]>;
+  finalizeBatch: (tx: L1TxStatus) => Promise<L1Tx>;
+  submitDepositsToL2: (hash: L1TxHash, deposits: Deposit[]) => Promise<L2Tx>;
 };
 
 export async function applyChange(
@@ -209,26 +212,8 @@ export async function applyChange(
       break;
     }
     case 'l2tx': {
-      console.log('Handling L2Tx:', change);
-      for (let i = 0; i < newState.depositBatches.length; i++) {
-        const depositBatch = newState.depositBatches[i];
-        switch (depositBatch.status) {
-          case 'SUBMITTED_TO_L2':
-            if (depositBatch.depositTx.hash === change.hash) {
-              if (change.status.isSuccess()) {
-                // TODO: finality?
-                newState.depositBatches[i] = {
-                  ...depositBatch,
-                  depositTx: change,
-                  status: 'DEPOSITED',
-                };
-              } else {
-                depositBatch.depositTx = change;
-              }
-            }
-            break;
-        }
-      }
+      updateL2TxStatus(newState, change);
+      updateDeposits(newState);
       break;
     }
     default: {
@@ -239,18 +224,15 @@ export async function applyChange(
   return newState;
 }
 
-function updateL1TxStatus(state: OperatorState, tx: L1TxHashAndStatus) {
+function updateL1TxStatus(state: OperatorState, tx: L1TxStatus) {
   // TODO: make sure it is complete, generated by o1
-  // 1. Check pendingDeposits (each Deposit has origin: L1TxHashAndStatus)
   for (const deposit of state.pendingDeposits) {
     if (deposit.origin.hash === tx.hash) {
       deposit.origin.status = tx.status;
     }
   }
 
-  // 2. Check depositBatches
   for (const batch of state.depositBatches) {
-    // a) aggregationTxs is always present (array of arrays)
     for (const aggArray of batch.aggregationTxs) {
       for (let i = 0; i < aggArray.length; i++) {
         if (aggArray[i].hash === tx.hash) {
@@ -259,7 +241,6 @@ function updateL1TxStatus(state: OperatorState, tx: L1TxHashAndStatus) {
       }
     }
 
-    // b) Some batch statuses have finalizeBatchTx
     if (
       batch.status === 'FINALIZED' ||
       batch.status === 'SUBMITTED_TO_L2' ||
@@ -273,7 +254,6 @@ function updateL1TxStatus(state: OperatorState, tx: L1TxHashAndStatus) {
       }
     }
 
-    // c) Some batch statuses have verifyTx
     if (
       batch.status === 'SUBMITTED_FOR_COMPLETION' ||
       batch.status === 'COMPLETED'
@@ -284,9 +264,7 @@ function updateL1TxStatus(state: OperatorState, tx: L1TxHashAndStatus) {
     }
   }
 
-  // 3. Check withdrawalBatches
   for (const wb of state.withdrawalBatches) {
-    // a) Some statuses have withdrawBatchTx
     if (
       wb.status === 'SUBMITTED_FOR_EXPANSION' ||
       wb.status === 'BEING_EXPANDED' ||
@@ -297,7 +275,6 @@ function updateL1TxStatus(state: OperatorState, tx: L1TxHashAndStatus) {
       }
     }
 
-    // b) Some statuses have expansionTxs (array of arrays)
     if (wb.status === 'BEING_EXPANDED' || wb.status === 'EXPANDED') {
       for (const expansionArray of wb.expansionTxs) {
         for (let i = 0; i < expansionArray.length; i++) {
@@ -313,7 +290,7 @@ function updateL1TxStatus(state: OperatorState, tx: L1TxHashAndStatus) {
 }
 
 export function getAllL1Txs(state: OperatorState): Set<L1TxId> {
-  const l1Txs: L1TxHashAndStatus[] = [];
+  const l1Txs: L1TxStatus[] = [];
 
   for (const deposit of state.pendingDeposits) {
     l1Txs.push(deposit.origin);
@@ -373,6 +350,73 @@ export function getAllL1Txs(state: OperatorState): Set<L1TxId> {
   );
 }
 
+function updateL2TxStatus(state: OperatorState, tx: L2TxStatus) {
+  for (const batch of state.depositBatches) {
+    if (
+      batch.status === 'SUBMITTED_TO_L2' ||
+      batch.status === 'DEPOSITED' ||
+      batch.status === 'SUBMITTED_FOR_COMPLETION' ||
+      batch.status === 'COMPLETED'
+    ) {
+      if (batch.depositTx.hash === tx.hash) {
+        batch.depositTx = { ...batch.depositTx, ...tx };
+      }
+    }
+  }
+
+  for (const wb of state.withdrawalBatches) {
+    if (
+      wb.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED' ||
+      wb.status === 'CLOSED' ||
+      wb.status === 'SUBMITTED_FOR_EXPANSION' ||
+      wb.status === 'BEING_EXPANDED' ||
+      wb.status === 'EXPANDED'
+    ) {
+      if (wb.closeWithdrawalBatchTx.hash === tx.hash) {
+        wb.closeWithdrawalBatchTx = { ...wb.closeWithdrawalBatchTx, ...tx };
+      }
+    }
+  }
+
+  return state;
+}
+
+export function getAllL2Txs(state: OperatorState): Set<L2TxId> {
+  const results: L2TxStatus[] = [];
+
+  for (const batch of state.depositBatches) {
+    if (
+      batch.status === 'SUBMITTED_TO_L2' ||
+      batch.status === 'DEPOSITED' ||
+      batch.status === 'SUBMITTED_FOR_COMPLETION' ||
+      batch.status === 'COMPLETED'
+    ) {
+      results.push(batch.depositTx);
+    }
+  }
+
+  for (const wb of state.withdrawalBatches) {
+    if (
+      wb.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED' ||
+      wb.status === 'CLOSED' ||
+      wb.status === 'SUBMITTED_FOR_EXPANSION' ||
+      wb.status === 'BEING_EXPANDED' ||
+      wb.status === 'EXPANDED'
+    ) {
+      results.push(wb.closeWithdrawalBatchTx);
+    }
+  }
+
+  return new Set(
+    results
+      .filter((tx) => tx.status === 'PENDING')
+      .map(({ type, hash }) => ({
+        type,
+        hash,
+      }))
+  );
+}
+
 async function initiateAggregation(
   env: BridgeEnvironment,
   state: OperatorState
@@ -397,7 +441,7 @@ async function initiateAggregation(
         aggregationTxs: [[deposits[0].origin]],
       });
     } else {
-      const aggregationTxs: L1TxHashAndStatus[][] = [
+      const aggregationTxs: L1Tx[][] = [
         await env.aggregateDeposits(deposits.map((d) => d.origin)),
       ];
       state.depositBatches.push({
@@ -451,6 +495,7 @@ async function manageAggregation(
       batch.status === 'AGGREGATED' &&
       batch.finalizeBatchTx.status === 'Mined'
     ) {
+      console.log('Submitting to l2:', batch.finalizeBatchTx.hash);
       newState.depositBatches[i] = {
         ...batch,
         status: 'SUBMITTED_TO_L2',
@@ -459,6 +504,21 @@ async function manageAggregation(
           batch.deposits
         ),
       };
+    }
+  }
+}
+function updateDeposits(newState: OperatorState) {
+  for (let i = 0; i < newState.depositBatches.length; i++) {
+    const depositBatch = newState.depositBatches[i];
+    switch (depositBatch.status) {
+      case 'SUBMITTED_TO_L2':
+        if (depositBatch.depositTx.status === 'SUCCEEDED') {
+          newState.depositBatches[i] = {
+            ...depositBatch,
+            status: 'DEPOSITED',
+          };
+        }
+        break;
     }
   }
 }

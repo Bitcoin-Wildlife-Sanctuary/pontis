@@ -197,8 +197,8 @@ pub mod Bridge {
 
     #[generate_trait]
     pub impl InternalImpl of InternalTrait {
-        const TREE_HEIGHT: u8 = 8;
-        const TREE_MAX_SIZE: u16 = 256; //pow2(TREE_HEIGHT)!
+        const TREE_HEIGHT: u8 = 4;
+        const TREE_MAX_SIZE: u16 = 16; //pow2(TREE_HEIGHT)!
         // TODO: how to enforce ZERO_HASHES.len() == TREE_HEIGHT?
         // calculated with print_zero_hashes below
         #[cairofmt::skip]

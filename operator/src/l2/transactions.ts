@@ -1,8 +1,8 @@
 import { Provider, ReceiptTx, RpcProvider } from 'starknet';
-import { L1TxHashAndStatus, L2TxHashAndStatus, OperatorState } from '../state';
+import { L1TxStatus, L2TxStatus, OperatorState } from '../state';
 import { filter, from, interval, map, Observable, switchMap } from 'rxjs';
 
-export function l2TransactionStatus<T extends L2TxHashAndStatus>(
+export function l2TransactionStatus<T extends L2TxStatus>(
   provider: RpcProvider,
   tx: T
 ): Observable<T> {

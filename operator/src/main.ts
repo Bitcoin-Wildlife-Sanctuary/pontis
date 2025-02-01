@@ -1,59 +1,29 @@
-import { Account, constants, RpcProvider } from 'starknet';
+import { Account, cairo, constants, RpcProvider } from 'starknet';
 
 import { contractEvents } from './l2/events';
-import { contractFromAddress, init } from './l2/contracts';
+import {
+  contractFromAddress,
+  init,
+  l2TxStatus,
+  submitDepositsToL2,
+  toDigest,
+} from './l2/contracts';
 import * as devnet from './l2/devnet';
 import {
   applyChange,
   BridgeEnvironment,
   Deposit,
+  L1Tx,
   L1TxHash,
-  L1TxHashAndStatus,
-  L2TxHashAndStatus,
+  L1TxStatus,
+  L2Tx,
+  L2TxId,
+  L2TxStatus,
   OperatorState,
 } from './state';
 import { setupOperator } from './operator';
 import { mocked, MockEvent } from './mock';
 import { aggregateDeposits, finalizeBatch } from './l1/l1mocks';
-
-// async function example1() {
-//   const provider = new RpcProvider({ nodeUrl: 'http://127.0.0.1:5050/rpc' });
-//
-//   const admin = new Account(
-//     provider,
-//     devnet.admin.address,
-//     devnet.admin.privateKey
-//   );
-//
-//   const alice = new Account(
-//     provider,
-//     devnet.alice.address,
-//     devnet.alice.privateKey
-//   );
-//
-//   const bob = new Account(provider, devnet.bob.address, devnet.bob.privateKey);
-//
-//   const { btc, bridge } = await init(admin);
-//
-//   console.log(`BTC: ${btc.address}`);
-//   console.log(`Bridge: ${bridge.address}`);
-//   // for devnet:
-//   // BTC: 0x384aec22c0c63c24461abfcac606a10d178d10e36916a4789f35763c18bd78
-//   // Bridge: 0x5c5fb10a5b2c98c04ab60740aacf002ee8443802211db3b8558574c08365293
-//
-//   const events = contractEvents(provider, bridge.address, 0);
-//
-//   events.subscribe((event) => {
-//     console.log(event);
-//   });
-//
-//   for (let i = 0; i < 10; i++) {
-//     await basicFlow(btc, bridge, admin, alice, bob);
-//     await new Promise((resolve) =>
-//       setTimeout(resolve, Math.floor(Math.random() * 2000))
-//     );
-//   }
-// }
 
 async function mockedOperator() {
   const events: MockEvent[] = [
@@ -68,7 +38,6 @@ async function mockedOperator() {
             type: 'l1tx',
             hash: '0xabc',
             status: 'Mined',
-            blockNumber: 1,
             timestamp: 1,
           },
         },
@@ -86,7 +55,6 @@ async function mockedOperator() {
             type: 'l1tx',
             hash: '0xabd',
             status: 'Mined',
-            blockNumber: 2,
             timestamp: 2,
           },
         },
@@ -103,7 +71,6 @@ async function mockedOperator() {
             type: 'l1tx',
             hash: '0xabe',
             status: 'Mined',
-            blockNumber: 3,
             timestamp: 3,
           },
         },
@@ -114,7 +81,6 @@ async function mockedOperator() {
             type: 'l1tx',
             hash: '0xabf',
             status: 'Mined',
-            blockNumber: 4,
             timestamp: 3,
           },
         },
@@ -131,7 +97,6 @@ async function mockedOperator() {
             type: 'l1tx',
             hash: '0xabe',
             status: 'Mined',
-            blockNumber: 5,
             timestamp: 4,
           },
         },
@@ -142,64 +107,48 @@ async function mockedOperator() {
       type: 'l1tx',
       hash: '0xabcabd',
       status: 'Confirmed',
-      blockNumber: 0,
-      timestamp: 0,
     },
     // aggregation tx status
     {
       type: 'l1tx',
       hash: '0xabeabf',
       status: 'Confirmed',
-      blockNumber: 0,
-      timestamp: 0,
     },
     // aggregation tx status
     {
       type: 'l1tx',
       hash: '0xabcabd',
       status: 'Mined',
-      blockNumber: 0,
-      timestamp: 0,
     },
     // aggregation tx status
     {
       type: 'l1tx',
       hash: '0xabeabf',
       status: 'Mined',
-      blockNumber: 0,
-      timestamp: 0,
     },
     // aggregation tx status
     {
       type: 'l1tx',
       hash: '0xabcabdabeabf',
       status: 'Confirmed',
-      blockNumber: 0,
-      timestamp: 0,
     },
     // aggregation tx status
     {
       type: 'l1tx',
       hash: '0xabcabdabeabf',
       status: 'Mined',
-      blockNumber: 0,
-      timestamp: 0,
     },
     // finalize tx status
     {
       type: 'l1tx',
-      hash: '0xfff0xabe',
+      hash: '0xfffabe',
       status: 'Confirmed',
-      blockNumber: 0,
-      timestamp: 0,
     },
     // finalize tx status
     {
       type: 'l1tx',
-      hash: '0xfff0xabe',
+      hash: '0xfffabe',
       status: 'Mined',
-      blockNumber: 0,
-      timestamp: 0,
     },
     // advance clock
     {
@@ -209,35 +158,27 @@ async function mockedOperator() {
     // finalize tx status
     {
       type: 'l1tx',
-      hash: '0xfff0xabcabdabeabf',
+      hash: '0xfffabcabdabeabf',
       status: 'Confirmed',
-      blockNumber: 0,
-      timestamp: 0,
     },
     // finalize tx status
     {
       type: 'l1tx',
-      hash: '0xfff0xabcabdabeabf',
+      hash: '0xfffabcabdabeabf',
       status: 'Mined',
-      blockNumber: 0,
-      timestamp: 0,
     },
     // finalize tx status
     {
       type: 'l1tx',
-      hash: '0xfff0xabe',
+      hash: '0xfffabe',
       status: 'Confirmed',
-      blockNumber: 0,
-      timestamp: 0,
     },
-    // finalize tx status
-    {
-      type: 'l1tx',
-      hash: '0xfff0xabe',
-      status: 'Mined',
-      blockNumber: 0,
-      timestamp: 0,
-    },
+    // // finalize tx status
+    // {
+    //   type: 'l1tx',
+    //   hash: '0xfffabe',
+    //   status: 'Mined',
+    // },
   ];
 
   const initialState: OperatorState = {
@@ -252,56 +193,43 @@ async function mockedOperator() {
 
   function saveState(state: OperatorState) {}
 
-  const {
-    clock,
-    l1Events,
-    l2Events,
-    l1TxStatus,
-    l2TxStatus,
-    start,
-    lastTick,
-    lastL1BlockNumber,
-  } = mocked(events);
+  const { clock, l1Events, l2Events, l1TxStatus, start } = mocked(events);
 
   const provider = new RpcProvider({ nodeUrl: 'http://127.0.0.1:5050/rpc' });
 
   const admin = new Account(
     provider,
     devnet.admin.address,
-    devnet.admin.privateKey,
-    undefined,
-    constants.TRANSACTION_VERSION.V3
+    devnet.admin.privateKey
+    // undefined,
+    // constants.TRANSACTION_VERSION.V3
   );
 
-  const btcAddress = `0x77fc1221819b89ddeabd14ba2ca4575a81e8b44adb89f2d3834fdc2c2e550f9`;
+  // const alice = new Account(
+  //   provider,
+  //   devnet.alice.address,
+  //   devnet.alice.privateKey,
+  //   // undefined,
+  //   // constants.TRANSACTION_VERSION.V3
+  // );
+
+  // const btcAddress = `0x158e01104787e42600041c770931cf1a964b9fb8b389fc9e2f0408a1650a1af`;
   const bridgeAddress =
-    '0x714134c22c9d88878e4f483c70c77f2bafa938785159acb31b01377454765f2';
+    '0x2b553433dc1efe29adba3f9bc1b972cce032490185aba1b2572ed5c39cb5376';
+
   const bridge = await contractFromAddress(provider, bridgeAddress);
+  bridge.connect(admin);
 
   const env: BridgeEnvironment = {
     DEPOSIT_BATCH_SIZE: 4,
     MAX_PENDING_DEPOSITS: 4000,
-    aggregateDeposits: async (txs: L1TxHashAndStatus[]) =>
-      aggregateDeposits(txs, lastL1BlockNumber.value, lastTick.value),
-    finalizeBatch: async (tx: L1TxHashAndStatus) =>
-      finalizeBatch(tx, lastL1BlockNumber.value, lastTick.value),
+    aggregateDeposits: async (txs: L1Tx[]) => aggregateDeposits(txs),
+    finalizeBatch: async (tx: L1TxStatus) => finalizeBatch(tx),
     submitDepositsToL2: async (
       hash: L1TxHash,
       deposits: Deposit[]
-    ): Promise<L2TxHashAndStatus> => {
-      bridge.connect(admin);
-      const { transaction_hash } = await bridge.deposit(
-        hash,
-        deposits.map((recipient, amount) => [recipient, amount])
-      );
-      const status = await provider.waitForTransaction(transaction_hash);
-      return {
-        type: 'l2tx',
-        hash: transaction_hash,
-        blockNumber: 0n,
-        status,
-      };
-    },
+    ): Promise<L2Tx> =>
+      submitDepositsToL2(admin, bridge, BigInt(hash), deposits),
   };
 
   const operator = setupOperator(
@@ -311,7 +239,7 @@ async function mockedOperator() {
     l1Events,
     l2Events,
     l1TxStatus,
-    l2TxStatus,
+    (tx: L2TxId) => l2TxStatus(provider, tx),
     applyChange,
     saveState
   );
