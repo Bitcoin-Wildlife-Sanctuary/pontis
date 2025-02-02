@@ -180,13 +180,16 @@ export type BridgeEnvironment = {
   submitDepositsToL2: (hash: L1TxHash, deposits: Deposit[]) => Promise<L2Tx>;
 };
 
+let i = 0;
+
 export async function applyChange(
   env: BridgeEnvironment,
   state: OperatorState,
   change: OperatorChange
 ): Promise<OperatorState> {
-
-  console.log('change:');
+  let li = i++;
+  console.log('================================');
+  console.log(li, 'change:');
   console.dir(change, { depth: null });
 
   const newState = cloneDeep(state);
@@ -194,7 +197,7 @@ export async function applyChange(
   switch (change.type) {
     case 'deposits': {
       newState.pendingDeposits.push(...change.deposits);
-      await initiateAggregation(env, state);
+      await initiateAggregation(env, newState);
       break;
     }
     case 'l1tx': {
@@ -229,8 +232,8 @@ export async function applyChange(
     }
   }
 
-  console.log('state:');
-  console.dir(state, { depth: null });
+  console.log(li, 'state:');
+  console.dir(newState, { depth: null });
 
   return newState;
 }

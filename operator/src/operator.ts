@@ -9,6 +9,7 @@ import {
   Observable,
   pipe,
   scan,
+  switchScan,
   tap,
   timer,
 } from 'rxjs';

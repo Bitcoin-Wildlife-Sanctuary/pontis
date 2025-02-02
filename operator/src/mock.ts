@@ -72,7 +72,7 @@ export function mocked(events: MockEvent[]): MockedOperatorEnvironment {
       }
       await sleep(1);
       timestamp += 1;
-      if( timestamp % 5 === 0) {
+      if (timestamp % 5 === 0) {
         clock.next({ type: 'tick', timestamp });
       }
     }
