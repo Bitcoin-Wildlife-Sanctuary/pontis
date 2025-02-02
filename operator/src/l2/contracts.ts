@@ -121,7 +121,7 @@ export function l2TxStatus(
       return {
         ...tx,
         status,
-        receipt,
+        // receipt,
       };
     })
   );

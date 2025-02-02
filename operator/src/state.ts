@@ -34,7 +34,7 @@ export type L2TxStatus = L2TxId &
     | { status: 'PENDING' }
     | {
         status: 'SUCCEEDED' | 'REJECTED' | 'REVERTED' | 'ERROR';
-        receipt: ReceiptTx;
+        // receipt: ReceiptTx;
       }
   );
 
@@ -185,6 +185,10 @@ export async function applyChange(
   state: OperatorState,
   change: OperatorChange
 ): Promise<OperatorState> {
+
+  console.log('change:');
+  console.dir(change, { depth: null });
+
   const newState = cloneDeep(state);
 
   switch (change.type) {
@@ -204,11 +208,14 @@ export async function applyChange(
       await manageAggregation(env, newState);
       break;
     }
-    case 'l2event': {
+    case 'withdrawal': {
       assert(change.blockNumber >= newState.l2BlockNumber);
       newState.l2BlockNumber = change.blockNumber;
-      // `event` is of type L2Event here
-      console.log('Handling L2Event:', change);
+      await manageWithdrawals(newState, change);
+      break;
+    }
+    case 'closeBatch': {
+      // throw new Error('Not implemented');
       break;
     }
     case 'l2tx': {
@@ -221,6 +228,10 @@ export async function applyChange(
       return _exhaustiveCheck;
     }
   }
+
+  console.log('state:');
+  console.dir(state, { depth: null });
+
   return newState;
 }
 
@@ -520,5 +531,26 @@ function updateDeposits(newState: OperatorState) {
         }
         break;
     }
+  }
+}
+
+async function manageWithdrawals(state: OperatorState, change: L2Event) {
+  if (change.type === 'withdrawal') {
+    let batch = state.withdrawalBatches.find((b) => b.id === change.id);
+    if (!batch) {
+      // make sure there is only one PEDING batch
+      assert(!state.withdrawalBatches.find((b) => b.status === 'PENDING'));
+      batch = {
+        status: 'PENDING',
+        id: change.id,
+        withdrawals: [],
+      };
+      state.withdrawalBatches.push(batch);
+    }
+    batch.withdrawals.push({
+      amount: change.amount,
+      recipient: change.recipient,
+      origin: change.origin,
+    });
   }
 }

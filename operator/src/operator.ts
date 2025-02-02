@@ -72,12 +72,7 @@ function operatorLoop<E, TI, TS, S>(
     stateToTransactions(transactionsFromState, transactionStatus)
   );
   return merge(events, transactions).pipe(
-    tap((change) => console.log('change:', change)),
     mergeScan(applyChange, initialState, 1),
-    tap((state) => {
-      console.log('state:');
-      console.dir(state, { depth: null });
-    }),
     tap(state)
   );
 }

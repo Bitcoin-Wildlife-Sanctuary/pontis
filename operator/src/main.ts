@@ -1,6 +1,6 @@
 import { Account, cairo, constants, RpcProvider } from 'starknet';
 
-import { contractEvents } from './l2/events';
+import { contractEvents, l2Events } from './l2/events';
 import {
   contractFromAddress,
   init,
@@ -24,6 +24,7 @@ import {
 import { setupOperator } from './operator';
 import { mocked, MockEvent } from './mock';
 import { aggregateDeposits, finalizeBatch } from './l1/l1mocks';
+import { filter } from 'rxjs';
 
 async function mockedOperator() {
   const events: MockEvent[] = [
@@ -33,6 +34,7 @@ async function mockedOperator() {
       deposits: [
         {
           amount: 100n,
+          // alice
           recipient:
             '0x078662e7352d062084b0010068b99288486c2d8b914f6e2a55ce945f8792c8b1',
           origin: {
@@ -51,6 +53,7 @@ async function mockedOperator() {
       deposits: [
         {
           amount: 200n,
+          // bob
           recipient:
             '0x049dfb8ce986e21d354ac93ea65e6a11f639c1934ea253e5ff14ca62eca0f38e',
           origin: {
@@ -184,6 +187,25 @@ async function mockedOperator() {
       hash: '0xfffabe',
       status: 'Mined',
     },
+    {
+      type: 'function_call',
+      call: async () => {
+        const alice = new Account(
+          provider,
+          devnet.alice.address,
+          devnet.alice.privateKey
+          // undefined,
+          // constants.TRANSACTION_VERSION.V3
+        );
+        btc.connect(alice);
+        const r1 = await btc.approve(bridge.address, 100);
+        await provider.waitForTransaction(r1.transaction_hash);
+
+        bridge.connect(alice);
+        const r2 = await bridge.withdraw(alice.address, 100);
+        await provider.waitForTransaction(r2.transaction_hash);
+      },
+    },
   ];
 
   const initialState: OperatorState = {
@@ -198,7 +220,7 @@ async function mockedOperator() {
 
   function saveState(state: OperatorState) {}
 
-  const { clock, l1Events, l2Events, l1TxStatus, start } = mocked(events);
+  const { clock, l1Events, l1TxStatus, start } = mocked(events);
 
   const provider = new RpcProvider({ nodeUrl: 'http://127.0.0.1:5050/rpc' });
 
@@ -210,19 +232,12 @@ async function mockedOperator() {
     // constants.TRANSACTION_VERSION.V3
   );
 
-  // const alice = new Account(
-  //   provider,
-  //   devnet.alice.address,
-  //   devnet.alice.privateKey,
-  //   // undefined,
-  //   // constants.TRANSACTION_VERSION.V3
-  // );
-
-  // const btcAddress = `0x158e01104787e42600041c770931cf1a964b9fb8b389fc9e2f0408a1650a1af`;
+  const btcAddress = `0x158e01104787e42600041c770931cf1a964b9fb8b389fc9e2f0408a1650a1af`;
   const bridgeAddress =
     '0x2b553433dc1efe29adba3f9bc1b972cce032490185aba1b2572ed5c39cb5376';
 
   const bridge = await contractFromAddress(provider, bridgeAddress);
+  const btc = await contractFromAddress(provider, btcAddress);
   bridge.connect(admin);
 
   const env: BridgeEnvironment = {
@@ -237,12 +252,24 @@ async function mockedOperator() {
       submitDepositsToL2(admin, bridge, BigInt(hash), deposits),
   };
 
+  const operatorL2Events = l2Events(provider, initialState.l2BlockNumber, [
+    bridgeAddress,
+  ]);
+
+  // operatorL2Events.subscribe({
+  //   next: (e) => {
+  //     console.log(e);
+  //   },
+  //   error: console.error,
+  //   complete: () => console.log('Complete'),
+  // });
+
   const operator = setupOperator(
     initialState,
     env,
     clock,
     l1Events,
-    l2Events,
+    operatorL2Events,
     l1TxStatus,
     (tx: L2TxId) => l2TxStatus(provider, tx),
     applyChange,

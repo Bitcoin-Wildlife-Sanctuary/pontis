@@ -11,7 +11,13 @@ import {
 
 export type AdvanceClock = { type: 'advance_clock'; delta: number };
 
-export type MockEvent = BridgeEvent | TransactionStatus | AdvanceClock;
+export type FunctionCall = { type: 'function_call'; call: () => void };
+
+export type MockEvent =
+  | BridgeEvent
+  | TransactionStatus
+  | AdvanceClock
+  | FunctionCall;
 
 export type MockedOperatorEnvironment = {
   clock: Observable<TickEvent>;
@@ -42,7 +48,10 @@ export function mocked(events: MockEvent[]): MockedOperatorEnvironment {
           break;
         case 'tick':
           throw new Error('Cannot handle tick events!');
-        case 'l2event':
+        case 'withdrawal':
+          l2Events.next(event);
+          break;
+        case 'closeBatch':
           l2Events.next(event);
           break;
         case 'deposits':
@@ -54,13 +63,18 @@ export function mocked(events: MockEvent[]): MockedOperatorEnvironment {
         case 'l2tx':
           l2TxStatus.next(event);
           break;
+        case 'function_call':
+          await event.call();
+          break;
         default:
           const _exhaustive: never = event;
           return _exhaustive;
       }
       await sleep(1);
       timestamp += 1;
-      clock.next({ type: 'tick', timestamp });
+      if( timestamp % 5 === 0) {
+        clock.next({ type: 'tick', timestamp });
+      }
     }
   }
 

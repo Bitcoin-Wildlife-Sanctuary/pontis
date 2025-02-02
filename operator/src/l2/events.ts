@@ -1,7 +1,14 @@
 import { Provider, events, CallData, ParsedEvent } from 'starknet';
 import { Observable, interval, from } from 'rxjs';
-import { switchMap, scan, distinctUntilChanged } from 'rxjs/operators';
+import {
+  switchMap,
+  scan,
+  distinctUntilChanged,
+  mergeMap,
+} from 'rxjs/operators';
 import { EVENT } from 'starknet-types-07/dist/types/api/components';
+import { L1Address, L2TxHash } from '../state';
+import { BinaryLike } from 'crypto';
 
 const POLL_INTERVAL = 5000;
 const CHUNK_SIZE = 10;
@@ -10,12 +17,12 @@ export function currentBlockRange(
   provider: Provider,
   initialBlockNumber: number
 ): Observable<[number, number]> {
-  const blocks$: Observable<number> = interval(POLL_INTERVAL).pipe(
+  const latest: Observable<number> = interval(POLL_INTERVAL).pipe(
     switchMap(async () => (await provider.getBlock('latest')).block_number),
     distinctUntilChanged()
   );
 
-  return blocks$.pipe(
+  return latest.pipe(
     scan(
       ([_, previous], current) => [previous + 1, current],
       [0, initialBlockNumber]
@@ -41,11 +48,25 @@ async function eventParser(
     events.parseEvents([rawEvent], abiEvents, abiStructs, abiEnums)[0];
 }
 
-export type L2Event = {
-  type: 'l2event';
+type L2EventCommon = {
   blockNumber: number;
-  parsedEvent: ParsedEvent;
+  origin: L2TxHash;
 };
+
+export type L2Event = (
+  | {
+      type: 'withdrawal';
+      id: bigint;
+      amount: bigint;
+      recipient: L1Address;
+    }
+  | {
+      type: 'closeBatch';
+      id: bigint;
+      root: string;
+    }
+) &
+  L2EventCommon;
 
 function contractEventsInRange(
   provider: Provider,
@@ -66,14 +87,33 @@ function contractEventsInRange(
             to_block: { block_number: to },
             // you can include `keys: [<event key(s)>]` here.
             chunk_size: CHUNK_SIZE,
-            // continuation_token: continuationToken,
+            continuation_token: continuationToken,
           });
 
           const events = response.events;
           for (const rawEvent of events) {
             const blockNumber = rawEvent.block_number;
+            const origin: L2TxHash = rawEvent.transaction_hash as any;
             const parsedEvent = parseEvents(rawEvent);
-            subscriber.next({ type: 'l2event', blockNumber, parsedEvent });
+            // console.log('rawEvent', rawEvent);
+            if (
+              parsedEvent.hasOwnProperty(
+                'pontis::bridge::Bridge::WithdrawEvent'
+              )
+            ) {
+              const { id, amount, recipient } =
+                parsedEvent['pontis::bridge::Bridge::WithdrawEvent'];
+
+              subscriber.next({
+                type: 'withdrawal',
+                id: BigInt(id.toString()),
+                amount: BigInt(amount.toString()),
+                recipient: recipient as any,
+                origin,
+                blockNumber,
+              });
+            }
+            // TODO: handle closeBatch event
           }
           continuationToken = response.continuation_token;
         } while (continuationToken);
@@ -106,7 +146,7 @@ export function l2Events(
   contractAddresses: string[]
 ): Observable<L2Event> {
   return from(contractAddresses).pipe(
-    switchMap((contractAddress) =>
+    mergeMap((contractAddress) =>
       contractEvents(provider, contractAddress, initialBlockNumber)
     )
   );
