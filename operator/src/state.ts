@@ -1,7 +1,7 @@
 import { ReceiptTx } from 'starknet';
 import { L2Event } from './l2/events';
 import { assert } from 'console';
-import { cloneDeep } from 'lodash';
+import { cloneDeep, max } from 'lodash';
 
 export type L1Address = `0x${string}`;
 export type L2Address = `0x${string}`;
@@ -21,7 +21,7 @@ export type L1TxStatus = L1TxId & {
 };
 
 export type L1Tx = L1TxStatus & {
-  timestamp: number;
+  blockNumber: number;
 }; // TODO: What else should go into a l1 tx?
 
 export type L2TxId = {
@@ -146,7 +146,6 @@ type WithdrawalBatch =
     } & WithdrawalBatchCommon);
 
 export type OperatorState = {
-  timestamp: number;
   l1BlockNumber: number;
   l2BlockNumber: number;
   total: bigint;
@@ -160,9 +159,9 @@ export type Deposits = {
   deposits: Deposit[];
 };
 
-export type TickEvent = { type: 'tick'; timestamp: number };
+export type BlockNumberEvent = { type: 'l1BlockNumber'; blockNumber: number };
 
-export type BridgeEvent = L2Event | Deposits | TickEvent;
+export type BridgeEvent = L2Event | Deposits | BlockNumberEvent;
 
 export type TransactionId = L1TxId | L2TxId;
 
@@ -170,7 +169,7 @@ export type TransactionStatus = L1TxStatus | L2TxStatus;
 
 export type Transaction = L1Tx | L2Tx;
 
-export type OperatorChange = BridgeEvent | TransactionStatus | TickEvent;
+export type OperatorChange = BridgeEvent | TransactionStatus | BlockNumberEvent;
 
 export type BridgeEnvironment = {
   DEPOSIT_BATCH_SIZE: number;
@@ -197,6 +196,10 @@ export async function applyChange(
   switch (change.type) {
     case 'deposits': {
       newState.pendingDeposits.push(...change.deposits);
+      newState.l1BlockNumber = Math.max(
+        newState.l1BlockNumber,
+        max(change.deposits.map((d) => d.origin.blockNumber)) || 0
+      );
       await initiateAggregation(env, newState);
       break;
     }
@@ -205,15 +208,20 @@ export async function applyChange(
       await manageAggregation(env, newState);
       break;
     }
-    case 'tick': {
-      newState.timestamp = change.timestamp;
+    case 'l1BlockNumber': {
+      newState.l1BlockNumber = Math.max(
+        newState.l1BlockNumber,
+        change.blockNumber
+      );
       await initiateAggregation(env, newState);
       await manageAggregation(env, newState);
       break;
     }
     case 'withdrawal': {
-      assert(change.blockNumber >= newState.l2BlockNumber);
-      newState.l2BlockNumber = change.blockNumber;
+      newState.l2BlockNumber = Math.max(
+        newState.l2BlockNumber,
+        change.blockNumber
+      );
       await manageWithdrawals(newState, change);
       break;
     }
@@ -472,7 +480,10 @@ function waitedLongEnough(
   state: OperatorState
 ): boolean {
   for (const deposit of state.pendingDeposits) {
-    if (deposit.origin.timestamp + env.MAX_PENDING_DEPOSITS < state.timestamp) {
+    if (
+      deposit.origin.blockNumber + env.MAX_PENDING_DEPOSITS <
+      state.l1BlockNumber
+    ) {
       return true;
     }
   }
@@ -541,8 +552,11 @@ async function manageWithdrawals(state: OperatorState, change: L2Event) {
   if (change.type === 'withdrawal') {
     let batch = state.withdrawalBatches.find((b) => b.id === change.id);
     if (!batch) {
-      // make sure there is only one PEDING batch
-      assert(!state.withdrawalBatches.find((b) => b.status === 'PENDING'));
+      assert(
+        state.withdrawalBatches.find((b) => b.status === 'PENDING') ===
+          undefined,
+        'No more than 1 pending batch'
+      );
       batch = {
         status: 'PENDING',
         id: change.id,

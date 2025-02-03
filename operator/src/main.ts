@@ -41,7 +41,7 @@ async function mockedOperator() {
             type: 'l1tx',
             hash: '0xabc',
             status: 'Mined',
-            timestamp: 1,
+            blockNumber: 1,
           },
         },
       ],
@@ -60,7 +60,7 @@ async function mockedOperator() {
             type: 'l1tx',
             hash: '0xabd',
             status: 'Mined',
-            timestamp: 2,
+            blockNumber: 2,
           },
         },
       ],
@@ -77,7 +77,7 @@ async function mockedOperator() {
             type: 'l1tx',
             hash: '0xabe',
             status: 'Mined',
-            timestamp: 3,
+            blockNumber: 3,
           },
         },
         {
@@ -88,7 +88,7 @@ async function mockedOperator() {
             type: 'l1tx',
             hash: '0xabf',
             status: 'Mined',
-            timestamp: 3,
+            blockNumber: 3,
           },
         },
       ],
@@ -105,7 +105,7 @@ async function mockedOperator() {
             type: 'l1tx',
             hash: '0xabe',
             status: 'Mined',
-            timestamp: 4,
+            blockNumber: 4,
           },
         },
       ],
@@ -160,8 +160,8 @@ async function mockedOperator() {
     },
     // advance clock
     {
-      type: 'advance_clock',
-      delta: 5000,
+      type: 'advanceL1BlockNumber',
+      delta: 50,
     },
     // finalize tx status
     {
@@ -209,7 +209,6 @@ async function mockedOperator() {
   ];
 
   const initialState: OperatorState = {
-    timestamp: 0,
     l1BlockNumber: 0,
     l2BlockNumber: 0,
     total: 0n,
@@ -232,9 +231,9 @@ async function mockedOperator() {
     // constants.TRANSACTION_VERSION.V3
   );
 
-  const btcAddress = `0x158e01104787e42600041c770931cf1a964b9fb8b389fc9e2f0408a1650a1af`;
+  const btcAddress = `0x5b1df9df6682f0af9d2eff1fdd7c6ca91f40e1d066eca10d96328dd0d05be2e`;
   const bridgeAddress =
-    '0x2b553433dc1efe29adba3f9bc1b972cce032490185aba1b2572ed5c39cb5376';
+    '0x1e8e1f9db04816a2b2985f6f98285b9304cf56e8dc0387ca92b93a2c6d3a961';
 
   const bridge = await contractFromAddress(provider, bridgeAddress);
   const btc = await contractFromAddress(provider, btcAddress);
@@ -242,7 +241,7 @@ async function mockedOperator() {
 
   const env: BridgeEnvironment = {
     DEPOSIT_BATCH_SIZE: 4,
-    MAX_PENDING_DEPOSITS: 4000,
+    MAX_PENDING_DEPOSITS: 4,
     aggregateDeposits: async (txs: L1Tx[]) => aggregateDeposits(txs),
     finalizeBatch: async (tx: L1TxStatus) => finalizeBatch(tx),
     submitDepositsToL2: async (
@@ -255,14 +254,6 @@ async function mockedOperator() {
   const operatorL2Events = l2Events(provider, initialState.l2BlockNumber, [
     bridgeAddress,
   ]);
-
-  // operatorL2Events.subscribe({
-  //   next: (e) => {
-  //     console.log(e);
-  //   },
-  //   error: console.error,
-  //   complete: () => console.log('Complete'),
-  // });
 
   const operator = setupOperator(
     initialState,

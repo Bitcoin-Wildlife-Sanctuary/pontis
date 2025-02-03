@@ -15,7 +15,7 @@ import {
 } from 'rxjs';
 import {
   BridgeEvent,
-  TickEvent,
+  BlockNumberEvent,
   getAllL1Txs,
   L1TxStatus,
   L2TxStatus,
@@ -78,17 +78,10 @@ function operatorLoop<E, TI, TS, S>(
   );
 }
 
-export function clock(): Observable<TickEvent> {
-  return timer(0, 1000).pipe(
-    map(() => Date.now()),
-    map((timestamp) => ({ type: 'tick', timestamp }))
-  );
-}
-
 export function setupOperator(
   initialState: OperatorState,
   environment: BridgeEnvironment,
-  clock: Observable<TickEvent>,
+  block: Observable<BlockNumberEvent>,
   l1Events: Observable<BridgeEvent>,
   l2Events: Observable<BridgeEvent>,
   l1TxStatus: (tx: L1TxId) => Observable<L1TxStatus>,
@@ -117,7 +110,7 @@ export function setupOperator(
   }
 
   return operatorLoop(
-    merge(clock, l1Events, l2Events),
+    merge(block, l1Events, l2Events),
     transactionsFromState,
     transactionStatus,
     (state: OperatorState, change: OperatorChange) =>

@@ -1,7 +1,7 @@
 import { BehaviorSubject, filter, map, Observable, scan, Subject } from 'rxjs';
 import {
   BridgeEvent,
-  TickEvent,
+  BlockNumberEvent,
   L1TxStatus,
   L2TxStatus,
   TransactionStatus,
@@ -9,7 +9,7 @@ import {
   L1TxId,
 } from './state';
 
-export type AdvanceClock = { type: 'advance_clock'; delta: number };
+export type AdvanceClock = { type: 'advanceL1BlockNumber'; delta: number };
 
 export type FunctionCall = { type: 'function_call'; call: () => void };
 
@@ -20,34 +20,34 @@ export type MockEvent =
   | FunctionCall;
 
 export type MockedOperatorEnvironment = {
-  clock: Observable<TickEvent>;
+  clock: Observable<BlockNumberEvent>;
   l1Events: Observable<BridgeEvent>;
   l2Events: Observable<BridgeEvent>;
   l1TxStatus: (tx: L1TxId) => Observable<L1TxStatus>;
   l2TxStatus: (tx: L2TxId) => Observable<L2TxStatus>;
   start: () => Promise<void>;
-  lastTick: BehaviorSubject<number>;
+  lastl1Block: BehaviorSubject<number>;
 };
 
 export function mocked(events: MockEvent[]): MockedOperatorEnvironment {
-  const clock = new Subject<TickEvent>();
+  const clock = new Subject<BlockNumberEvent>();
   const l1Events = new Subject<BridgeEvent>();
   const l2Events = new Subject<BridgeEvent>();
   const l1TxStatus = new Subject<L1TxStatus>();
   const l2TxStatus = new Subject<L2TxStatus>();
 
-  let timestamp = 0;
+  let l1BlockNumber = 0;
 
   async function start() {
-    clock.next({ type: 'tick', timestamp });
+    clock.next({ type: 'l1BlockNumber', blockNumber: l1BlockNumber });
     for (const event of events) {
       await sleep(1);
       switch (event.type) {
-        case 'advance_clock':
-          timestamp += event.delta;
+        case 'advanceL1BlockNumber':
+          l1BlockNumber += event.delta;
           break;
-        case 'tick':
-          throw new Error('Cannot handle tick events!');
+        case 'l1BlockNumber':
+          throw new Error('Cannot handle blockNumber events!');
         case 'withdrawal':
           l2Events.next(event);
           break;
@@ -71,15 +71,15 @@ export function mocked(events: MockEvent[]): MockedOperatorEnvironment {
           return _exhaustive;
       }
       await sleep(1);
-      timestamp += 1;
-      if (timestamp % 5 === 0) {
-        clock.next({ type: 'tick', timestamp });
+      l1BlockNumber += 1;
+      if (l1BlockNumber % 5 === 0) {
+        clock.next({ type: 'l1BlockNumber', blockNumber: l1BlockNumber });
       }
     }
   }
 
-  const lastTick = new BehaviorSubject<number>(0);
-  clock.pipe(map((tick) => tick.timestamp)).subscribe(lastTick);
+  const lastl1Block = new BehaviorSubject<number>(0);
+  clock.pipe(map((block) => block.blockNumber)).subscribe(lastl1Block);
 
   return {
     clock,
@@ -90,7 +90,7 @@ export function mocked(events: MockEvent[]): MockedOperatorEnvironment {
     l2TxStatus: (txId: L2TxId) =>
       l2TxStatus.pipe(filter((tx) => txId.hash === tx.hash)),
     start,
-    lastTick,
+    lastl1Block: lastl1Block,
   };
 }
 
