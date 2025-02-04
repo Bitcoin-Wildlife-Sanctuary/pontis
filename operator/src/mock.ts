@@ -48,6 +48,8 @@ export function mocked(events: MockEvent[]): MockedOperatorEnvironment {
           break;
         case 'l1BlockNumber':
           throw new Error('Cannot handle blockNumber events!');
+        case 'l2BlockNumber':
+          throw new Error('Cannot handle blockNumber events!');
         case 'withdrawal':
           l2Events.next(event);
           break;

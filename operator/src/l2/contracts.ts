@@ -66,11 +66,19 @@ export function toDigest(x: bigint): { value: bigint[] } {
   const value = new Array<bigint>(8);
 
   for (let i = 0; i < 8; i++) {
-    const shift = 32n * (7n - BigInt(i));
+    const shift = 32n * BigInt(i);
     value[i] = (x >> shift) & 0xffffffffn;
   }
 
   return { value };
+}
+
+export function fromDigest(value: bigint[]): bigint {
+  let result = 0n;
+  for (let i = 7; i >= 0; i--) {
+    result = (result << 32n) + value[i];
+  }
+  return result;
 }
 
 export async function submitDepositsToL2(
@@ -92,11 +100,19 @@ export async function submitDepositsToL2(
 
   const { transaction_hash } = await admin.execute(call);
 
-  // console.log('fetching status of', transaction_hash);
+  return {
+    type: 'l2tx',
+    hash: transaction_hash as any,
+    status: 'PENDING',
+  };
+}
 
-  // const status = await provider.waitForTransaction(transaction_hash);
-
-  // console.log('status', status);
+export async function closePendingWithdrawalBatch(
+  admin: Account,
+  bridge: Contract
+): Promise<L2Tx> {
+  bridge.connect(admin);
+  const { transaction_hash } = await bridge.close_withdrawal_batch();
 
   return {
     type: 'l2tx',
@@ -126,26 +142,3 @@ export function l2TxStatus(
     })
   );
 }
-
-// export async function basicFlow(
-//   btc: Contract,
-//   bridge: Contract,
-//   admin: Account,
-//   alice: Account,
-//   bob: Account
-// ) {
-//   bridge.connect(admin);
-//   await bridge.deposit(alice.address, 1000);
-//
-//   btc.connect(alice);
-//   await btc.transfer(bob.address, 500);
-//
-//   btc.connect(bob);
-//   await btc.approve(bridge.address, 500);
-//
-//   bridge.connect(bob);
-//   await bridge.withdraw(bob.address, 500);
-//
-//   bridge.connect(admin);
-//   await bridge.close_withdrawal_batch();
-// }

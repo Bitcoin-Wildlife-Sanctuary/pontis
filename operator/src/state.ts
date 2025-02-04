@@ -96,6 +96,7 @@ type Withdrawal = {
   amount: bigint;
   recipient: L1Address;
   origin: L2TxHash;
+  blockNumber: number;
 };
 
 type WithdrawalBatchCommon = {
@@ -112,26 +113,25 @@ type WithdrawalBatch =
   | ({
       status: 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED';
       withdrawals: Withdrawal[];
-      hash: bigint;
       closeWithdrawalBatchTx: L2Tx;
     } & WithdrawalBatchCommon)
   | ({
       status: 'CLOSED';
       withdrawals: Withdrawal[];
-      hash: bigint;
+      hash: string;
       closeWithdrawalBatchTx: L2Tx;
     } & WithdrawalBatchCommon)
   | ({
       status: 'SUBMITTED_FOR_EXPANSION';
       withdrawals: Withdrawal[];
-      hash: bigint;
+      hash: string;
       closeWithdrawalBatchTx: L2Tx;
       withdrawBatchTx: L1TxStatus;
     } & WithdrawalBatchCommon)
   | ({
       status: 'BEING_EXPANDED';
       withdrawals: Withdrawal[];
-      hash: bigint;
+      hash: string;
       closeWithdrawalBatchTx: L2Tx;
       withdrawBatchTx: L1TxStatus;
       expansionTxs: L1TxStatus[][];
@@ -139,7 +139,7 @@ type WithdrawalBatch =
   | ({
       status: 'EXPANDED';
       withdrawals: Withdrawal[];
-      hash: bigint;
+      hash: string;
       closeWithdrawalBatchTx: L2Tx;
       withdrawBatchTx: L1TxStatus;
       expansionTxs: L1TxStatus[][];
@@ -159,7 +159,9 @@ export type Deposits = {
   deposits: Deposit[];
 };
 
-export type BlockNumberEvent = { type: 'l1BlockNumber'; blockNumber: number };
+export type BlockNumberEvent =
+  | { type: 'l1BlockNumber'; blockNumber: number }
+  | { type: 'l2BlockNumber'; blockNumber: number };
 
 export type BridgeEvent = L2Event | Deposits | BlockNumberEvent;
 
@@ -172,11 +174,14 @@ export type Transaction = L1Tx | L2Tx;
 export type OperatorChange = BridgeEvent | TransactionStatus | BlockNumberEvent;
 
 export type BridgeEnvironment = {
+  MAX_DEPOSIT_BLOCK_AGE: number;
   DEPOSIT_BATCH_SIZE: number;
-  MAX_PENDING_DEPOSITS: number;
+  MAX_WITHDRAWAL_BLOCK_AGE: number;
+  MAX_WITHDRAWAL_BATCH_SIZE: number;
   aggregateDeposits: (txs: L1Tx[]) => Promise<L1Tx[]>;
   finalizeBatch: (tx: L1TxStatus) => Promise<L1Tx>;
   submitDepositsToL2: (hash: L1TxHash, deposits: Deposit[]) => Promise<L2Tx>;
+  closePendingWithdrawalBatch: () => Promise<L2Tx>;
 };
 
 let i = 0;
@@ -217,16 +222,26 @@ export async function applyChange(
       await manageAggregation(env, newState);
       break;
     }
+    case 'l2BlockNumber': {
+      newState.l2BlockNumber = Math.max(
+        newState.l2BlockNumber,
+        change.blockNumber
+      );
+      await closeWithdrawalBatch(env, newState);
+      break;
+    }
+
     case 'withdrawal': {
       newState.l2BlockNumber = Math.max(
         newState.l2BlockNumber,
         change.blockNumber
       );
-      await manageWithdrawals(newState, change);
+      await handleWithdrawal(newState, change);
+      await closeWithdrawalBatch(env, newState);
       break;
     }
     case 'closeBatch': {
-      // throw new Error('Not implemented');
+      updateWithdrawalBatch(env, newState, change);
       break;
     }
     case 'l2tx': {
@@ -445,7 +460,7 @@ async function initiateAggregation(
 ) {
   while (
     state.pendingDeposits.length >= env.DEPOSIT_BATCH_SIZE ||
-    waitedLongEnough(env, state)
+    depositsOldEnough(env, state)
   ) {
     const batchSize = Math.min(
       2 ** Math.floor(Math.log2(state.pendingDeposits.length)),
@@ -475,13 +490,13 @@ async function initiateAggregation(
   }
 }
 
-function waitedLongEnough(
+function depositsOldEnough(
   env: BridgeEnvironment,
   state: OperatorState
 ): boolean {
   for (const deposit of state.pendingDeposits) {
     if (
-      deposit.origin.blockNumber + env.MAX_PENDING_DEPOSITS <
+      deposit.origin.blockNumber + env.MAX_DEPOSIT_BLOCK_AGE <
       state.l1BlockNumber
     ) {
       return true;
@@ -548,7 +563,7 @@ function updateDeposits(newState: OperatorState) {
   }
 }
 
-async function manageWithdrawals(state: OperatorState, change: L2Event) {
+async function handleWithdrawal(state: OperatorState, change: L2Event) {
   if (change.type === 'withdrawal') {
     let batch = state.withdrawalBatches.find((b) => b.id === change.id);
     if (!batch) {
@@ -568,6 +583,61 @@ async function manageWithdrawals(state: OperatorState, change: L2Event) {
       amount: change.amount,
       recipient: change.recipient,
       origin: change.origin,
+      blockNumber: change.blockNumber,
     });
   }
+}
+async function closeWithdrawalBatch(
+  env: BridgeEnvironment,
+  state: OperatorState
+) {
+  for (let i = 0; i < state.withdrawalBatches.length; i++) {
+    const batch = state.withdrawalBatches[i];
+    if (
+      batch.status === 'PENDING' &&
+      (batch.withdrawals.length === env.MAX_WITHDRAWAL_BATCH_SIZE ||
+        withdrawalsOldEnough(env, state.l2BlockNumber, batch.withdrawals))
+    ) {
+      state.withdrawalBatches[i] = {
+        ...batch,
+        status: 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED',
+        closeWithdrawalBatchTx: await env.closePendingWithdrawalBatch(),
+      };
+    }
+  }
+}
+
+async function updateWithdrawalBatch(
+  env: BridgeEnvironment,
+  state: OperatorState,
+  change: L2Event
+) {
+  if (change.type === 'closeBatch') {
+    for (let i = 0; i < state.withdrawalBatches.length; i++) {
+      const batch = state.withdrawalBatches[i];
+      if (batch.id === change.id) {
+        assert(batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED');
+        if (batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED') {
+          state.withdrawalBatches[i] = {
+            ...batch,
+            status: 'CLOSED',
+            hash: change.root,
+          };
+        }
+      }
+    }
+  }
+}
+
+function withdrawalsOldEnough(
+  env: BridgeEnvironment,
+  blockNumber: number,
+  withdrawals: Withdrawal[]
+): boolean {
+  for (const withdrawal of withdrawals) {
+    if (withdrawal.blockNumber + env.MAX_WITHDRAWAL_BLOCK_AGE < blockNumber) {
+      return true;
+    }
+  }
+  return false;
 }

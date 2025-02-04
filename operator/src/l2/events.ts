@@ -5,24 +5,28 @@ import {
   scan,
   distinctUntilChanged,
   mergeMap,
+  map,
 } from 'rxjs/operators';
 import { EVENT } from 'starknet-types-07/dist/types/api/components';
-import { L1Address, L2TxHash } from '../state';
+import { BlockNumberEvent, L1Address, L2TxHash } from '../state';
 import { BinaryLike } from 'crypto';
+import { fromDigest } from './contracts';
 
 const POLL_INTERVAL = 5000;
 const CHUNK_SIZE = 10;
+
+export function currentBlock(provider: Provider): Observable<number> {
+  return interval(POLL_INTERVAL).pipe(
+    switchMap(async () => (await provider.getBlock('latest')).block_number),
+    distinctUntilChanged()
+  );
+}
 
 export function currentBlockRange(
   provider: Provider,
   initialBlockNumber: number
 ): Observable<[number, number]> {
-  const latest: Observable<number> = interval(POLL_INTERVAL).pipe(
-    switchMap(async () => (await provider.getBlock('latest')).block_number),
-    distinctUntilChanged()
-  );
-
-  return latest.pipe(
+  return currentBlock(provider).pipe(
     scan(
       ([_, previous], current) => [previous + 1, current],
       [0, initialBlockNumber]
@@ -95,6 +99,7 @@ function contractEventsInRange(
             const blockNumber = rawEvent.block_number;
             const origin: L2TxHash = rawEvent.transaction_hash as any;
             const parsedEvent = parseEvents(rawEvent);
+            // console.log('parsedEvent', parsedEvent);
             // console.log('rawEvent', rawEvent);
             if (
               parsedEvent.hasOwnProperty(
@@ -113,7 +118,22 @@ function contractEventsInRange(
                 blockNumber,
               });
             }
-            // TODO: handle closeBatch event
+            if (
+              parsedEvent.hasOwnProperty(
+                'pontis::bridge::Bridge::CloseBatchEvent'
+              )
+            ) {
+              const root =
+                '0x' +
+                fromDigest(rawEvent.data.slice(1).map(BigInt)).toString(16);
+              subscriber.next({
+                type: 'closeBatch',
+                id: BigInt(rawEvent.data[0]),
+                root,
+                origin,
+                blockNumber,
+              });
+            }
           }
           continuationToken = response.continuation_token;
         } while (continuationToken);
@@ -149,5 +169,13 @@ export function l2Events(
     mergeMap((contractAddress) =>
       contractEvents(provider, contractAddress, initialBlockNumber)
     )
+  );
+}
+
+export function l2BlockNumber(
+  provider: Provider
+): Observable<BlockNumberEvent> {
+  return currentBlock(provider).pipe(
+    map((blockNumber) => ({ type: 'l2BlockNumber', blockNumber }))
   );
 }

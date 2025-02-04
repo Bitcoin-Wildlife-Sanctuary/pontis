@@ -1,7 +1,8 @@
 import { Account, cairo, constants, RpcProvider } from 'starknet';
 
-import { contractEvents, l2Events } from './l2/events';
+import { contractEvents, l2BlockNumber, l2Events } from './l2/events';
 import {
+  closePendingWithdrawalBatch,
   contractFromAddress,
   init,
   l2TxStatus,
@@ -24,7 +25,8 @@ import {
 import { setupOperator } from './operator';
 import { mocked, MockEvent } from './mock';
 import { aggregateDeposits, finalizeBatch } from './l1/l1mocks';
-import { filter } from 'rxjs';
+import { filter, merge } from 'rxjs';
+import { close } from 'fs';
 
 async function mockedOperator() {
   const events: MockEvent[] = [
@@ -206,6 +208,23 @@ async function mockedOperator() {
         await provider.waitForTransaction(r2.transaction_hash);
       },
     },
+    {
+      type: 'function_call',
+      call: async () => {
+        for (const _ of [1, 2, 3]) {
+          try {
+            const response = await fetch('http://127.0.0.1:5050/create_block', {
+              method: 'POST',
+            });
+            if (!response.ok) {
+              throw new Error(`Request failed with status ${response.status}`);
+            }
+          } catch (error) {
+            console.error('Error creating block:', error);
+          }
+        }
+      },
+    },
   ];
 
   const initialState: OperatorState = {
@@ -231,9 +250,9 @@ async function mockedOperator() {
     // constants.TRANSACTION_VERSION.V3
   );
 
-  const btcAddress = `0x5b1df9df6682f0af9d2eff1fdd7c6ca91f40e1d066eca10d96328dd0d05be2e`;
+  const btcAddress = `0xfac280f06e56e66ab2f49789dd0e38da7d4804fa410f30a3f70cc135916788`;
   const bridgeAddress =
-    '0x1e8e1f9db04816a2b2985f6f98285b9304cf56e8dc0387ca92b93a2c6d3a961';
+    '0x767fcb99fc737c830c06267706b8709f3c295f8d672da039f2dd9894ac20cb';
 
   const bridge = await contractFromAddress(provider, bridgeAddress);
   const btc = await contractFromAddress(provider, btcAddress);
@@ -241,7 +260,9 @@ async function mockedOperator() {
 
   const env: BridgeEnvironment = {
     DEPOSIT_BATCH_SIZE: 4,
-    MAX_PENDING_DEPOSITS: 4,
+    MAX_DEPOSIT_BLOCK_AGE: 4,
+    MAX_WITHDRAWAL_BLOCK_AGE: 2,
+    MAX_WITHDRAWAL_BATCH_SIZE: 2,
     aggregateDeposits: async (txs: L1Tx[]) => aggregateDeposits(txs),
     finalizeBatch: async (tx: L1TxStatus) => finalizeBatch(tx),
     submitDepositsToL2: async (
@@ -249,6 +270,8 @@ async function mockedOperator() {
       deposits: Deposit[]
     ): Promise<L2Tx> =>
       submitDepositsToL2(admin, bridge, BigInt(hash), deposits),
+    closePendingWithdrawalBatch: async (): Promise<L2Tx> =>
+      closePendingWithdrawalBatch(admin, bridge),
   };
 
   const operatorL2Events = l2Events(provider, initialState.l2BlockNumber, [
@@ -258,7 +281,7 @@ async function mockedOperator() {
   const operator = setupOperator(
     initialState,
     env,
-    clock,
+    merge(clock, l2BlockNumber(provider)),
     l1Events,
     operatorL2Events,
     l1TxStatus,
