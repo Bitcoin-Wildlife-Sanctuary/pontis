@@ -113,7 +113,7 @@ pub mod Bridge {
                 leafs.append(HelpersTrait::double_sha256_deposit(*recipient, *amount));
             };
 
-            let root = HelpersImpl::merkle_root(leafs.span());
+            let root = HelpersTrait::merkle_root(leafs.span());
             let btc = self.btc.read();
             let mut total = 0;
             let mut deposits_ = deposits;
@@ -172,22 +172,15 @@ pub mod Bridge {
             double_sha256_word_array(b)
         }
         fn merkle_root(hashes: Span<Digest>) -> Digest {
-            let zero_hash = DigestTrait::new([0; 8]);
-            let mut hashes: Array<Digest> = hashes.into();
+            let mut hashes = hashes;
 
-            let expected_size = InternalImpl::TREE_MAX_SIZE;
-            for _ in 0..(expected_size.into() - hashes.len()) {
-                hashes.append(zero_hash);
-            };
-
-            let mut hashes = hashes.span();
-
-            for _ in 0..InternalImpl::TREE_HEIGHT {
+            while hashes.len() > 1 {
                 let mut next_hashes: Array<Digest> = array![];
                 while let Option::Some(v) = hashes.multi_pop_front::<2>() {
                     let [a, b] = (*v).unbox();
                     next_hashes.append(double_sha256_parent(@a, @b));
                 };
+                assert!(hashes.len() == 0, "Number of hashes should be a power of 2");
                 hashes = next_hashes.span();
             };
 
@@ -196,7 +189,7 @@ pub mod Bridge {
     }
 
     #[generate_trait]
-    pub impl InternalImpl of InternalTrait {
+    pub impl ProgresiveHelpersImpl of ProgresiveHelpersTrait {
         const TREE_HEIGHT: u8 = 4;
         const TREE_MAX_SIZE: u16 = 16; //pow2(TREE_HEIGHT)!
         // TODO: how to enforce ZERO_HASHES.len() == TREE_HEIGHT?
@@ -264,11 +257,19 @@ pub mod Bridge {
             let mut height = 0;
             let mut size = self.batch.size.read();
 
-            if size == Self::TREE_MAX_SIZE {
-                return self.get_element(Self::TREE_HEIGHT.into());
+            // round up to the nearest power of 2
+            let mut rounded_size = 1;
+            let mut rounded_height = 0;
+            while (rounded_size < size) {
+                rounded_size *= 2;
+                rounded_height += 1;
+            };
+
+            if size == rounded_size {
+                return self.get_element(rounded_height.into());
             }
 
-            while height < Self::TREE_HEIGHT.into() {
+            while height < rounded_height {
                 if size % 2 == 1 {
                     root = double_sha256_parent(@self.get_element(height.into()), @root);
                 } else {
@@ -296,16 +297,60 @@ pub mod Bridge {
 #[cfg(test)]
 mod merkle_tree_tests {
     use crate::utils::hash::Digest;
+    use super::Bridge::HelpersImpl;
+    // use super::Bridge::MerkleTreeHelpersImpl::merkle_root;
+    // use super::Bridge::HelpersTrait::merkle_root;
+
+    fn data(size: u256) -> Array<Digest> {
+        let x = 0x8000000000000000000000000000000000000000000000000000000000000000;
+        let mut r = array![];
+        for i in 1..size + 1 {
+            r.append((x + i).into());
+        };
+        r
+    }
+
+    #[test]
+    fn test_merkle_root1() {
+        let data = data(1).span();
+        assert_eq!(HelpersImpl::merkle_root(data), *data.at(0), "merkle root mismatch");
+    }
+
+    #[test]
+    #[should_panic(expected: "Number of hashes should be a power of 2")]
+    fn test_merkle_root3() {
+        HelpersImpl::merkle_root(data(3).span());
+    }
+
+    #[test]
+    #[should_panic(expected: "Number of hashes should be a power of 2")]
+    fn test_merkle_root7() {
+        HelpersImpl::merkle_root(data(7).span());
+    }
+
+    #[test]
+    fn test_merkle_root() {
+        HelpersImpl::merkle_root(data(1).span());
+        HelpersImpl::merkle_root(data(2).span());
+        HelpersImpl::merkle_root(data(4).span());
+        HelpersImpl::merkle_root(data(8).span());
+        HelpersImpl::merkle_root(data(16).span());
+    }
+}
+
+#[cfg(test)]
+mod withdrawals_tests {
+    use crate::utils::hash::Digest;
     use crate::utils::double_sha256::double_sha256_parent;
     use super::Bridge;
-    use super::Bridge::{InternalTrait, InternalImpl, HelpersImpl};
+    use super::Bridge::{ProgresiveHelpersTrait, ProgresiveHelpersImpl, HelpersImpl};
 
     // use this to fill the ZERO_HASHES array
     #[test]
     #[ignore]
     fn print_zero_hashes() {
         let mut previous: Digest = 0_u256.into();
-        for _ in 0..InternalImpl::TREE_HEIGHT {
+        for _ in 0..ProgresiveHelpersImpl::TREE_HEIGHT {
             previous = double_sha256_parent(@previous, @previous);
         }
     }
@@ -319,6 +364,23 @@ mod merkle_tree_tests {
         r
     }
 
+    fn complement_with_zeros(data: Span<Digest>) -> Span<Digest> {
+        let mut required_size = 1;
+        while (required_size < data.len()) {
+            required_size *= 2;
+        };
+
+        let mut r = array![];
+        r.append_span(data);
+
+        let mut missing_zeros = required_size - data.len();
+
+        for _ in 0..missing_zeros {
+            r.append(0_u256.into());
+        };
+        r.span()
+    }
+
     fn test_data(size: u256) {
         let data = data(size).span();
 
@@ -328,27 +390,26 @@ mod merkle_tree_tests {
             bridge.append(*d);
         };
 
-        assert_eq!(bridge.root(), HelpersImpl::merkle_root(data), "merkle root mismatch");
+        assert_eq!(
+            bridge.root(),
+            HelpersImpl::merkle_root(complement_with_zeros(data)),
+            "merkle root mismatch",
+        );
+        bridge.close_batch_internal();
     }
 
     #[test]
-    fn test_merkle_root1() {
-        test_data(1);
+    fn test_progressive_merkle_root1() {
+        for i in 1..64_u256 {
+            test_data(i);
+        }
     }
 
     #[test]
-    fn test_merkle_root2() {
-        test_data(2);
-    }
-
-    #[test]
-    fn test_merkle_root3() {
-        test_data(3);
-    }
-
-    #[test]
-    fn test_merkle_root256() {
-        test_data(256);
+    fn test_progressive_merkle_root2() {
+        for i in 65..96_u256 {
+            test_data(i);
+        }
     }
 }
 
@@ -363,7 +424,7 @@ mod bridge_tests {
     use starknet::{ContractAddress, contract_address_const};
     use crate::btc::{IBTCDispatcher, IBTCDispatcherTrait};
     use super::{
-        Deposit, Bridge::{Event, CloseBatchEvent, InternalTrait, InternalImpl}, IBridgeDispatcher,
+        Deposit, Bridge::{Event, CloseBatchEvent, ProgresiveHelpersImpl}, IBridgeDispatcher,
         IBridgeDispatcherTrait,
     };
 
@@ -454,7 +515,7 @@ mod bridge_tests {
 
         start_cheat_caller_address_global(alice_address);
         btc.approve(bridge.contract_address, 2000);
-        for _ in 0..InternalTrait::TREE_MAX_SIZE + 1 {
+        for _ in 0..ProgresiveHelpersImpl::TREE_MAX_SIZE + 1 {
             bridge.withdraw(808_u256, 1);
         };
 
@@ -466,7 +527,7 @@ mod bridge_tests {
                         Event::CloseBatchEvent(
                             CloseBatchEvent {
                                 id: 0,
-                                root: 0x96a73c264a774ea8b897f9d048fc199f3e4779f2ad192c1decd66ed9f38b13e9_u256
+                                root: 0x6849d71bb3026db34e73ee25d236d16c2159f27d5f5877214b494a78a6c934e4_u256
                                     .into(),
                             },
                         ),

@@ -250,9 +250,9 @@ async function mockedOperator() {
     // constants.TRANSACTION_VERSION.V3
   );
 
-  const btcAddress = `0xfac280f06e56e66ab2f49789dd0e38da7d4804fa410f30a3f70cc135916788`;
+  const btcAddress = `0x16d70473ef5c57fd1d50a1b4e8a6a292f478783906be36c0e8191f9e71f2f5f`;
   const bridgeAddress =
-    '0x767fcb99fc737c830c06267706b8709f3c295f8d672da039f2dd9894ac20cb';
+    '0x519276e7bd5a015618047384963368a2bf6da2f0514361e4a9e1ff49513b3d';
 
   const bridge = await contractFromAddress(provider, bridgeAddress);
   const btc = await contractFromAddress(provider, btcAddress);
