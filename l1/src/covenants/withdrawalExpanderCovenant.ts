@@ -49,7 +49,7 @@ export type TracedWithdrawalExpander = {
 }
 
 export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState> {
-  static readonly LOCKED_ASM_VERSION = 'd3a800a2b377c663b0fa9538a8cce450'
+  static readonly LOCKED_ASM_VERSION = '38be83e07916c6c8107a7310dbacc222'
 
   constructor(
     readonly operator: PubKey,

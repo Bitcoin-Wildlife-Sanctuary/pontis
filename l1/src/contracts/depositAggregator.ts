@@ -197,7 +197,6 @@ export class DepositAggregator extends SmartContract {
     const stateOut = GeneralUtils.getStateOutput(newHash)
 
     // Sum up aggregated amounts and construct contract output.
-    // todo: change herer;
     const contractOut = GeneralUtils.getContractOutput(
       prevTx0.outputContractAmt + prevTx1.outputContractAmt,
       prevTx0.outputContractSPK

@@ -121,7 +121,7 @@ export type WithdrawalNode = {
   level: bigint
   withdrawals: Array<Withdrawal>
 }
-// todo: add a hash prefix to avoid tree collision
+// todo: maybe add a hash prefix to avoid tree collision
 export class WithdrawalMerkle {
   private static calculateMerkle(withdrawalList: Array<Withdrawal>): {
     root: Sha256

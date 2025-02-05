@@ -20,22 +20,12 @@ export class GeneralUtils extends SmartContractLib {
 
   @method()
   static padAmt(amt: bigint): ByteString {
-    // todo: here only allow max 0.167 BTC, otherwise it thows
-    // todo: add support for more than 0.167 BTC
+    // note: here only allow max 21.47483647 BTC, otherwise it thows. the reason is bitcoin vm only support int32 math
+    // todo: add support for more than 21.47483647 BTC
+    
+    // check the amt is less or equal than int32.max, avoid overflow
+    assert(amt <= 0x7fffffff);
     const res = int2ByteString(amt, 8n)
-    // if (res == toByteString('')) {
-    //   res = toByteString('0000000000000000')
-    // } else if (amt < 0x0100n) {
-    //   res += toByteString('00000000000000')
-    // } else if (amt < 0x010000n) {
-    //   res += toByteString('000000000000')
-    // } else if (amt < 0x01000000n) {
-    //   res += toByteString('0000000000')
-    // } else if (amt <= 0x7fffffffn) {
-    //   res += toByteString('00000000')
-    // } else {
-    //   assert(false)
-    // }
     return res
   }
 
@@ -53,7 +43,6 @@ export class GeneralUtils extends SmartContractLib {
   @method()
   static getContractOutput(amt: bigint, spk: ByteString): ByteString {
     assert(len(spk) == 34n) // spk is 34(0x22) bytes long
-    // todo: amt is uint64, which is not supported by bitcoin virtual machine
     return GeneralUtils.padAmt(amt) + toByteString('22') + spk
   }
 }

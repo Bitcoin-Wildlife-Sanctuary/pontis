@@ -29,7 +29,7 @@ export type Node = {
 
 export const NODE_LENGTH = 32
 
-// todo: bigger the depth
+// todo: confirm the depth of bridge state merkle tree
 export type MerkleProof = FixedArray<Node, typeof MERKLE_PROOF_MAX_DEPTH> // If shorter than max depth, pad with invalid nodes.
 
 export type IntermediateValues = FixedArray<
@@ -59,12 +59,12 @@ export class MerklePath extends SmartContractLib {
   }
 
   /**
-   * Check level is valid, 1 bytes for uint8, first bit is always 0
+   * Check level is valid, support max 8 levels
    * @param level
    */
   @method()
   static checkLevelValid(level: bigint): boolean {
-    assert(level >= 0 && level <= 127)
+    assert(level >= 0 && level <= 8)
     return true
   }
 

@@ -102,7 +102,7 @@ export interface TraceableDepositAggregatorUtxo extends DepositAggregatorUtxo {
 }
 
 export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> {
-  static readonly LOCKED_ASM_VERSION = '9b59ad39a2c6227f6fefc7cb8244b5bc'
+  static readonly LOCKED_ASM_VERSION = 'a9785e842bb0966e3fa34e8bb96b0258'
 
   constructor(
     readonly operator: PubKey,
@@ -259,7 +259,6 @@ export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> 
       // the hash data output is always the second output
       // the change output is always the third output, if exists
       outputContractAmt: tx.outs[0].value,
-      // todo: confirm should we prepend the length
       outputContractSPK: tools.toHex(tx.outs[0].script),
       hashData: Sha256(splitHashFromStateOutput(tx, 1)),
       changeOutput: tx.outs.length > 2 ? outputToByteString(tx, 2) : '',

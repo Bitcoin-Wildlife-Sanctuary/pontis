@@ -31,7 +31,7 @@ export class AggregatorUtils extends SmartContractLib {
     // leaf deposit tx: feeInput => aggregatorContractOutput + stateOutput
     // non-leaf deposit tx: aggregatorContractInput + aggregatorContractInput + feeInput => aggregatorContractOutput + stateOutput
 
-    // todo: add an depositInfo opReturn output, which contains the deposit info, convinient for the indexer
+    // optimize: add an depositInfo opReturn output in the tx of deploying DepositAggregator, in case of losing the deposit info which is stored in offline;
 
     const nInputs = isLeaf
       ? toByteString('01')

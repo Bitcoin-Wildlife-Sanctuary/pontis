@@ -103,7 +103,7 @@ export class Bridge extends SmartContract {
     )
 
     // Construct new batches root
-    // todo: change txid => outpoint to  avoid replaying issue.
+    // optimize: change txid => outpoint to  avoid replaying issue. currently the index of aggregator outpoint is always 0, which is verified in Bridge.getHashDepositTxPrevouts
     const batchID = sha256(aggregatorTxId + aggregatorTx.hashData)
     const batchesRootNew: Sha256 = MerklePath.calcMerkleRoot(
       batchID,
