@@ -179,7 +179,7 @@ export type BridgeEnvironment = {
   MAX_WITHDRAWAL_BLOCK_AGE: number;
   MAX_WITHDRAWAL_BATCH_SIZE: number;
   aggregateDeposits: (txs: L1Tx[]) => Promise<L1Tx[]>;
-  finalizeBatch: (tx: L1TxStatus) => Promise<L1Tx>;
+  finalizeBatch: (tx: L1Tx) => Promise<L1Tx>;
   submitDepositsToL2: (hash: L1TxHash, deposits: Deposit[]) => Promise<L2Tx>;
   closePendingWithdrawalBatch: () => Promise<L2Tx>;
 };

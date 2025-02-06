@@ -11,6 +11,7 @@
     "posttest": "npm run lint",
     "devnet": "docker run -p 5050:5050 shardlabs/starknet-devnet-rs --seed 0",
     "main": "ts-node src/main.ts",
+    "sandbox": "ts-node src/sandbox.ts",
     "deploy": "ts-node src/deploy.ts",
     "play": "ts-node src/play.ts"
   },

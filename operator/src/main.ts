@@ -250,9 +250,9 @@ async function mockedOperator() {
     // constants.TRANSACTION_VERSION.V3
   );
 
-  const btcAddress = `0x16d70473ef5c57fd1d50a1b4e8a6a292f478783906be36c0e8191f9e71f2f5f`;
+  const btcAddress = `0x179d86ff28c3bdfd989d0dcd54b076dabe9941db110417f9d2ac00b2e04b509`;
   const bridgeAddress =
-    '0x519276e7bd5a015618047384963368a2bf6da2f0514361e4a9e1ff49513b3d';
+    '0x1d8f97b57e8886406b016915049a263c5aa627919beed25f7ca4b0cf14c7fea';
 
   const bridge = await contractFromAddress(provider, bridgeAddress);
   const btc = await contractFromAddress(provider, btcAddress);
@@ -264,7 +264,7 @@ async function mockedOperator() {
     MAX_WITHDRAWAL_BLOCK_AGE: 2,
     MAX_WITHDRAWAL_BATCH_SIZE: 2,
     aggregateDeposits: async (txs: L1Tx[]) => aggregateDeposits(txs),
-    finalizeBatch: async (tx: L1TxStatus) => finalizeBatch(tx),
+    finalizeBatch: async (tx: L1Tx) => finalizeBatch(tx),
     submitDepositsToL2: async (
       hash: L1TxHash,
       deposits: Deposit[]

@@ -17,7 +17,7 @@ export async function aggregateDeposits(txs: L1Tx[]): Promise<L1Tx[]> {
   return result;
 }
 
-export async function finalizeBatch(tx: L1TxStatus): Promise<L1Tx> {
+export async function finalizeBatch(tx: L1Tx): Promise<L1Tx> {
   return {
     type: 'l1tx',
     hash: `0xfff${tx.hash.substring(2)}`,
