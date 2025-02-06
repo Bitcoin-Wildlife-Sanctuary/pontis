@@ -14,6 +14,9 @@ import * as withdrawFeature from '../../src/features/withdraw'
 import { TraceableBridgeUtxo } from '../../src/covenants/bridgeCovenant'
 import { Withdrawal } from '../../src/util/merkleUtils'
 import { TraceableWithdrawalExpanderUtxo } from '../../src/covenants'
+import { Postage } from '../../src/lib/constants'
+
+export const MINIMAL_DEPOSIT_AMT = Postage.DEPOSIT_AGGREGATOR_POSTAGE * 2
 
 export const FEE_RATE = 10
 export const ALLOWED_SIZE_DIFF = 40

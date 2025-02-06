@@ -26,6 +26,7 @@ export type DepositData = {
 
 export class DepositAggregator extends SmartContract {
   @prop()
+  /// @dev-note: xonly
   operator: PubKey
 
   @prop()

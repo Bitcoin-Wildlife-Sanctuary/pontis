@@ -5,9 +5,9 @@ import { SupportedNetwork } from '../lib/constants'
 import { Bridge, BridgeTransaction } from '../contracts/bridge'
 import { AggregatorTransaction } from '../contracts/aggregatorUtils'
 import { BridgeUtxo, ChainProvider } from '../lib/provider'
-import { Transaction } from '@scrypt-inc/bitcoinjs-lib'
 import {
   createEmptySha256,
+  inputsToSegmentByteString,
   inputToByteString,
   isTxHashEqual,
   locktimeToByteString,
@@ -17,6 +17,8 @@ import {
 } from '../lib/txTools'
 import { InputCtx, SubContractCall } from '../lib/extPsbt'
 import { BatchMerkleTree, BridgeMerkle } from '../util/merkleUtils'
+import { Transaction } from '@scrypt-inc/bitcoinjs-lib'
+import { toXOnly } from '../lib/utils'
 
 export type BridgeState = {
   batchesRoot: Sha256
@@ -40,7 +42,7 @@ export interface TraceableBridgeUtxo extends BridgeUtxo {
 
 export class BridgeCovenant extends Covenant<BridgeState> {
   // locked bridge artifact md5 hash
-  static readonly LOCKED_ASM_VERSION = 'df0feb71217b6fd1d1cc8cf15bc49dbf'
+  static readonly LOCKED_ASM_VERSION = '82385bff7d75ecfe446f46dd96101ed7'
 
   constructor(
     readonly operator: PubKey,
@@ -51,7 +53,9 @@ export class BridgeCovenant extends Covenant<BridgeState> {
     super(
       [
         {
-          contract: new Bridge(operator, expanderSPK),
+          // todo: confirm address type
+          contract: new Bridge(PubKey(toXOnly(operator, true)), expanderSPK),
+          // contract: new Bridge(operator, expanderSPK),
         },
       ],
       {
@@ -259,11 +263,7 @@ export class BridgeCovenant extends Covenant<BridgeState> {
 
     const prevTx: BridgeTransaction = {
       ver: versionToByteString(tx),
-      inputs:
-        int2ByteString(BigInt(tx.ins.length), 1n) +
-        tx.ins
-          .map((_, inputIndex) => inputToByteString(tx, inputIndex))
-          .reduce((prev, cur) => prev + cur, ''),
+      inputs: inputsToSegmentByteString(tx),
 
       contractSPK,
       contractAmt: tx.outs[0].value,

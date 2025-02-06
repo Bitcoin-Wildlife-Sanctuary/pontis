@@ -1,4 +1,4 @@
-import { ByteString, PubKey, sha256, Sha256, toByteString } from 'scrypt-ts'
+import { ByteString, len, PubKey, sha256, Sha256, toByteString } from 'scrypt-ts'
 import { Covenant } from '../lib/covenant'
 import { SupportedNetwork } from '../lib/constants'
 import { DepositAggregator, DepositData } from '../contracts/depositAggregator'
@@ -9,7 +9,7 @@ import {
 } from '../contracts/aggregatorUtils'
 import { ChainProvider, DepositAggregatorUtxo } from '../lib/provider'
 import { Transaction } from '@scrypt-inc/bitcoinjs-lib'
-import { getTxId } from '../lib/utils'
+import { getTxId, toXOnly } from '../lib/utils'
 import {
   createEmptySha256,
   inputToByteString,
@@ -102,7 +102,7 @@ export interface TraceableDepositAggregatorUtxo extends DepositAggregatorUtxo {
 }
 
 export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> {
-  static readonly LOCKED_ASM_VERSION = 'a9785e842bb0966e3fa34e8bb96b0258'
+  static readonly LOCKED_ASM_VERSION = '7ad35561d719f997faad925059267c72'
 
   constructor(
     readonly operator: PubKey,
@@ -110,10 +110,15 @@ export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> 
     state: DepositAggregatorState,
     network?: SupportedNetwork
   ) {
+    if (len(operator) !== 33n) {
+      throw new Error('operator pubkey invalid')
+    }
     super(
       [
         {
-          contract: new DepositAggregator(operator, bridgeSPK),
+          // todo: confirm address type
+          contract: new DepositAggregator(PubKey(toXOnly(operator, true)), bridgeSPK),
+          // contract: new DepositAggregator(operator, bridgeSPK),
         },
       ],
       {

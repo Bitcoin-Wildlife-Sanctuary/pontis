@@ -7,6 +7,7 @@ import { cloneDeep } from 'lodash-es'
 import { md5 } from 'scryptlib'
 import { SupportedNetwork, TAPROOT_ONLY_SCRIPT_SPENT_KEY } from './constants'
 import { LEAF_VERSION_TAPSCRIPT } from './btc'
+import { checkDisableOpCodeHex } from './txTools'
 
 type AliasedContract = {
   alias?: string
@@ -43,6 +44,9 @@ export abstract class Covenant<StateT = undefined> {
         throw new Error(`Alias ${aliasName} for contract already exists`)
       }
       const taprootContract = TapLeafSmartContract.create(contract)
+      if (checkDisableOpCodeHex(contract.lockingScript.toHex())) {
+        throw new Error(`${contract.constructor.name} has disable opcodes`)
+      }
       tapLeafContracts[aliasName] = taprootContract
       tapTree.push(taprootContract.tapScript)
     }

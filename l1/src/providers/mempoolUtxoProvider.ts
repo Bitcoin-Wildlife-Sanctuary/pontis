@@ -37,6 +37,8 @@ export class MempoolUtxoProvider implements UtxoProvider {
       bitcoinjs.address.toOutputScript(address)
     ).toString('hex')
 
+
+
     const url = `${this.getMempoolApiHost()}/api/address/${address}/utxo`
 
     const utxos: Array<any> = await fetch(url)
@@ -63,6 +65,9 @@ export class MempoolUtxoProvider implements UtxoProvider {
       .catch((e) => {
         return []
       })
+    
+    // console.log('address', address)
+    // console.log('utxos', utxos)
 
     return utxos
       .concat(Array.from(this.newUTXOs.values()))

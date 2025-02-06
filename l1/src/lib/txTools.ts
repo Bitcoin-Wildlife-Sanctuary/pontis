@@ -11,7 +11,7 @@ import {
   toHex,
   UTXO,
 } from 'scrypt-ts'
-import { SpentSPKs } from '../contracts/txUtil'
+import { InputsSegments, MAX_INPUT, SpentSPKs } from '../contracts/txUtil'
 import { SHPreimage } from '../contracts/sigHashUtils'
 import { btc } from './btc'
 import {
@@ -156,6 +156,11 @@ export const checkDisableOpCode = function (scriptPubKey) {
   return false
 }
 
+export function checkDisableOpCodeHex(script: string): boolean {
+  const scriptPubKey = btc.Script.fromHex(script)
+  return checkDisableOpCode(scriptPubKey)
+}
+
 export function unlockingScriptToWitness(script: btc.Script): Buffer[] {
   return script.chunks.map((value) => {
     if (!value.buf) {
@@ -295,7 +300,7 @@ export function inputToByteString(
   tx: Transaction,
   inputIndex: number
 ): ByteString {
-  // 40 = 32(txhash) + 4(index) + 4(sequence)
+  // 41 = 32(txhash) + 4(index) + 1(script) + 4(sequence)
   const len = 40 + varSliceSize(tx.ins[inputIndex].script)
   const buffer = new Uint8Array(len)
   const bufferWriter = new BufferWriter(buffer)
@@ -304,6 +309,19 @@ export function inputToByteString(
   bufferWriter.writeVarSlice(tx.ins[inputIndex].script)
   bufferWriter.writeUInt32(tx.ins[inputIndex].sequence)
   return tools.toHex(buffer)
+}
+
+export function inputsToSegmentByteString(tx: Transaction): InputsSegments {
+  // length = nInputs[1 byte] + inputs[nInputs * 40 bytes]
+  // due to MAX_STANDARD_P2WSH_STACK_ITEM_SIZE = 80, we need to split the inputs into multiple segments
+  if (tx.ins.length > MAX_INPUT) {
+    throw new Error('Inputs length exceeds the maximum limit')
+  }
+  const bytes = int2ByteString(BigInt(tx.ins.length), 1n) + tx.ins.map((_, inputIndex) => inputToByteString(tx, inputIndex)).reduce((prev, cur) => prev + cur, '');
+  const segments = [];
+  segments[0] = bytes.slice(0, 160)
+  segments[1] = bytes.slice(160)
+  return segments as InputsSegments;
 }
 
 export function outputToByteString(

@@ -16,10 +16,11 @@ import { SHPreimage, SigHashUtils } from './sigHashUtils'
 import { AggregatorTransaction, AggregatorUtils } from './aggregatorUtils'
 import { MerklePath, MerkleProof } from './merklePath'
 import { GeneralUtils } from './generalUtils'
+import { InputsSegments, TxUtils } from './txUtil'
 
 export type BridgeTransaction = {
   ver: ByteString // version of the transaction
-  inputs: ByteString // inputLengh + all inputs of the transaction
+  inputs: InputsSegments // inputLengh + all inputs of the transaction
 
   contractSPK: ByteString // the script pubkey of the bridge contract output
   expanderSPK: ByteString // the script pubkey of the expander contract output
@@ -35,14 +36,9 @@ export type BridgeTransaction = {
   locktime: ByteString
 }
 
-export const MAX_NODES_AGGREGATED = 4
-export const MAX_INPUTS = 6
-
 export class Bridge extends SmartContract {
-  // @prop()
-  // outpoint: ByteString;
-
   @prop()
+  /// @dev-note: xonly
   operator: PubKey
 
   @prop()
@@ -255,14 +251,14 @@ export class Bridge extends SmartContract {
   @method()
   static getTxId(tx: BridgeTransaction, expanderSPK: ByteString): Sha256 {
     // deployContract: feeInput => bridgeOutput + stateOutput + changeOutput
-    // finalizeL1Deposit  : bridgeInput + depositAggregatorInput => bridgeOutput + stateOutput + changeOutput
+    // finalizeL1Deposit  : bridgeInput + depositAggregatorInput + feeInput => bridgeOutput + stateOutput + changeOutput
     // finalizeL2Deposit: bridgeInput + feeInput => bridgeOutput + stateOutput + changeOutput
     // withdrawTx: bridgeInput + feeInput => bridgeOutput + bridgeStateOutput + expanderOutput + expanderStateOutput + changeOutput
     let nOutputs: bigint = tx.expanderAmt == 0n ? 2n : 4n
     if (tx.changeOutput != toByteString('')) {
       nOutputs += 1n
     }
-    const nOutputsByteString = int2ByteString(nOutputs, 1n)
+    const nOutputsByteString = int2ByteString(nOutputs)
 
     const stateHash = Bridge.getStateHash(
       tx.batchesRoot,
@@ -282,7 +278,7 @@ export class Bridge extends SmartContract {
 
     return hash256(
       tx.ver +
-        tx.inputs +
+        TxUtils.mergeInputsSegments(tx.inputs) +
         nOutputsByteString +
         GeneralUtils.getContractOutput(tx.contractAmt, tx.contractSPK) +
         GeneralUtils.getStateOutput(stateHash) +

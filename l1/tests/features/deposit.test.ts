@@ -10,11 +10,12 @@ import {
   finalizeL1Deposit,
   deployBridge,
   finalizeL2Deposit,
+  MINIMAL_DEPOSIT_AMT,
 } from './featureUtil'
 import { testOperatorSigner, testUserSigner } from '../utils/testSigner'
 import { PubKey, Sha256 } from 'scrypt-ts'
 import { testUtxoProvider, testChainProvider } from '../utils/testProvider'
-import { SupportedNetwork } from '../../src/lib/constants'
+import { Postage, SupportedNetwork } from '../../src/lib/constants'
 import { verifyInputSpent } from '../utils/txHelper'
 import {
   stateToBatchID,
@@ -23,6 +24,9 @@ import {
 import { getScriptPubKeys } from '../../src/covenants/instance'
 import { reverseTxId } from '../../src/lib/txTools'
 import { createLogger } from './logUtil'
+import { sleepTxTime } from '../utils/sleep'
+import { toXOnly } from '../../src/lib/utils'
+import { AddressType } from '../../src/signers'
 
 use(chaiAsPromised)
 
@@ -36,62 +40,63 @@ const l2Address3 =
 const l2Address4 =
   '02d889448e2ce40fa6874e0bc0bd6156d535a1c9866fd9163be5756e5695493b'
 
-describe('Test the feature of deposit', () => {
+describe('Test the feature of deposit', async () => {
   let scriptSPKs: ReturnType<typeof getScriptPubKeys>
+  let deployBridgeRes: Awaited<ReturnType<typeof deployBridge>>
+  let operatorPubKey: PubKey 
+  let operatorPubKeyXOnly: PubKey
 
   before(async () => {
-    const operatorPubKey = PubKey(await testOperatorSigner.getPublicKey())
+    const logger = createLogger('deposit.test.before')
+
+    operatorPubKey = PubKey(await testOperatorSigner.getPublicKey())  
+    operatorPubKeyXOnly = PubKey(toXOnly(operatorPubKey, testOperatorSigner.addressType === AddressType.P2TR))
+    console.log('operatorPubKey', operatorPubKey)
 
     loadArtifacts()
     scriptSPKs = getScriptPubKeys(operatorPubKey)
-    console.log('scriptSPKs', scriptSPKs)
 
     const operatorAddress = await testOperatorSigner.getAddress()
     const userAddress = await testUserSigner.getAddress()
 
-    console.log('operatorAddress', operatorAddress)
-    console.log('userAddress', userAddress)
+    
+    deployBridgeRes = await deployBridge(
+      testUtxoProvider,
+      testChainProvider
+    )
+    expect(deployBridgeRes.bridgeUtxo.satoshis).to.be.equal(Postage.BRIDGE_POSTAGE)
+    logger.info('deployBridge txid', deployBridgeRes.txid)
+
+    logger.info('operatorAddress', operatorAddress)
+    logger.info('userAddress', userAddress)
   })
 
-  it('should aggregate successfully', async () => {
-    const logger = createLogger('depositTest')
+  it('deposit basic flow', async () => {
+    const logger = createLogger('deposit basic flow')
 
-    const operatorPubKey = PubKey(await testOperatorSigner.getPublicKey())
-
+    await sleepTxTime()
     const depositRes1 = await deposit(
       testUtxoProvider,
       testChainProvider,
       l2Address1,
-      BigInt(1e8),
+      BigInt(MINIMAL_DEPOSIT_AMT),
       network
     )
     logger.info('deposit1 txid', depositRes1.txid)
+
+    await sleepTxTime()
     const depositRes2 = await deposit(
       testUtxoProvider,
       testChainProvider,
       l2Address2,
-      BigInt(1e8),
+      BigInt(MINIMAL_DEPOSIT_AMT + 1),
       network
     )
     logger.info('deposit2 txid', depositRes2.txid)
-    const depositRes3 = await deposit(
-      testUtxoProvider,
-      testChainProvider,
-      l2Address3,
-      BigInt(1e8),
-      network
-    )
-    logger.info('deposit3 txid', depositRes3.txid)
-    const depositRes4 = await deposit(
-      testUtxoProvider,
-      testChainProvider,
-      l2Address4,
-      BigInt(1e8),
-      network
-    )
-    logger.info('deposit4 txid', depositRes4.txid)
 
-    const level1Res1 = await aggregate(
+    
+    await sleepTxTime()
+    const level1Res0 = await aggregate(
       testUtxoProvider,
       testChainProvider,
       {
@@ -107,11 +112,35 @@ describe('Test the feature of deposit', () => {
         utxo: depositRes1.aggregatorUtxo,
       }
     )
-    expect(verifyInputSpent(level1Res1.psbt, 0)).to.be.true
-    expect(verifyInputSpent(level1Res1.psbt, 1)).to.be.true
-    logger.info('level1 aggregate1 txid', level1Res1.txid)
+    expect(verifyInputSpent(level1Res0.psbt, 0)).to.be.true
+    expect(verifyInputSpent(level1Res0.psbt, 1)).to.be.true
+    const level1Amt0 = MINIMAL_DEPOSIT_AMT * 2 + 1
+    expect(level1Res0.aggregatorUtxo.satoshis).to.be.equal(level1Amt0)
+    logger.info('level1 aggregate0 txid', level1Res0.txid)
 
-    const level1Res2 = await aggregate(
+    await sleepTxTime()
+    const depositRes3 = await deposit(
+      testUtxoProvider,
+      testChainProvider,
+      l2Address3,
+      BigInt(MINIMAL_DEPOSIT_AMT + 2),
+      network
+    )
+    logger.info('deposit3 txid', depositRes3.txid)
+
+    await sleepTxTime()
+    const depositRes4 = await deposit(
+      testUtxoProvider,
+      testChainProvider,
+      l2Address4,
+      BigInt(MINIMAL_DEPOSIT_AMT + 3),
+      network
+    )
+    logger.info('deposit4 txid', depositRes4.txid)
+
+
+    await sleepTxTime()
+    const level1Res1 = await aggregate(
       testUtxoProvider,
       testChainProvider,
       {
@@ -127,33 +156,34 @@ describe('Test the feature of deposit', () => {
         utxo: depositRes4.aggregatorUtxo,
       }
     )
-    expect(verifyInputSpent(level1Res2.psbt, 0)).to.be.true
-    expect(verifyInputSpent(level1Res2.psbt, 1)).to.be.true
-    logger.info('level1 aggregate2 txid', level1Res2.txid)
+    expect(verifyInputSpent(level1Res1.psbt, 0)).to.be.true
+    expect(verifyInputSpent(level1Res1.psbt, 1)).to.be.true
+    const level1Amt1 = MINIMAL_DEPOSIT_AMT * 2  + 2 + 3
+    expect(level1Res1.aggregatorUtxo.satoshis).to.be.equal(level1Amt1)
+    logger.info('level1 aggregate1 txid', level1Res1.txid)
 
+    await sleepTxTime()
     const level2Res = await aggregate(
       testUtxoProvider,
       testChainProvider,
       {
         operator: operatorPubKey,
         bridgeSPK: scriptSPKs.bridge,
-        state: level1Res1.state,
-        utxo: level1Res1.aggregatorUtxo,
+        state: level1Res0.state,
+        utxo: level1Res0.aggregatorUtxo,
       },
       {
         operator: operatorPubKey,
         bridgeSPK: scriptSPKs.bridge,
-        state: level1Res2.state,
-        utxo: level1Res2.aggregatorUtxo,
+        state: level1Res1.state,
+        utxo: level1Res1.aggregatorUtxo,
       }
     )
     expect(verifyInputSpent(level2Res.psbt, 0)).to.be.true
+    const level2Amt = level1Amt0 + level1Amt1
+    expect(level2Res.aggregatorUtxo.satoshis).to.be.equal(level2Amt)
     logger.info('level2 aggregate txid', level2Res.txid)
 
-    const deployBridgeRes = await deployBridge(
-      testUtxoProvider,
-      testChainProvider
-    )
 
     const level2AggregatorUtxo: TraceableDepositAggregatorUtxo = {
       utxo: level2Res.aggregatorUtxo,
@@ -161,6 +191,7 @@ describe('Test the feature of deposit', () => {
       operator: operatorPubKey,
       bridgeSPK: scriptSPKs.bridge,
     }
+    await sleepTxTime()
     const finalizeL1Res = await finalizeL1Deposit(
       testUtxoProvider,
       testChainProvider,
@@ -177,6 +208,7 @@ describe('Test the feature of deposit', () => {
     expect(verifyInputSpent(finalizeL1Res.psbt, 1)).to.be.true
     logger.info('finalizeL1 deposit txid', finalizeL1Res.txid)
 
+    await sleepTxTime()
     const finalizeL2Res = await finalizeL2Deposit(
       testUtxoProvider,
       testChainProvider,
@@ -191,6 +223,7 @@ describe('Test the feature of deposit', () => {
       }
     )
     expect(verifyInputSpent(finalizeL2Res.psbt, 0)).to.be.true
+    expect(finalizeL2Res.bridgeUtxo.satoshis).to.be.equal(Postage.BRIDGE_POSTAGE + level2Amt)
     logger.info('finalizeL2 deposit txid', finalizeL2Res.txid)
   })
 })

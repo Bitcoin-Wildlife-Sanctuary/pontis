@@ -2,6 +2,9 @@ import { UTXO } from 'scrypt-ts'
 import { ChainProvider, UtxoProvider } from '../../src/lib/provider'
 import { Transaction } from '@scrypt-inc/bitcoinjs-lib'
 import { getDummyUtxo } from '../../src/lib/utils'
+import { MempoolChainProvider } from '../../src/providers/mempoolChainProvider'
+import {MempoolUtxoProvider} from '../../src/providers/mempoolUtxoProvider'
+import { REMOTE_NETWORK } from './env'
 
 export class TestChainProvider implements ChainProvider {
   private broadcastedTxs: Map<string, string> = new Map()
@@ -43,5 +46,5 @@ export class TestUtxoProvider implements UtxoProvider {
   }
 }
 
-export const testChainProvider = new TestChainProvider()
-export const testUtxoProvider = new TestUtxoProvider()
+export const testChainProvider = REMOTE_NETWORK ? new MempoolChainProvider(REMOTE_NETWORK) : new TestChainProvider()
+export const testUtxoProvider = REMOTE_NETWORK ? new MempoolUtxoProvider(REMOTE_NETWORK) : new TestUtxoProvider()

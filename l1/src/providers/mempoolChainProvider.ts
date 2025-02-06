@@ -2,7 +2,7 @@ import { SupportedNetwork } from '../lib/constants'
 import { ChainProvider } from '../lib/provider'
 import fetch from 'cross-fetch'
 
-export class MempolChainProvider implements ChainProvider {
+export class MempoolChainProvider implements ChainProvider {
   private broadcastedTxs: Map<string, string> = new Map()
 
   constructor(public readonly network: SupportedNetwork) {}

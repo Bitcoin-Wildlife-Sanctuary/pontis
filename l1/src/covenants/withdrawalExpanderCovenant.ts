@@ -8,6 +8,7 @@ import {
 import { InputCtx, SubContractCall } from '../lib/extPsbt'
 import {
   createEmptySha256,
+  inputsToSegmentByteString,
   inputToByteString,
   isTxHashEqual,
   locktimeToByteString,
@@ -18,7 +19,7 @@ import {
 import { ChainProvider, WithdrawalExpanderUtxo } from '../lib/provider'
 import { Transaction } from '@scrypt-inc/bitcoinjs-lib'
 import * as tools from 'uint8array-tools'
-
+import { toXOnly } from '../lib/utils'
 export type WithdrawalExpanderState = {
   level: bigint
 
@@ -49,7 +50,7 @@ export type TracedWithdrawalExpander = {
 }
 
 export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState> {
-  static readonly LOCKED_ASM_VERSION = '38be83e07916c6c8107a7310dbacc222'
+  static readonly LOCKED_ASM_VERSION = '447bd6ee4caabcb3733665f398181af7'
 
   constructor(
     readonly operator: PubKey,
@@ -59,7 +60,8 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
     super(
       [
         {
-          contract: new WithdrawalExpander(operator),
+          contract: new WithdrawalExpander(PubKey(toXOnly(operator, true))),
+          // contract: new WithdrawalExpander(operator),
         },
       ],
       {
@@ -240,11 +242,7 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
 
     const res = {
       ver: versionToByteString(tx),
-      inputs:
-        int2ByteString(BigInt(tx.ins.length)) +
-        tx.ins
-          .map((_, inputIndex) => inputToByteString(tx, inputIndex))
-          .join(''),
+      inputs: inputsToSegmentByteString(tx),
 
       isCreateWithdrawalTx,
 

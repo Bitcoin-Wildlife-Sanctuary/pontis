@@ -15,7 +15,7 @@ export enum AddressType {
 export class DefaultSigner implements Signer {
   constructor(
     private readonly keyPair: ECPairInterface = ECPair.makeRandom(),
-    private readonly addressType: AddressType = AddressType.P2TR
+    public readonly addressType: AddressType = AddressType.P2TR
   ) {}
 
   async getAddress(): Promise<string> {

@@ -75,6 +75,6 @@ export class MerklePath extends SmartContractLib {
    */
   @method()
   static levelToByteString(level: bigint): ByteString {
-    return int2ByteString(level, 1n)
+    return int2ByteString(level)
   }
 }

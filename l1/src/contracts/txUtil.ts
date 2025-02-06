@@ -10,10 +10,12 @@ import {
   toByteString,
 } from 'scrypt-ts'
 
-export const MAX_INPUT = 6
+export const MAX_INPUT = 3
 export const MAX_OUTPUT = 6
+export const MAX_INPUT_SEGMENT = 2
 
 export type SpentSPKs = FixedArray<ByteString, typeof MAX_OUTPUT>
+export type InputsSegments = FixedArray<ByteString, typeof MAX_INPUT_SEGMENT>
 
 export class TxUtils extends SmartContractLib {
   @method()
@@ -27,5 +29,12 @@ export class TxUtils extends SmartContractLib {
     }
     assert(hashSpentScripts == sha256(mergedSPKs))
     return true
+  }
+
+  @method()
+  static mergeInputsSegments(
+    inputsSegments: InputsSegments,
+  ): ByteString {
+    return inputsSegments[0] + inputsSegments[1];
   }
 }

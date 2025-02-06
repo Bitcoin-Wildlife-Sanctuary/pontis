@@ -18,10 +18,11 @@ import { SHPreimage, SigHashUtils } from './sigHashUtils'
 import { Bridge, BridgeTransaction } from './bridge'
 import { GeneralUtils } from './generalUtils'
 import { MerklePath } from './merklePath'
+import { InputsSegments, TxUtils } from './txUtil'
 
 export type ExpanderTransaction = {
   ver: ByteString
-  inputs: ByteString
+  inputs: InputsSegments
 
   isCreateWithdrawalTx: boolean
   // non-empty if prev tx is createWithdrawal tx, otherwise empty
@@ -50,6 +51,7 @@ export type WithdrawalState = {
 
 export class WithdrawalExpander extends SmartContract {
   @prop()
+  /// @dev-note: xonly
   operator: PubKey
 
   constructor(operator: PubKey) {
@@ -336,7 +338,7 @@ export class WithdrawalExpander extends SmartContract {
 
     return hash256(
       tx.ver +
-        tx.inputs +
+        TxUtils.mergeInputsSegments(tx.inputs) +
         int2ByteString(nOutputs) +
         bridgeOutputs +
         expanderOutputs +
@@ -354,7 +356,7 @@ export class WithdrawalExpander extends SmartContract {
 
     return hash256(
       tx.ver +
-        tx.inputs +
+        TxUtils.mergeInputsSegments(tx.inputs) +
         toByteString('04') +
         GeneralUtils.getContractOutput(tx.contractAmt, tx.contractSPK) +
         GeneralUtils.getStateOutput(stateHash) +
