@@ -308,7 +308,7 @@ async function mockedOperator() {
 }
 
 async function startServer() {
-  const operator = await mockedOperator()
+  const operator = await mockedOperator();
   serve(operator);
 }
 
