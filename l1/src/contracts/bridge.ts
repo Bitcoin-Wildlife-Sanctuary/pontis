@@ -121,7 +121,7 @@ export class Bridge extends SmartContract {
     const stateOut = GeneralUtils.getStateOutput(stateHash, toByteString(''))
 
     // Enforce outputs.
-    const hashOutputs = sha256(stateOut + contractOut  + changeOutput)
+    const hashOutputs = sha256(stateOut + contractOut + changeOutput)
     assert(hashOutputs == shPreimage.hashOutputs)
   }
 
@@ -183,7 +183,7 @@ export class Bridge extends SmartContract {
     const stateOut = GeneralUtils.getStateOutput(stateHash, toByteString(''))
 
     // Enforce outputs.
-    const hashOutputs = sha256(stateOut + contractOut  + changeOutput)
+    const hashOutputs = sha256(stateOut + contractOut + changeOutput)
     assert(hashOutputs == shPreimage.hashOutputs)
   }
 
@@ -233,10 +233,15 @@ export class Bridge extends SmartContract {
     // Create an expander P2TR output which carries the total amount withrawn.
     const expanderOut = GeneralUtils.getContractOutput(sumAmt, this.expanderSPK)
 
-    const stateOut = GeneralUtils.getStateOutput(bridgeStateHash, expanderStateHash)
+    const stateOut = GeneralUtils.getStateOutput(
+      bridgeStateHash,
+      expanderStateHash
+    )
 
     // Enforce outputs.
-    const hashOutputs = sha256(stateOut + contractOut + expanderOut + changeOutput)
+    const hashOutputs = sha256(
+      stateOut + contractOut + expanderOut + changeOutput
+    )
     assert(hashOutputs == shPreimage.hashOutputs)
   }
 
@@ -246,7 +251,7 @@ export class Bridge extends SmartContract {
     // finalizeL1Deposit  : bridgeInput + depositAggregatorInput + feeInput => stateOutput + bridgeOutput + changeOutput
     // finalizeL2Deposit: bridgeInput + feeInput => stateOutput + bridgeOutput + changeOutput
     // createWithdrawal: bridgeInput + feeInput => stateOutput + bridgeOutput + expanderOutput + changeOutput
-    let nOutputs: bigint = tx.expanderAmt == 0n ? 2n : 3n;
+    let nOutputs: bigint = tx.expanderAmt == 0n ? 2n : 3n
     if (tx.changeOutput != toByteString('')) {
       nOutputs += 1n
     }

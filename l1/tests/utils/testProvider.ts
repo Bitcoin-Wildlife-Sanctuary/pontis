@@ -3,8 +3,10 @@ import { ChainProvider, UtxoProvider } from '../../src/lib/provider'
 import { Transaction } from '@scrypt-inc/bitcoinjs-lib'
 import { getDummyUtxo } from '../../src/lib/utils'
 import { MempoolChainProvider } from '../../src/providers/mempoolChainProvider'
-import {MempoolUtxoProvider} from '../../src/providers/mempoolUtxoProvider'
+import { MempoolUtxoProvider } from '../../src/providers/mempoolUtxoProvider'
 import { REMOTE_NETWORK } from './env'
+import { RPCChainProvider } from '../../src/providers/rpcChainProvider'
+import { RPCUtxoProvider } from '../../src/providers/rpcUtxoProvider'
 
 export class TestChainProvider implements ChainProvider {
   private broadcastedTxs: Map<string, string> = new Map()
@@ -48,3 +50,21 @@ export class TestUtxoProvider implements UtxoProvider {
 
 export const testChainProvider = REMOTE_NETWORK ? new MempoolChainProvider(REMOTE_NETWORK) : new TestChainProvider()
 export const testUtxoProvider = REMOTE_NETWORK ? new MempoolUtxoProvider(REMOTE_NETWORK) : new TestUtxoProvider()
+
+// export const testChainProvider = REMOTE_NETWORK
+//   ? new RPCChainProvider(
+//       'yourrpchostandport',
+//       'yourwalletname',
+//       'yourusername',
+//       'yourpassword'
+//     )
+//   : new TestChainProvider()
+
+// export const testUtxoProvider = REMOTE_NETWORK
+//   ? new RPCUtxoProvider(
+//       'yourrpchostandport',
+//       'yourwalletname',
+//       'yourusername',
+//       'yourpassword'
+//     )
+//   : new TestUtxoProvider()

@@ -111,7 +111,7 @@ export class ExtPsbt extends Psbt {
   private _stateHashes: string[] = []
 
   constructor() {
-    super();
+    super()
   }
 
   get isFinalized(): boolean {
@@ -258,7 +258,7 @@ export class ExtPsbt extends Psbt {
       throw new Error('state output can only be added at the first output')
     }
     // add a dummy state output;
-    const stateOutputScript = this.stateScript;
+    const stateOutputScript = this.stateScript
     this.addOutput({
       script: stateOutputScript,
       value: BigInt(0),
@@ -270,16 +270,13 @@ export class ExtPsbt extends Psbt {
     const stateOutput = GeneralUtils.getStateOutput(
       this.stateHashes[0] || sha256(''),
       this.stateHashes[1]
-    );
+    )
     const script = tools.fromHex(stateOutput.slice(18)) // remove satoshis, script length
     return script
   }
 
   get stateHashes() {
-    return [
-      this._stateHashes[0] || '',
-      this._stateHashes[1] || '',
-    ] as const
+    return [this._stateHashes[0] || '', this._stateHashes[1] || ''] as const
   }
 
   addCovenantOutput<T>(covenant: Covenant<T>, satoshis: number = 330): this {
@@ -288,12 +285,12 @@ export class ExtPsbt extends Psbt {
       value: BigInt(satoshis),
     })
     this._checkOutputCnt()
-    const state = covenant.stateHash;
-    this._stateHashes.push(state);
+    const state = covenant.stateHash
+    this._stateHashes.push(state)
     if (this._stateHashes.length > 2) {
       throw new Error('only support two covenant outputs')
     }
-    this.unsignedTx.outs[0].script = this.stateScript;
+    this.unsignedTx.outs[0].script = this.stateScript
     return this
   }
 

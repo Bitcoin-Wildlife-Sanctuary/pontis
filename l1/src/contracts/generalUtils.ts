@@ -23,9 +23,9 @@ export class GeneralUtils extends SmartContractLib {
   static padAmt(amt: bigint): ByteString {
     // note: here only allow max 21.47483647 BTC, otherwise it thows. the reason is bitcoin vm only support int32 math
     // todo: add support for more than 21.47483647 BTC
-    
+
     // check the amt is less or equal than int32.max, avoid overflow
-    assert(amt <= 0x7fffffff);
+    assert(amt <= 0x7fffffff)
     // const res = int2ByteString(amt, 8n)
     let res = int2ByteString(amt)
     if (res == toByteString('')) {
@@ -48,10 +48,10 @@ export class GeneralUtils extends SmartContractLib {
   static getStateOutput(hash1: ByteString, hash2: ByteString): ByteString {
     // hash2 can be empty;
     // todo here maybe exist vulnerability when simply concatenate hash1 and hash2; but in poc, it's acceptable
-    assert(len(hash1) == 32n);
-    assert(len(hash2) == 32n || len(hash2) == 0n);
-    const hash = hash1 + hash2;
-    const scriptLen = len(hash) + 2n;
+    assert(len(hash1) == 32n)
+    assert(len(hash2) == 32n || len(hash2) == 0n)
+    const hash = hash1 + hash2
+    const scriptLen = len(hash) + 2n
 
     return (
       toByteString('0000000000000000') + // Output satoshis (0 sats)

@@ -1,7 +1,7 @@
-import { IS_LOCAL } from "./env";
+import { IS_LOCAL } from './env'
 
 export function sleep(seconds: number) {
-  return new Promise(resolve => setTimeout(resolve, seconds * 1000));
+  return new Promise((resolve) => setTimeout(resolve, seconds * 1000))
 }
 
 export async function sleepTxTime() {

@@ -317,11 +317,15 @@ export function inputsToSegmentByteString(tx: Transaction): InputsSegments {
   if (tx.ins.length > MAX_INPUT) {
     throw new Error('Inputs length exceeds the maximum limit')
   }
-  const bytes = int2ByteString(BigInt(tx.ins.length), 1n) + tx.ins.map((_, inputIndex) => inputToByteString(tx, inputIndex)).reduce((prev, cur) => prev + cur, '');
-  const segments = [];
+  const bytes =
+    int2ByteString(BigInt(tx.ins.length), 1n) +
+    tx.ins
+      .map((_, inputIndex) => inputToByteString(tx, inputIndex))
+      .reduce((prev, cur) => prev + cur, '')
+  const segments = []
   segments[0] = bytes.slice(0, 160)
   segments[1] = bytes.slice(160)
-  return segments as InputsSegments;
+  return segments as InputsSegments
 }
 
 export function outputToByteString(
@@ -346,22 +350,23 @@ export function outputToUtxo(tx: Transaction, outputIndex: number): UTXO {
   }
 }
 
-export function splitHashFromStateOutput(
-  tx: Transaction,
-) {
+export function splitHashFromStateOutput(tx: Transaction) {
   // state output script = 1(op return) + 1(op push 32) + 32(hash)
   // or state output script = 1(op return) + 1(op push 32) + 32(hash) + 32(hash)
-  const stateScript = tx.outs[0].script;
+  const stateScript = tx.outs[0].script
   if (stateScript.length === ONE_STATE_OUTPUT_SCRIPT_LENGTH) {
-    return [tools.toHex(stateScript.slice(2, 34)), ''] as const;
+    return [tools.toHex(stateScript.slice(2, 34)), ''] as const
   }
   if (stateScript.length === TWO_STATE_OUTPUT_SCRIPT_LENGTH) {
-    return [tools.toHex(stateScript.slice(2, 34)), tools.toHex(stateScript.slice(34, 66))] as const;
+    return [
+      tools.toHex(stateScript.slice(2, 34)),
+      tools.toHex(stateScript.slice(34, 66)),
+    ] as const
   }
-  throw new Error('Invalid state output script length');
+  throw new Error('Invalid state output script length')
 }
-export const TWO_STATE_OUTPUT_SCRIPT_LENGTH = 66;
-export const ONE_STATE_OUTPUT_SCRIPT_LENGTH = 34;
+export const TWO_STATE_OUTPUT_SCRIPT_LENGTH = 66
+export const ONE_STATE_OUTPUT_SCRIPT_LENGTH = 34
 
 export function inputToPrevout(
   tx: Transaction,

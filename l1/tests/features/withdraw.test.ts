@@ -35,13 +35,13 @@ const l1Address =
 
 describe('Test the feature of withdraw', () => {
   let scriptSPKs: ReturnType<typeof getScriptPubKeys>
-  let operatorPubKey: PubKey;
+  let operatorPubKey: PubKey
 
   // only update in before and beforeEachDeposit
-  let bridgeTraceableUtxo: TraceableBridgeUtxo;
-  
+  let bridgeTraceableUtxo: TraceableBridgeUtxo
+
   before(async () => {
-    const logger = createLogger('withdraw.test.before');
+    const logger = createLogger('withdraw.test.before')
     operatorPubKey = PubKey(await testOperatorSigner.getPublicKey())
     loadArtifacts()
     scriptSPKs = getScriptPubKeys(operatorPubKey)
@@ -56,11 +56,16 @@ describe('Test the feature of withdraw', () => {
       expanderSPK: scriptSPKs.withdrawExpander,
       state: deployBridgeRes.state,
     }
-    expect(deployBridgeRes.bridgeUtxo.satoshis).to.be.equal(Postage.BRIDGE_POSTAGE)
+    expect(deployBridgeRes.bridgeUtxo.satoshis).to.be.equal(
+      Postage.BRIDGE_POSTAGE
+    )
     logger.info('deployBridge txid', deployBridgeRes.txid)
   })
 
-  async function beforeEachDeposit(logger: ReturnType<typeof createLogger>, amt: bigint) {
+  async function beforeEachDeposit(
+    logger: ReturnType<typeof createLogger>,
+    amt: bigint
+  ) {
     // deposit to bridge;
     await sleepTxTime()
     const depositRes = await deposit(
@@ -87,7 +92,9 @@ describe('Test the feature of withdraw', () => {
     )
     expect(verifyInputSpent(finalizeL1DepositTx.psbt, 0)).to.be.true
     expect(verifyInputSpent(finalizeL1DepositTx.psbt, 1)).to.be.true
-    expect(finalizeL1DepositTx.bridgeUtxo.satoshis).equals(bridgeTraceableUtxo.utxo.satoshis + Number(amt))
+    expect(finalizeL1DepositTx.bridgeUtxo.satoshis).equals(
+      bridgeTraceableUtxo.utxo.satoshis + Number(amt)
+    )
 
     bridgeTraceableUtxo = {
       utxo: finalizeL1DepositTx.bridgeUtxo,
@@ -131,8 +138,11 @@ describe('Test the feature of withdraw', () => {
         amt: BigInt(MINIMAL_DEPOSIT_AMT + 6),
       },
     ]
-    const totalWithdrawAmt = withdrawals.reduce((acc, w) => acc + w.amt, BigInt(0));
-    await beforeEachDeposit(logger, totalWithdrawAmt);
+    const totalWithdrawAmt = withdrawals.reduce(
+      (acc, w) => acc + w.amt,
+      BigInt(0)
+    )
+    await beforeEachDeposit(logger, totalWithdrawAmt)
 
     // withdraw from bridge;
     await sleepTxTime()
@@ -145,8 +155,12 @@ describe('Test the feature of withdraw', () => {
     )
     logger.info('createWithdrawal txid', createWithdrawalRes.txid)
     expect(verifyInputSpent(createWithdrawalRes.psbt, 0)).to.be.true
-    expect(createWithdrawalRes.bridgeUtxo.satoshis).equals(bridgeTraceableUtxo.utxo.satoshis - Number(totalWithdrawAmt))
-    expect(createWithdrawalRes.withdrawalUtxo.satoshis).equals( Number(totalWithdrawAmt))
+    expect(createWithdrawalRes.bridgeUtxo.satoshis).equals(
+      bridgeTraceableUtxo.utxo.satoshis - Number(totalWithdrawAmt)
+    )
+    expect(createWithdrawalRes.withdrawalUtxo.satoshis).equals(
+      Number(totalWithdrawAmt)
+    )
 
     // expand withdrawal;
     await sleepTxTime()
@@ -163,10 +177,18 @@ describe('Test the feature of withdraw', () => {
     )
     logger.info('expandWithdrawal txid', expandWithdrawalRes.txid)
     expect(verifyInputSpent(expandWithdrawalRes.psbt, 0)).to.be.true
-    const withdrawAmt0 = withdrawals.slice(0, 4).reduce((acc, w) => acc + w.amt, BigInt(0));
-    const withdrawAmt1 = withdrawals.slice(4, 8).reduce((acc, w) => acc + w.amt, BigInt(0));
-    expect(expandWithdrawalRes.withdrawalExpander0Utxo.satoshis).equals(Number(withdrawAmt0))
-    expect(expandWithdrawalRes.withdrawalExpander1Utxo.satoshis).equals(Number(withdrawAmt1))
+    const withdrawAmt0 = withdrawals
+      .slice(0, 4)
+      .reduce((acc, w) => acc + w.amt, BigInt(0))
+    const withdrawAmt1 = withdrawals
+      .slice(4, 8)
+      .reduce((acc, w) => acc + w.amt, BigInt(0))
+    expect(expandWithdrawalRes.withdrawalExpander0Utxo.satoshis).equals(
+      Number(withdrawAmt0)
+    )
+    expect(expandWithdrawalRes.withdrawalExpander1Utxo.satoshis).equals(
+      Number(withdrawAmt1)
+    )
 
     await sleepTxTime()
     const distrubiteRes0 = await distributeWithdrawals(
@@ -186,7 +208,7 @@ describe('Test the feature of withdraw', () => {
       expect(utxo.satoshis).equals(Number(withdrawals[index].amt))
       expect(utxo.script).equals(withdrawals[index].l1Address)
     })
-    
+
     await sleepTxTime()
     const distrubiteRes1 = await distributeWithdrawals(
       testUtxoProvider,

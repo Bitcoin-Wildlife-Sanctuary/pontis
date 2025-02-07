@@ -244,7 +244,8 @@ export class BridgeCovenant extends Covenant<BridgeState> {
     let expanderAmt = 0n
     let expanderStateHash: Sha256 = createEmptySha256()
     let expanderSPK = ''
-    const isPrevTxCreateWithdrawal = tx.outs[0].script.length === TWO_STATE_OUTPUT_SCRIPT_LENGTH;
+    const isPrevTxCreateWithdrawal =
+      tx.outs[0].script.length === TWO_STATE_OUTPUT_SCRIPT_LENGTH
     if (isPrevTxCreateWithdrawal) {
       // the 3rd output is expander output
       expanderAmt = tx.outs[2].value

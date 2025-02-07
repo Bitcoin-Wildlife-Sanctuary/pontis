@@ -243,7 +243,7 @@ export class WithdrawalExpander extends SmartContract {
     assert(stateHash == nodeHash)
 
     let outputs = toByteString('')
-    let childExpander1StateHash = toByteString('');
+    let childExpander1StateHash = toByteString('')
     // first expander output and state output
     outputs += GeneralUtils.getContractOutput(
       childExpanderAmt0,
@@ -259,8 +259,11 @@ export class WithdrawalExpander extends SmartContract {
       childExpander1StateHash = childExpandNodeHash1
     }
 
-    const stateOut = GeneralUtils.getStateOutput(childExpandNodeHash0, childExpander1StateHash);
-    outputs = stateOut + outputs;
+    const stateOut = GeneralUtils.getStateOutput(
+      childExpandNodeHash0,
+      childExpander1StateHash
+    )
+    outputs = stateOut + outputs
 
     // change output
     outputs += changeOutput
@@ -317,29 +320,33 @@ export class WithdrawalExpander extends SmartContract {
 
   @method()
   static getTxId(tx: ExpanderTransaction): Sha256 {
-
     // createWithdrawalTx: bridge + fee => state + bridge + withdrawalExpander + change(optional);
     // expanderTx: bridge + fee => state + expander + expander(exists when output1Amt > 0n) + change(optional);
-    let nOutputs: bigint = (tx.isCreateWithdrawalTx || tx.output1Amt > 0n) ? 3n : 2n
+    let nOutputs: bigint =
+      tx.isCreateWithdrawalTx || tx.output1Amt > 0n ? 3n : 2n
     if (tx.changeOutput != toByteString('')) {
       nOutputs = nOutputs + 1n
     }
 
     const stateOut = GeneralUtils.getStateOutput(
-      tx.isCreateWithdrawalTx ? tx.bridgeStateHash : tx.stateHash0, 
+      tx.isCreateWithdrawalTx ? tx.bridgeStateHash : tx.stateHash0,
       tx.isCreateWithdrawalTx ? tx.stateHash0 : tx.stateHash1
-    );
+    )
 
     const bridgeOutputs = tx.isCreateWithdrawalTx
       ? GeneralUtils.getContractOutput(tx.bridgeAmt, tx.bridgeSPK)
       : toByteString('')
 
-    let expanderOutputs =
-      GeneralUtils.getContractOutput(tx.output0Amt, tx.contractSPK)
+    let expanderOutputs = GeneralUtils.getContractOutput(
+      tx.output0Amt,
+      tx.contractSPK
+    )
 
     if (tx.output1Amt > 0n) {
-      expanderOutputs +=
-        GeneralUtils.getContractOutput(tx.output1Amt, tx.contractSPK)
+      expanderOutputs += GeneralUtils.getContractOutput(
+        tx.output1Amt,
+        tx.contractSPK
+      )
     }
 
     return hash256(

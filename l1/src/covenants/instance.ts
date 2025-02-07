@@ -20,7 +20,7 @@ export function getScriptPubKeys(operatorPubKey: PubKey) {
     DepositAggregatorCovenant.createEmptyState()
   )
 
-  if (checkDisableOpCodeHex(bridge.lockingScriptHex)) { 
+  if (checkDisableOpCodeHex(bridge.lockingScriptHex)) {
     throw new Error('Bridge covenant has disable opcodes')
   }
   if (checkDisableOpCodeHex(depositAggregator.lockingScriptHex)) {

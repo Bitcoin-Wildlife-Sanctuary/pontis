@@ -7,13 +7,13 @@ const ECPair = ECPairFactory(ecc)
 bitcoinjs.initEccLib(ecc)
 
 async function main() {
-    const key = ECPair.makeRandom();
+  const key = ECPair.makeRandom()
 
-    const signer = new DefaultSigner(key);
-    const address = await signer.getAddress();
-    
-    console.log('private key:', key.toWIF());
-    console.log('address:', address);
+  const signer = new DefaultSigner(key)
+  const address = await signer.getAddress()
+
+  console.log('private key:', key.toWIF())
+  console.log('address:', address)
 }
 
-main();
+main()

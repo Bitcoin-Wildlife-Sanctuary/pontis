@@ -17,7 +17,7 @@ export class TapLeafSmartContract {
 
   constructor(contract: SmartContract) {
     const contractScript = contract.lockingScript
-    
+
     const tapScript = Tap.encodeScript(
       contractScript.toBuffer(),
       LEAF_VERSION_TAPSCRIPT

@@ -145,8 +145,6 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
           throw new Error('Input context is not available')
         }
 
-
-
         return [
           shPreimage,
           () => {
@@ -205,7 +203,8 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
   }
 
   private static getExpanderTransaction(tx: Transaction): ExpanderTransaction {
-    const isSingleExpanderOutput = tx.outs[0].script.length === ONE_STATE_OUTPUT_SCRIPT_LENGTH;
+    const isSingleExpanderOutput =
+      tx.outs[0].script.length === ONE_STATE_OUTPUT_SCRIPT_LENGTH
     let isCreateWithdrawalTx = false
     if (!isSingleExpanderOutput) {
       isCreateWithdrawalTx =
@@ -239,7 +238,11 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
     }
 
     let changeOutput = ''
-    if ((!isCreateWithdrawalTx && isSingleExpanderOutput) && tx.outs.length === 3) {
+    if (
+      !isCreateWithdrawalTx &&
+      isSingleExpanderOutput &&
+      tx.outs.length === 3
+    ) {
       changeOutput = outputToByteString(tx, 2)
     }
     if (tx.outs.length === 4) {

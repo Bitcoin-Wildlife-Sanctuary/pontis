@@ -1,4 +1,11 @@
-import { ByteString, len, PubKey, sha256, Sha256, toByteString } from 'scrypt-ts'
+import {
+  ByteString,
+  len,
+  PubKey,
+  sha256,
+  Sha256,
+  toByteString,
+} from 'scrypt-ts'
 import { Covenant } from '../lib/covenant'
 import { SupportedNetwork } from '../lib/constants'
 import { DepositAggregator, DepositData } from '../contracts/depositAggregator'
@@ -117,7 +124,10 @@ export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> 
       [
         {
           // todo: confirm address type
-          contract: new DepositAggregator(PubKey(toXOnly(operator, true)), bridgeSPK),
+          contract: new DepositAggregator(
+            PubKey(toXOnly(operator, true)),
+            bridgeSPK
+          ),
           // contract: new DepositAggregator(operator, bridgeSPK),
         },
       ],

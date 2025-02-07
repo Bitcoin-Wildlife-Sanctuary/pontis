@@ -32,9 +32,7 @@ export class TxUtils extends SmartContractLib {
   }
 
   @method()
-  static mergeInputsSegments(
-    inputsSegments: InputsSegments,
-  ): ByteString {
-    return inputsSegments[0] + inputsSegments[1];
+  static mergeInputsSegments(inputsSegments: InputsSegments): ByteString {
+    return inputsSegments[0] + inputsSegments[1]
   }
 }
