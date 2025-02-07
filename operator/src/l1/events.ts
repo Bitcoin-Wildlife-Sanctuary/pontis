@@ -10,6 +10,7 @@ import {
   filter,
 } from 'rxjs';
 import { BlockNumberEvent, Deposit, Deposits } from '../state';
+import * as chain from './lib/chain';
 
 const POLL_INTERVAL = 5000;
 
@@ -50,7 +51,7 @@ export function deposits(initialBlockNumber: number): Observable<Deposits> {
 // functions to be implemented
 // add whatever parameters you need
 async function getCurrentL1BlockNumber(): Promise<number> {
-  throw new Error('Not implemented.');
+  return chain.getBlockNumber();
 }
 
 async function depositsInRange(
