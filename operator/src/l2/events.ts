@@ -1,5 +1,5 @@
 import { Provider, events, CallData, ParsedEvent } from 'starknet';
-import { Observable, interval, from } from 'rxjs';
+import { Observable, from, timer } from 'rxjs';
 import {
   switchMap,
   scan,
@@ -16,7 +16,7 @@ const POLL_INTERVAL = 5000;
 const CHUNK_SIZE = 10;
 
 export function currentBlock(provider: Provider): Observable<number> {
-  return interval(POLL_INTERVAL).pipe(
+  return timer(0, POLL_INTERVAL).pipe(
     switchMap(async () => (await provider.getBlock('latest')).block_number),
     distinctUntilChanged()
   );

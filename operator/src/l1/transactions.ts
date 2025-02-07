@@ -7,7 +7,7 @@ export function l1TransactionStatus(
 ): Observable<L1TxStatus> {
   return interval(5000).pipe(
     switchMap(() => from(getL1TransactionStatus(tx))),
-    takeWhile((tx) => tx.status === 'Mined')
+    takeWhile((tx) => tx.status === 'MINED')
   );
 }
 

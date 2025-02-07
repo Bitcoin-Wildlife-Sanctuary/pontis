@@ -10,7 +10,7 @@ export async function aggregateDeposits(txs: L1Tx[]): Promise<L1Tx[]> {
     result.push({
       type: 'l1tx',
       hash: `0x${txs[i].hash.substring(2)}${txs[i + 1].hash.substring(2)}`,
-      status: 'Unconfirmed',
+      status: 'UNCONFIRMED',
       blockNumber: 0,
     });
   }
@@ -21,7 +21,7 @@ export async function finalizeBatch(tx: L1Tx): Promise<L1Tx> {
   return {
     type: 'l1tx',
     hash: `0xfff${tx.hash.substring(2)}`,
-    status: 'Unconfirmed',
+    status: 'UNCONFIRMED',
     blockNumber: 0,
   };
 }

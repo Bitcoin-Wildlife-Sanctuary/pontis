@@ -17,7 +17,7 @@ export type L1TxId = {
 };
 
 export type L1TxStatus = L1TxId & {
-  status: 'Unconfirmed' | 'Confirmed' | 'Mined'; // Orphaned, Droped?;
+  status: 'UNCONFIRMED' | 'SENT' | 'MINED'; // Orphaned, Droped?;
 };
 
 export type L1Tx = L1TxStatus & {
@@ -379,7 +379,7 @@ export function getAllL1Txs(state: OperatorState): Set<L1TxId> {
 
   return new Set(
     l1Txs
-      .filter((tx) => tx.status !== 'Mined')
+      .filter((tx) => tx.status !== 'MINED')
       .map(({ type, hash }) => ({
         type,
         hash,
@@ -515,7 +515,7 @@ async function manageAggregation(
       const aggregationTxs = batch.aggregationTxs.at(-1);
       if (
         aggregationTxs &&
-        aggregationTxs.every((tx) => tx.status === 'Mined')
+        aggregationTxs.every((tx) => tx.status === 'MINED')
       ) {
         if (aggregationTxs.length === 1) {
           const finalizeBatchTx = await env.finalizeBatch(aggregationTxs[0]);
@@ -533,7 +533,7 @@ async function manageAggregation(
     }
     if (
       batch.status === 'AGGREGATED' &&
-      batch.finalizeBatchTx.status === 'Mined'
+      batch.finalizeBatchTx.status === 'MINED'
     ) {
       console.log('Submitting to l2:', batch.finalizeBatchTx.hash);
       newState.depositBatches[i] = {

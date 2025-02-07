@@ -82,10 +82,12 @@ async function sandboxOperator() {
 
   operator.subscribe((_) => {});
 
+  // const depositTx = send deposit tx here
+
   // this is how you would manually trigger a deposit:
   // send a transaction, then call next on the subject
   // operator will pick it up and process it
-  // manualDesposits.next(...)
+  // manualDesposits.next({ type: "l2Tx", depositTx})
 }
 
 sandboxOperator().catch(console.error);

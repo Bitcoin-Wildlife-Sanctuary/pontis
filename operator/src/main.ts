@@ -42,7 +42,7 @@ async function mockedOperator() {
           origin: {
             type: 'l1tx',
             hash: '0xabc',
-            status: 'Mined',
+            status: 'MINED',
             blockNumber: 1,
           },
         },
@@ -61,7 +61,7 @@ async function mockedOperator() {
           origin: {
             type: 'l1tx',
             hash: '0xabd',
-            status: 'Mined',
+            status: 'MINED',
             blockNumber: 2,
           },
         },
@@ -78,7 +78,7 @@ async function mockedOperator() {
           origin: {
             type: 'l1tx',
             hash: '0xabe',
-            status: 'Mined',
+            status: 'MINED',
             blockNumber: 3,
           },
         },
@@ -89,7 +89,7 @@ async function mockedOperator() {
           origin: {
             type: 'l1tx',
             hash: '0xabf',
-            status: 'Mined',
+            status: 'MINED',
             blockNumber: 3,
           },
         },
@@ -106,7 +106,7 @@ async function mockedOperator() {
           origin: {
             type: 'l1tx',
             hash: '0xabe',
-            status: 'Mined',
+            status: 'MINED',
             blockNumber: 4,
           },
         },
@@ -116,49 +116,49 @@ async function mockedOperator() {
     {
       type: 'l1tx',
       hash: '0xabcabd',
-      status: 'Confirmed',
+      status: 'SENT',
     },
     // aggregation tx status
     {
       type: 'l1tx',
       hash: '0xabeabf',
-      status: 'Confirmed',
+      status: 'SENT',
     },
     // aggregation tx status
     {
       type: 'l1tx',
       hash: '0xabcabd',
-      status: 'Mined',
+      status: 'MINED',
     },
     // aggregation tx status
     {
       type: 'l1tx',
       hash: '0xabeabf',
-      status: 'Mined',
+      status: 'MINED',
     },
     // aggregation tx status
     {
       type: 'l1tx',
       hash: '0xabcabdabeabf',
-      status: 'Confirmed',
+      status: 'SENT',
     },
     // aggregation tx status
     {
       type: 'l1tx',
       hash: '0xabcabdabeabf',
-      status: 'Mined',
+      status: 'MINED',
     },
     // finalize tx status
     {
       type: 'l1tx',
       hash: '0xfffabe',
-      status: 'Confirmed',
+      status: 'SENT',
     },
     // finalize tx status
     {
       type: 'l1tx',
       hash: '0xfffabe',
-      status: 'Mined',
+      status: 'MINED',
     },
     // advance clock
     {
@@ -169,25 +169,25 @@ async function mockedOperator() {
     {
       type: 'l1tx',
       hash: '0xfffabcabdabeabf',
-      status: 'Confirmed',
+      status: 'SENT',
     },
     // finalize tx status
     {
       type: 'l1tx',
       hash: '0xfffabcabdabeabf',
-      status: 'Mined',
+      status: 'MINED',
     },
     // finalize tx status
     {
       type: 'l1tx',
       hash: '0xfffabe',
-      status: 'Confirmed',
+      status: 'SENT',
     },
     // finalize tx status
     {
       type: 'l1tx',
       hash: '0xfffabe',
-      status: 'Mined',
+      status: 'MINED',
     },
     {
       type: 'function_call',
