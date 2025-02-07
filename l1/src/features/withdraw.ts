@@ -132,7 +132,7 @@ export async function expandWithdrawal(
   return {
     psbt,
     txid: tx.getId(),
-    withdrawalExpander0Utxo: outputToUtxo(tx, 0),
+    withdrawalExpander0Utxo: outputToUtxo(tx, 1),
     withdrawalExpander0State: outputWithdrawalExpander0Covenant.state!,
     withdrawalExpander1Utxo: outputToUtxo(tx, 2),
     withdrawalExpander1State: outputWithdrawalExpander1Covenant.state!,
@@ -216,16 +216,15 @@ function buildExpandWithdrawalTx(
   const expandWithdrawalTx = new ExtPsbt()
     .addCovenantInput(tracedWithdrawalExpander.covenant)
     .addFeeInputs([feeUtxo])
+    .addStateOutput()
     .addCovenantOutput(
       outputWithdrawalExpander0Covenant,
       Number(withdrawalExpanderUtxo.state.leftAmt)
     )
-    .addStateOutput(outputWithdrawalExpander0Covenant)
     .addCovenantOutput(
       outputWithdrawalExpander1Covenant,
       Number(withdrawalExpanderUtxo.state.rightAmt)
     )
-    .addStateOutput(outputWithdrawalExpander1Covenant)
     .change(changeAddress, feeRate)
 
   const inputCtxs = expandWithdrawalTx.calculateInputCtxs()
@@ -237,7 +236,7 @@ function buildExpandWithdrawalTx(
       inputCtxs,
 
       tracedWithdrawalExpander.trace.prevTx.isCreateWithdrawalTx ||
-        withdrawalExpanderUtxo.utxo.outputIndex === 0,
+        withdrawalExpanderUtxo.utxo.outputIndex === 1,
       tracedWithdrawalExpander.trace.prevTx,
 
       inputToPrevout(expandWithdrawalTx.unsignedTx, 1)
@@ -424,7 +423,7 @@ function buildDistributeWithdrawalsTx(
       inputCtxs,
 
       tracedWithdrawalExpander.trace.prevTx.isCreateWithdrawalTx ||
-        withdrawalExpanderUtxo.utxo.outputIndex === 0,
+        withdrawalExpanderUtxo.utxo.outputIndex === 1,
       withdrawalExpanderUtxo.state.level,
 
       tracedWithdrawalExpander.trace.prevTx,

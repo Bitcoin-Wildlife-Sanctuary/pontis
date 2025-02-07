@@ -68,7 +68,7 @@ export async function deployBridge(
     psbt: txPsbt,
     txid: tx.getId(),
     state,
-    bridgeUtxo: outputToUtxo(tx, 0) as UTXO,
+    bridgeUtxo: outputToUtxo(tx, 1) as UTXO,
   }
 }
 
@@ -172,7 +172,7 @@ export async function finalizeL1Deposit(
     psbt: txPsbt,
     txid: tx.getId(),
     state: newState,
-    bridgeUtxo: outputToUtxo(tx, 0) as UTXO,
+    bridgeUtxo: outputToUtxo(tx, 1) as UTXO,
   }
 }
 
@@ -256,7 +256,7 @@ export async function finalizeL2Deposit(
     psbt: txPsbt,
     txid: tx.getId(),
     state: newState,
-    bridgeUtxo: outputToUtxo(tx, 0) as UTXO,
+    bridgeUtxo: outputToUtxo(tx, 1) as UTXO,
   }
 }
 
@@ -356,7 +356,7 @@ export async function createWithdrawalExpander(
     txid: tx.getId(),
     bridgeState: outputBridgeCovenant.state,
     withdrawalState: outputWithdrawalExpanderCovenant.state,
-    bridgeUtxo: outputToUtxo(tx, 0) as UTXO,
+    bridgeUtxo: outputToUtxo(tx, 1) as UTXO,
     withdrawalUtxo: outputToUtxo(tx, 2) as UTXO,
   }
 }
@@ -412,13 +412,12 @@ function buildCreateWithdrawalTx(
   const createWithdrawalTx = new ExtPsbt()
     .addCovenantInput(tracedBridge.covenant)
     .addFeeInputs([feeUtxo])
+    .addStateOutput()
     .addCovenantOutput(
       outputBridgeCovenant,
       Number(bridgeUtxo.utxo.satoshis - Number(sumAmt))
     )
-    .addStateOutput(outputBridgeCovenant)
     .addCovenantOutput(outputWithdrawalExpanderCovenant, Number(sumAmt))
-    .addStateOutput(outputWithdrawalExpanderCovenant)
     .change(changeAddress, feeRate)
 
   const inputCtxs = createWithdrawalTx.calculateInputCtxs()
@@ -462,8 +461,8 @@ function buildFinalizeL2DepositTx(
   const finalizeL2Tx = new ExtPsbt()
     .addCovenantInput(tracedBridge.covenant)
     .addFeeInputs([feeUtxo])
+    .addStateOutput()
     .addCovenantOutput(outputBridgeCovenant, bridgeUtxo.utxo.satoshis)
-    .addStateOutput(outputBridgeCovenant)
     .change(changeAddress, feeRate, estimatedVSize)
 
   const inputCtxs = finalizeL2Tx.calculateInputCtxs()
@@ -528,11 +527,11 @@ function buildFinalizeL1DepositTx(
     .addCovenantInput(tracedBridge.covenant)
     .addCovenantInput(tracedDepositAggregator.covenant)
     .addFeeInputs([feeUtxo])
+    .addStateOutput()
     .addCovenantOutput(
       outputBridgeCovenant,
       bridgeUtxo.utxo.satoshis + depositAggregatorUtxo.utxo.satoshis
     )
-    .addStateOutput(outputBridgeCovenant)
     .change(changeAddress, feeRate, estimatedVSize)
 
   const inputCtxs = finalizeL1Tx.calculateInputCtxs()
@@ -634,8 +633,8 @@ function buildDepolyBridgeTx(
 
   const deployBridgeTx = new ExtPsbt()
     .addFeeInputs([feeUtxo])
+    .addStateOutput()
     .addCovenantOutput(bridgeCovenant, Postage.BRIDGE_POSTAGE)
-    .addStateOutput(bridgeCovenant)
     .change(changeAddress, feeRate)
 
   return deployBridgeTx

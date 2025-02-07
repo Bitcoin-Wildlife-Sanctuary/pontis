@@ -10,6 +10,7 @@ import {
   len,
   OpCode,
   Addr,
+  sha256,
 } from 'scrypt-ts'
 
 export class GeneralUtils extends SmartContractLib {
@@ -44,12 +45,19 @@ export class GeneralUtils extends SmartContractLib {
   }
 
   @method()
-  static getStateOutput(hash: Sha256): ByteString {
+  static getStateOutput(hash1: ByteString, hash2: ByteString): ByteString {
+    // hash2 can be empty;
+    // todo here maybe exist vulnerability when simply concatenate hash1 and hash2; but in poc, it's acceptable
+    assert(len(hash1) == 32n);
+    assert(len(hash2) == 32n || len(hash2) == 0n);
+    const hash = hash1 + hash2;
+    const scriptLen = len(hash) + 2n;
+
     return (
       toByteString('0000000000000000') + // Output satoshis (0 sats)
-      toByteString('22') + // Script lenght (34 bytes)
+      int2ByteString(scriptLen) + // Script lenght (34 bytes)
       OpCode.OP_RETURN +
-      toByteString('20') + // Hash length (32 bytes)
+      int2ByteString(len(hash)) + // Hash length (32 bytes)
       hash
     )
   }

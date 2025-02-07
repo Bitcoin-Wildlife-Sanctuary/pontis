@@ -348,16 +348,20 @@ export function outputToUtxo(tx: Transaction, outputIndex: number): UTXO {
 
 export function splitHashFromStateOutput(
   tx: Transaction,
-  outputIndex: number
-): ByteString {
+) {
   // state output script = 1(op return) + 1(op push 32) + 32(hash)
-  if (tx.outs[outputIndex].script.length !== 34) {
-    throw new Error('Invalid state output script length')
+  // or state output script = 1(op return) + 1(op push 32) + 32(hash) + 32(hash)
+  const stateScript = tx.outs[0].script;
+  if (stateScript.length === ONE_STATE_OUTPUT_SCRIPT_LENGTH) {
+    return [tools.toHex(stateScript.slice(2, 34)), ''] as const;
   }
-  const script = tx.outs[outputIndex].script
-  const hash = tools.toHex(script.slice(2, 34))
-  return hash
+  if (stateScript.length === TWO_STATE_OUTPUT_SCRIPT_LENGTH) {
+    return [tools.toHex(stateScript.slice(2, 34)), tools.toHex(stateScript.slice(34, 66))] as const;
+  }
+  throw new Error('Invalid state output script length');
 }
+export const TWO_STATE_OUTPUT_SCRIPT_LENGTH = 66;
+export const ONE_STATE_OUTPUT_SCRIPT_LENGTH = 34;
 
 export function inputToPrevout(
   tx: Transaction,

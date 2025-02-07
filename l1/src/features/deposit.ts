@@ -73,7 +73,7 @@ export async function createDeposit(
     psbt: txPsbt,
     txid: tx.getId(),
     state,
-    aggregatorUtxo: outputToUtxo(tx, 0) as UTXO,
+    aggregatorUtxo: outputToUtxo(tx, 1) as UTXO,
   }
 }
 
@@ -109,11 +109,11 @@ function buildCreateDepositTx(
 
   const createDepositTx = new ExtPsbt()
     .addFeeInputs([feeUtxo])
+    .addStateOutput()
     .addCovenantOutput(
       depositAggregatorCovenant,
       Number(depositAggregatorCovenant.state.depositAmt)
     )
-    .addStateOutput(depositAggregatorCovenant)
     .change(changeAddress, feeRate)
 
   return createDepositTx
@@ -197,7 +197,7 @@ export async function aggregateDeposit(
     psbt: txPsbt,
     txid: tx.getId(),
     state: outputAggregator.state!,
-    aggregatorUtxo: outputToUtxo(tx, 0) as UTXO,
+    aggregatorUtxo: outputToUtxo(tx, 1) as UTXO,
   }
 }
 
@@ -221,11 +221,11 @@ function buildAggregateDepositTx(
     .addCovenantInput(tracedDepositAggregator0.covenant)
     .addCovenantInput(tracedDepositAggregator1.covenant)
     .addFeeInputs([feeUtxo])
+    .addStateOutput()
     .addCovenantOutput(
       outputAggregator,
       aggregatorUtxo0.utxo.satoshis + aggregatorUtxo1.utxo.satoshis
     )
-    .addStateOutput(outputAggregator)
     .change(changeAddress, feeRate, estimatedVSize)
 
   const inputCtxs = aggregateTx.calculateInputCtxs()

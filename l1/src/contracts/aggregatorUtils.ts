@@ -47,14 +47,11 @@ export class AggregatorUtils extends SmartContractLib {
         nInputs +
         tx.inputFee +
         nOutputs +
+        GeneralUtils.getStateOutput(tx.hashData, toByteString('')) +
         GeneralUtils.getContractOutput(
           tx.outputContractAmt,
           tx.outputContractSPK
         ) +
-        toByteString('000000000000000022') + // opreturn output:  satoshis + length of script
-        OpCode.OP_RETURN +
-        toByteString('20') +
-        tx.hashData + // todo: add some tag here which is useful for the indexer
         tx.changeOutput +
         tx.locktime
     )
@@ -68,9 +65,9 @@ export class AggregatorUtils extends SmartContractLib {
   ): Sha256 {
     return sha256(
       txId0 +
-        toByteString('00000000') +
+        toByteString('01000000') +
         txId1 +
-        toByteString('00000000') +
+        toByteString('01000000') +
         feePrevout
     )
   }

@@ -10,8 +10,10 @@ import {
   createEmptySha256,
   inputsToSegmentByteString,
   inputToByteString,
+  inputToPrevout,
   isTxHashEqual,
   locktimeToByteString,
+  ONE_STATE_OUTPUT_SCRIPT_LENGTH,
   outputToByteString,
   splitHashFromStateOutput,
   versionToByteString,
@@ -50,7 +52,7 @@ export type TracedWithdrawalExpander = {
 }
 
 export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState> {
-  static readonly LOCKED_ASM_VERSION = '447bd6ee4caabcb3733665f398181af7'
+  static readonly LOCKED_ASM_VERSION = 'a2d3f1ef3ca7aaf5f6698d2254adbdc4'
 
   constructor(
     readonly operator: PubKey,
@@ -100,7 +102,6 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
         if (!shPreimage) {
           throw new Error('Input context is not available')
         }
-
         return [
           shPreimage,
           () => {
@@ -143,6 +144,8 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
         if (!shPreimage) {
           throw new Error('Input context is not available')
         }
+
+
 
         return [
           shPreimage,
@@ -202,42 +205,45 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
   }
 
   private static getExpanderTransaction(tx: Transaction): ExpanderTransaction {
-    const isSingleExpanderOutput = tx.outs.length <= 3
+    const isSingleExpanderOutput = tx.outs[0].script.length === ONE_STATE_OUTPUT_SCRIPT_LENGTH;
     let isCreateWithdrawalTx = false
     if (!isSingleExpanderOutput) {
       isCreateWithdrawalTx =
-        tools.compare(tx.outs[0].script, tx.outs[2].script) != 0
+        tools.compare(tx.outs[1].script, tx.outs[2].script) != 0
     }
 
     let bridgeSPK = ''
     let bridgeAmt = 0n
     let bridgeStateHash = createEmptySha256()
     if (isCreateWithdrawalTx) {
-      bridgeSPK = tools.toHex(tx.outs[0].script)
-      bridgeAmt = tx.outs[0].value
-      bridgeStateHash = Sha256(splitHashFromStateOutput(tx, 1))
+      bridgeSPK = tools.toHex(tx.outs[1].script)
+      bridgeAmt = tx.outs[1].value
+      bridgeStateHash = Sha256(splitHashFromStateOutput(tx)[0])
     }
 
     const contractSPK = isCreateWithdrawalTx
       ? tools.toHex(tx.outs[2].script)
-      : tools.toHex(tx.outs[0].script)
+      : tools.toHex(tx.outs[1].script)
     const output0Amt = isCreateWithdrawalTx
       ? tx.outs[2].value
-      : tx.outs[0].value
+      : tx.outs[1].value
     const stateHash0 = isCreateWithdrawalTx
-      ? Sha256(splitHashFromStateOutput(tx, 3))
-      : Sha256(splitHashFromStateOutput(tx, 1))
+      ? Sha256(splitHashFromStateOutput(tx)[1])
+      : Sha256(splitHashFromStateOutput(tx)[0])
 
     let output1Amt = 0n
     let stateHash1 = createEmptySha256()
     if (!isCreateWithdrawalTx && !isSingleExpanderOutput) {
       output1Amt = tx.outs[2].value
-      stateHash1 = Sha256(splitHashFromStateOutput(tx, 3))
+      stateHash1 = Sha256(splitHashFromStateOutput(tx)[1])
     }
 
     let changeOutput = ''
-    if (tx.outs.length === 3 || tx.outs.length === 5) {
-      changeOutput = outputToByteString(tx, tx.outs.length - 1)
+    if ((!isCreateWithdrawalTx && isSingleExpanderOutput) && tx.outs.length === 3) {
+      changeOutput = outputToByteString(tx, 2)
+    }
+    if (tx.outs.length === 4) {
+      changeOutput = outputToByteString(tx, 3)
     }
 
     const res = {

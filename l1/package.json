@@ -13,10 +13,10 @@
     "compile": "npx scrypt-cli compile",
     "pretest": "npm run build && npm run compile",
     "test": "npm run test:mocha",
-    "test:local": "mocha",
+    "test:local": "mocha --config=.mocharc.deposit.json && mocha --config=.mocharc.withdraw.json",
     "//": "env.REMOTE_NETWORK instead of env.NETWORK, because env.NETWORK is used in scrypt-ts module, which may verify script in bsv network",
-    "test:signet": "cross-env REMOTE_NETWORK=btc-signet mocha --no-timeouts",
-    "test:fractal-testnet": "cross-env REMOTE_NETWORK=fractal-testnet mocha --no-timeouts",
+    "test:signet": "cross-env REMOTE_NETWORK=btc-signet mocha --config=.mocharc.deposit.json --no-timeouts && mocha --config=.mocharc.withdraw.json --no-timeouts",
+    "test:fractal-testnet": "cross-env REMOTE_NETWORK=fractal-testnet mocha --config=.mocharc.deposit.json --no-timeouts && mocha --config=.mocharc.withdraw.json --no-timeouts",
     "genkey": "npx ts-node tests/utils/genPrivateKey.ts",
     "lint": "eslint . --ext .js,.ts --fix && prettier --write --ignore-unknown \"**/*\"",
     "lint-check": "eslint . --ext .js,.ts && prettier --check --ignore-unknown \"**/*\""

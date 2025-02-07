@@ -8,6 +8,7 @@ import { TapLeafSmartContract } from './tapLeafContract'
 import {
   ByteString,
   DummyProvider,
+  sha256,
   Sha256,
   Sig,
   TestWallet,
@@ -33,6 +34,7 @@ import {
   getSigHashSchnorr,
   toSHPreimageObj,
   getSpentScripts,
+  createEmptySha256,
 } from './txTools'
 import { GeneralUtils } from '../contracts/generalUtils'
 import * as tools from 'uint8array-tools'
@@ -106,6 +108,11 @@ export class ExtPsbt extends Psbt {
   private finalizers: Map<InputIndex, AsyncFinalizer> = new Map()
   private sigRequests: Map<InputIndex, Omit<ToSignInput, 'index'>[]> = new Map()
   private changeOutputIndex?: number
+  private _stateHashes: string[] = []
+
+  constructor() {
+    super();
+  }
 
   get isFinalized(): boolean {
     return this.data.inputs.reduce((finalized, input) => {
@@ -246,15 +253,33 @@ export class ExtPsbt extends Psbt {
     return this
   }
 
-  addStateOutput<T>(covenant: Covenant<T>): this {
-    const stateHash = covenant.stateHash
-    const stateOutput = GeneralUtils.getStateOutput(Sha256(stateHash))
-    const script = tools.fromHex(stateOutput.slice(18)) // remove satoshis, script length
+  addStateOutput(): this {
+    if (this.txOutputs.length > 0) {
+      throw new Error('state output can only be added at the first output')
+    }
+    // add a dummy state output;
+    const stateOutputScript = this.stateScript;
     this.addOutput({
-      script: script,
+      script: stateOutputScript,
       value: BigInt(0),
     })
     return this
+  }
+
+  get stateScript(): Uint8Array {
+    const stateOutput = GeneralUtils.getStateOutput(
+      this.stateHashes[0] || sha256(''),
+      this.stateHashes[1]
+    );
+    const script = tools.fromHex(stateOutput.slice(18)) // remove satoshis, script length
+    return script
+  }
+
+  get stateHashes() {
+    return [
+      this._stateHashes[0] || '',
+      this._stateHashes[1] || '',
+    ] as const
   }
 
   addCovenantOutput<T>(covenant: Covenant<T>, satoshis: number = 330): this {
@@ -263,6 +288,12 @@ export class ExtPsbt extends Psbt {
       value: BigInt(satoshis),
     })
     this._checkOutputCnt()
+    const state = covenant.stateHash;
+    this._stateHashes.push(state);
+    if (this._stateHashes.length > 2) {
+      throw new Error('only support two covenant outputs')
+    }
+    this.unsignedTx.outs[0].script = this.stateScript;
     return this
   }
 

@@ -118,10 +118,10 @@ export class Bridge extends SmartContract {
       batchesRootNew,
       prevTx.depositAggregatorSPK
     )
-    const contractStateOut = GeneralUtils.getStateOutput(stateHash)
+    const stateOut = GeneralUtils.getStateOutput(stateHash, toByteString(''))
 
     // Enforce outputs.
-    const hashOutputs = sha256(contractOut + contractStateOut + changeOutput)
+    const hashOutputs = sha256(stateOut + contractOut  + changeOutput)
     assert(hashOutputs == shPreimage.hashOutputs)
   }
 
@@ -180,10 +180,10 @@ export class Bridge extends SmartContract {
       batchesRootNew,
       prevTx.depositAggregatorSPK
     )
-    const contractStateOut = GeneralUtils.getStateOutput(stateHash)
+    const stateOut = GeneralUtils.getStateOutput(stateHash, toByteString(''))
 
     // Enforce outputs.
-    const hashOutputs = sha256(contractOut + contractStateOut + changeOutput)
+    const hashOutputs = sha256(stateOut + contractOut  + changeOutput)
     assert(hashOutputs == shPreimage.hashOutputs)
   }
 
@@ -230,60 +230,49 @@ export class Bridge extends SmartContract {
       prevTx.depositAggregatorSPK
     )
     const expanderStateHash = expanderRoot
-
-    const bridgeStateOut = GeneralUtils.getStateOutput(bridgeStateHash)
-
     // Create an expander P2TR output which carries the total amount withrawn.
     const expanderOut = GeneralUtils.getContractOutput(sumAmt, this.expanderSPK)
-    const expanderStateOut = GeneralUtils.getStateOutput(expanderStateHash)
+
+    const stateOut = GeneralUtils.getStateOutput(bridgeStateHash, expanderStateHash)
 
     // Enforce outputs.
-    const hashOutputs = sha256(
-      contractOut +
-        bridgeStateOut +
-        expanderOut +
-        expanderStateOut +
-        changeOutput
-    )
+    const hashOutputs = sha256(stateOut + contractOut + expanderOut + changeOutput)
     assert(hashOutputs == shPreimage.hashOutputs)
   }
 
   @method()
   static getTxId(tx: BridgeTransaction, expanderSPK: ByteString): Sha256 {
-    // deployContract: feeInput => bridgeOutput + stateOutput + changeOutput
-    // finalizeL1Deposit  : bridgeInput + depositAggregatorInput + feeInput => bridgeOutput + stateOutput + changeOutput
-    // finalizeL2Deposit: bridgeInput + feeInput => bridgeOutput + stateOutput + changeOutput
-    // withdrawTx: bridgeInput + feeInput => bridgeOutput + bridgeStateOutput + expanderOutput + expanderStateOutput + changeOutput
-    let nOutputs: bigint = tx.expanderAmt == 0n ? 2n : 4n
+    // deployContract: feeInput => stateOutput + bridgeOutput + changeOutput
+    // finalizeL1Deposit  : bridgeInput + depositAggregatorInput + feeInput => stateOutput + bridgeOutput + changeOutput
+    // finalizeL2Deposit: bridgeInput + feeInput => stateOutput + bridgeOutput + changeOutput
+    // createWithdrawal: bridgeInput + feeInput => stateOutput + bridgeOutput + expanderOutput + changeOutput
+    let nOutputs: bigint = tx.expanderAmt == 0n ? 2n : 3n;
     if (tx.changeOutput != toByteString('')) {
       nOutputs += 1n
     }
     const nOutputsByteString = int2ByteString(nOutputs)
 
-    const stateHash = Bridge.getStateHash(
+    const bridgeStateHash = Bridge.getStateHash(
       tx.batchesRoot,
       tx.depositAggregatorSPK
     )
 
     let expanderOut = toByteString('')
-    let expanderStateOut = toByteString('')
     if (tx.expanderAmt != 0n) {
       expanderOut = GeneralUtils.getContractOutput(
         tx.expanderAmt,
         tx.expanderSPK
       )
       assert(tx.expanderSPK == expanderSPK)
-      expanderStateOut = GeneralUtils.getStateOutput(tx.expanderStateHash)
     }
 
     return hash256(
       tx.ver +
         TxUtils.mergeInputsSegments(tx.inputs) +
         nOutputsByteString +
+        GeneralUtils.getStateOutput(bridgeStateHash, tx.expanderStateHash) +
         GeneralUtils.getContractOutput(tx.contractAmt, tx.contractSPK) +
-        GeneralUtils.getStateOutput(stateHash) +
         expanderOut +
-        expanderStateOut +
         tx.changeOutput +
         tx.locktime
     )
@@ -291,25 +280,25 @@ export class Bridge extends SmartContract {
 
   @method()
   static getHashDepositTxPrevouts(
-    prevStateTxId: Sha256,
+    prevTxId: Sha256,
     aggregatorTxId: Sha256,
     feePrevout: ByteString
   ): Sha256 {
     return sha256(
-      prevStateTxId +
-        toByteString('00000000') +
+      prevTxId +
+        toByteString('01000000') +
         aggregatorTxId +
-        toByteString('00000000') +
+        toByteString('01000000') +
         feePrevout
     )
   }
 
   @method()
   static getHashNonDepositTxPrevouts(
-    prevStateTxId: Sha256,
+    prevTxId: Sha256,
     feePrevout: ByteString
   ): Sha256 {
-    return sha256(prevStateTxId + toByteString('00000000') + feePrevout)
+    return sha256(prevTxId + toByteString('01000000') + feePrevout)
   }
 
   /**

@@ -2,7 +2,7 @@
   "diff": true,
   "require": "ts-node/register",
   "extensions": ["ts"],
-  "spec": ["./tests/**/deposit.test.ts"],
+  "spec": ["./tests/**/withdraw.test.ts"],
   "package": "./package.json",
   "reporter": "spec",
   "slow": "75",

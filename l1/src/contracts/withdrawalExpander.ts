@@ -243,12 +243,12 @@ export class WithdrawalExpander extends SmartContract {
     assert(stateHash == nodeHash)
 
     let outputs = toByteString('')
+    let childExpander1StateHash = toByteString('');
     // first expander output and state output
     outputs += GeneralUtils.getContractOutput(
       childExpanderAmt0,
       prevTx.contractSPK
     )
-    outputs += GeneralUtils.getStateOutput(childExpandNodeHash0)
 
     // second expander output and state output
     if (childExpanderAmt1 > 0n) {
@@ -256,8 +256,12 @@ export class WithdrawalExpander extends SmartContract {
         childExpanderAmt1,
         prevTx.contractSPK
       )
-      outputs += GeneralUtils.getStateOutput(childExpandNodeHash1)
+      childExpander1StateHash = childExpandNodeHash1
     }
+
+    const stateOut = GeneralUtils.getStateOutput(childExpandNodeHash0, childExpander1StateHash);
+    outputs = stateOut + outputs;
+
     // change output
     outputs += changeOutput
 
@@ -313,55 +317,39 @@ export class WithdrawalExpander extends SmartContract {
 
   @method()
   static getTxId(tx: ExpanderTransaction): Sha256 {
-    let nOutputs = 2n
-    if (tx.isCreateWithdrawalTx || tx.output1Amt > 0n) {
-      nOutputs = 4n
-    }
+
+    // createWithdrawalTx: bridge + fee => state + bridge + withdrawalExpander + change(optional);
+    // expanderTx: bridge + fee => state + expander + expander(exists when output1Amt > 0n) + change(optional);
+    let nOutputs: bigint = (tx.isCreateWithdrawalTx || tx.output1Amt > 0n) ? 3n : 2n
     if (tx.changeOutput != toByteString('')) {
       nOutputs = nOutputs + 1n
     }
 
+    const stateOut = GeneralUtils.getStateOutput(
+      tx.isCreateWithdrawalTx ? tx.bridgeStateHash : tx.stateHash0, 
+      tx.isCreateWithdrawalTx ? tx.stateHash0 : tx.stateHash1
+    );
+
     const bridgeOutputs = tx.isCreateWithdrawalTx
-      ? GeneralUtils.getContractOutput(tx.bridgeAmt, tx.bridgeSPK) +
-        GeneralUtils.getStateOutput(tx.bridgeStateHash)
+      ? GeneralUtils.getContractOutput(tx.bridgeAmt, tx.bridgeSPK)
       : toByteString('')
 
     let expanderOutputs =
-      GeneralUtils.getContractOutput(tx.output0Amt, tx.contractSPK) +
-      GeneralUtils.getStateOutput(tx.stateHash0)
+      GeneralUtils.getContractOutput(tx.output0Amt, tx.contractSPK)
 
     if (tx.output1Amt > 0n) {
       expanderOutputs +=
-        GeneralUtils.getContractOutput(tx.output1Amt, tx.contractSPK) +
-        GeneralUtils.getStateOutput(tx.stateHash1)
+        GeneralUtils.getContractOutput(tx.output1Amt, tx.contractSPK)
     }
 
     return hash256(
       tx.ver +
         TxUtils.mergeInputsSegments(tx.inputs) +
         int2ByteString(nOutputs) +
+        stateOut +
         bridgeOutputs +
         expanderOutputs +
         tx.changeOutput +
-        tx.locktime
-    )
-  }
-
-  @method()
-  static getBridgeTxId(tx: BridgeTransaction): Sha256 {
-    const stateHash = Bridge.getStateHash(
-      tx.batchesRoot,
-      tx.depositAggregatorSPK
-    )
-
-    return hash256(
-      tx.ver +
-        TxUtils.mergeInputsSegments(tx.inputs) +
-        toByteString('04') +
-        GeneralUtils.getContractOutput(tx.contractAmt, tx.contractSPK) +
-        GeneralUtils.getStateOutput(stateHash) +
-        GeneralUtils.getContractOutput(tx.expanderAmt, tx.expanderSPK) +
-        GeneralUtils.getStateOutput(tx.expanderStateHash) +
         tx.locktime
     )
   }
@@ -376,7 +364,7 @@ export class WithdrawalExpander extends SmartContract {
     // prevTx is expander tx, and prevout is the first output
     const contractOutIdx =
       !isCreateWithdrawalTx && isExpandingPrevTxFirstOutput
-        ? toByteString('00000000')
+        ? toByteString('01000000')
         : toByteString('02000000')
 
     return sha256(prevTxId + contractOutIdx + feePrevout)

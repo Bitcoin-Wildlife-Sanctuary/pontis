@@ -147,21 +147,21 @@ export class DepositAggregator extends SmartContract {
       // Input structure: ancestorTxId + output index (0000000000) + nSequence (ffffffff)
       assert(
         prevTx0.inputContract0 ==
-          ancestorTxId0 + toByteString('0000000000ffffffff')
+          ancestorTxId0 + toByteString('0100000000ffffffff')
       )
       assert(
         prevTx0.inputContract1 ==
-          ancestorTxId1 + toByteString('0000000000ffffffff')
+          ancestorTxId1 + toByteString('0100000000ffffffff')
       )
 
       // Check prevTx1 unlocks ancestorTx2 and ancestorTx3.
       assert(
         prevTx1.inputContract0 ==
-          ancestorTxId2 + toByteString('0000000000ffffffff')
+          ancestorTxId2 + toByteString('0100000000ffffffff')
       )
       assert(
         prevTx1.inputContract1 ==
-          ancestorTxId3 + toByteString('0000000000ffffffff')
+          ancestorTxId3 + toByteString('0100000000ffffffff')
       )
 
       // Check ancestors have same contract SPK as prev txns.
@@ -195,7 +195,7 @@ export class DepositAggregator extends SmartContract {
       prevTx0.hashData,
       prevTx1.hashData
     )
-    const stateOut = GeneralUtils.getStateOutput(newHash)
+    const stateOut = GeneralUtils.getStateOutput(newHash, toByteString(''))
 
     // Sum up aggregated amounts and construct contract output.
     const contractOut = GeneralUtils.getContractOutput(
@@ -204,7 +204,7 @@ export class DepositAggregator extends SmartContract {
     )
 
     // Recurse. Send to aggregator with updated hash.
-    const outputs = contractOut + stateOut + changeOutput
+    const outputs = stateOut + contractOut + changeOutput
     assert(sha256(outputs) == shPreimage.hashOutputs)
   }
 
@@ -270,11 +270,11 @@ export class DepositAggregator extends SmartContract {
       // Check prevTx unlocks ancestorTx0 and ancestorTx1.
       assert(
         prevTx.inputContract0 ==
-          ancestorTxId0 + toByteString('0000000000ffffffff')
+          ancestorTxId0 + toByteString('0100000000ffffffff')
       )
       assert(
         prevTx.inputContract1 ==
-          ancestorTxId1 + toByteString('0000000000ffffffff')
+          ancestorTxId1 + toByteString('0100000000ffffffff')
       )
 
       // Check ancestors have same contract SPK as prev tx.

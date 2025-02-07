@@ -13,6 +13,7 @@ import {
   locktimeToByteString,
   outputToByteString,
   splitHashFromStateOutput,
+  TWO_STATE_OUTPUT_SCRIPT_LENGTH,
   versionToByteString,
 } from '../lib/txTools'
 import { InputCtx, SubContractCall } from '../lib/extPsbt'
@@ -42,7 +43,7 @@ export interface TraceableBridgeUtxo extends BridgeUtxo {
 
 export class BridgeCovenant extends Covenant<BridgeState> {
   // locked bridge artifact md5 hash
-  static readonly LOCKED_ASM_VERSION = '82385bff7d75ecfe446f46dd96101ed7'
+  static readonly LOCKED_ASM_VERSION = '6e405d9709ed98c1807becc5e2f1f921'
 
   constructor(
     readonly operator: PubKey,
@@ -239,18 +240,16 @@ export class BridgeCovenant extends Covenant<BridgeState> {
       throw new Error('Invalid bridge utxo')
     }
 
-    // createWithdrawal: outs.length == 4/5, optional changeOutput
-    // other: outs.length == 2/3, optional changeOutput
-    const isPrevTxCreateWithdrawal =
-      tx.outs.length === 4 || tx.outs.length === 5
+    // ref in Bridge.getTxId
     let expanderAmt = 0n
     let expanderStateHash: Sha256 = createEmptySha256()
     let expanderSPK = ''
+    const isPrevTxCreateWithdrawal = tx.outs[0].script.length === TWO_STATE_OUTPUT_SCRIPT_LENGTH;
     if (isPrevTxCreateWithdrawal) {
       // the 3rd output is expander output
       expanderAmt = tx.outs[2].value
       // the 4th output is expander state output
-      expanderStateHash = Sha256(splitHashFromStateOutput(tx, 3))
+      expanderStateHash = Sha256(splitHashFromStateOutput(tx)[1])
       expanderSPK = utxo.expanderSPK
     }
     let changeOutput: ByteString = ''
@@ -266,7 +265,7 @@ export class BridgeCovenant extends Covenant<BridgeState> {
       inputs: inputsToSegmentByteString(tx),
 
       contractSPK,
-      contractAmt: tx.outs[0].value,
+      contractAmt: tx.outs[1].value,
       expanderSPK,
       expanderAmt,
       expanderStateHash,
