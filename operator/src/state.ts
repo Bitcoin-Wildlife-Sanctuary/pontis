@@ -81,15 +81,15 @@ type DepositBatch =
       status: 'SUBMITTED_FOR_COMPLETION';
       aggregationTxs: L1Tx[][];
       finalizeBatchTx: L1Tx;
-      depositTx: L2TxStatus;
-      verifyTx: L1TxStatus;
+      depositTx: L2Tx;
+      verifyTx: L1Tx;
     } & DepositBatchCommon)
   | ({
       status: 'COMPLETED';
       aggregationTxs: L1Tx[][];
       finalizeBatchTx: L1Tx;
-      depositTx: L2TxStatus;
-      verifyTx: L1TxStatus;
+      depositTx: L2Tx;
+      verifyTx: L1Tx;
     } & DepositBatchCommon);
 
 type Withdrawal = {
@@ -126,23 +126,23 @@ type WithdrawalBatch =
       withdrawals: Withdrawal[];
       hash: string;
       closeWithdrawalBatchTx: L2Tx;
-      withdrawBatchTx: L1TxStatus;
+      withdrawBatchTx: L1Tx;
     } & WithdrawalBatchCommon)
   | ({
       status: 'BEING_EXPANDED';
       withdrawals: Withdrawal[];
       hash: string;
       closeWithdrawalBatchTx: L2Tx;
-      withdrawBatchTx: L1TxStatus;
-      expansionTxs: L1TxStatus[][];
+      withdrawBatchTx: L1Tx;
+      expansionTxs: L1Tx[][];
     } & WithdrawalBatchCommon)
   | ({
       status: 'EXPANDED';
       withdrawals: Withdrawal[];
       hash: string;
       closeWithdrawalBatchTx: L2Tx;
-      withdrawBatchTx: L1TxStatus;
-      expansionTxs: L1TxStatus[][];
+      withdrawBatchTx: L1Tx;
+      expansionTxs: L1Tx[][];
     } & WithdrawalBatchCommon);
 
 export type OperatorState = {
