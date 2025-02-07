@@ -1,36 +1,50 @@
-import {
-  ReceiptTx,
-  TransactionStatus,
-  GetTransactionReceiptResponse,
-} from 'starknet';
+import { ReceiptTx } from 'starknet';
 import { L2Event } from './l2/events';
-import { Observable, of } from 'rxjs';
 import { assert } from 'console';
+import { cloneDeep, max } from 'lodash';
 
-type L1Address = `0x${string}`; // or bigint?
-type L2Address = `0x${string}`; // or bigint?
+export type L1Address = `0x${string}`;
+export type L2Address = `0x${string}`;
 
-type L1TxHash = `0x${string}`; // or bigint?
-type L2TxHash = `0x${string}`; // or bigint?
+export type L1TxHash = `0x${string}`;
+export type L2TxHash = `0x${string}`;
 
 // TODO: everything about L1 is very WIP, should be checked with sCrypt team
-export type L1TxStatus = 'Unconfirmed' | 'Confirmed' | 'Spent'; // Orphaned, Droped?
-export type L1TxHashAndStatus = {
+
+export type L1TxId = {
+  type: 'l1tx';
   hash: L1TxHash;
-  status: L1TxStatus;
-  blockNumber: number;
-};
-export type L2TxHashAndStatus = {
-  hash: L2TxHash;
-  status: ReceiptTx;
-  blockNumber: bigint;
 };
 
-export interface Deposit {
+export type L1TxStatus = L1TxId & {
+  status: 'UNCONFIRMED' | 'SENT' | 'MINED'; // Orphaned, Droped?;
+};
+
+export type L1Tx = L1TxStatus & {
+  blockNumber: number;
+}; // TODO: What else should go into a l1 tx?
+
+export type L2TxId = {
+  type: 'l2tx';
+  hash: L1TxHash;
+};
+
+export type L2TxStatus = L2TxId &
+  (
+    | { status: 'PENDING' }
+    | {
+        status: 'SUCCEEDED' | 'REJECTED' | 'REVERTED' | 'ERROR';
+        // receipt: ReceiptTx;
+      }
+  );
+
+export type L2Tx = L2TxStatus;
+
+export type Deposit = {
   amount: bigint;
   recipient: L2Address;
-  origin: L1TxHashAndStatus;
-}
+  origin: L1Tx;
+};
 
 type DepositBatchCommon = {
   deposits: Deposit[];
@@ -39,54 +53,51 @@ type DepositBatchCommon = {
 type DepositBatch =
   | ({
       status: 'BEING_AGGREGATED';
-      aggregationTxs: L1TxHashAndStatus[][];
+      aggregationTxs: L1Tx[][];
     } & DepositBatchCommon)
   | ({
       status: 'AGGREGATED';
-      // state update transaction?
-      aggregationTxs: L1TxHashAndStatus[][];
+      aggregationTxs: L1Tx[][];
+      finalizeBatchTx: L1Tx;
     } & DepositBatchCommon)
   | ({
-      status: 'REGISTERED_ON_L1';
-      aggregationTxs: L1TxHashAndStatus[][];
-      stateUpdateTx: L1TxHashAndStatus;
+      status: 'FINALIZED';
+      aggregationTxs: L1Tx[][];
+      finalizeBatchTx: L1Tx;
     } & DepositBatchCommon)
   | ({
       status: 'SUBMITTED_TO_L2';
-      aggregationTxs: L1TxHashAndStatus[][];
-      stateUpdateTx: L1TxHashAndStatus;
-      depositTx: L2TxHashAndStatus;
+      aggregationTxs: L1Tx[][];
+      finalizeBatchTx: L1Tx;
+      depositTx: L2TxStatus;
     } & DepositBatchCommon)
   | ({
       status: 'DEPOSITED';
-      aggregationTxs: L1TxHashAndStatus[][];
-      stateUpdateTx: L1TxHashAndStatus;
-      depositTx: L2TxHashAndStatus;
+      aggregationTxs: L1Tx[][];
+      finalizeBatchTx: L1Tx;
+      depositTx: L2TxStatus;
     } & DepositBatchCommon)
   | ({
-<<<<<<< Updated upstream
-      status: 'SUBMITTED_FOR_VERIFICATION';
-=======
       status: 'SUBMITTED_FOR_COMPLETION';
->>>>>>> Stashed changes
-      aggregationTxs: L1TxHashAndStatus[][];
-      stateUpdateTx: L1TxHashAndStatus;
-      depositTx: L2TxHashAndStatus;
-      verifyTx: L1TxHashAndStatus;
+      aggregationTxs: L1Tx[][];
+      finalizeBatchTx: L1Tx;
+      depositTx: L2TxStatus;
+      verifyTx: L1TxStatus;
     } & DepositBatchCommon)
   | ({
-      status: 'VERIFIED';
-      aggregationTxs: L1TxHashAndStatus[][];
-      stateUpdateTx: L1TxHashAndStatus;
-      depositTx: L2TxHashAndStatus;
-      verifyTx: L1TxHashAndStatus;
+      status: 'COMPLETED';
+      aggregationTxs: L1Tx[][];
+      finalizeBatchTx: L1Tx;
+      depositTx: L2TxStatus;
+      verifyTx: L1TxStatus;
     } & DepositBatchCommon);
 
-interface Withdrawal {
+type Withdrawal = {
   amount: bigint;
   recipient: L1Address;
   origin: L2TxHash;
-}
+  blockNumber: number;
+};
 
 type WithdrawalBatchCommon = {
   id: bigint;
@@ -102,134 +113,141 @@ type WithdrawalBatch =
   | ({
       status: 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED';
       withdrawals: Withdrawal[];
-      hash: bigint;
-      closeWithdrawalBatchTx: L2TxHashAndStatus;
+      closeWithdrawalBatchTx: L2Tx;
     } & WithdrawalBatchCommon)
   | ({
       status: 'CLOSED';
       withdrawals: Withdrawal[];
-      hash: bigint;
-      closeWithdrawalBatchTx: L2TxHashAndStatus;
+      hash: string;
+      closeWithdrawalBatchTx: L2Tx;
     } & WithdrawalBatchCommon)
   | ({
-<<<<<<< Updated upstream
-      status: 'SUBMITTED_FOR_VERIFICATION';
-=======
       status: 'SUBMITTED_FOR_EXPANSION';
->>>>>>> Stashed changes
       withdrawals: Withdrawal[];
-      hash: bigint;
-      closeWithdrawalBatchTx: L2TxHashAndStatus;
-      withdrawBatchTx: L1TxHashAndStatus;
+      hash: string;
+      closeWithdrawalBatchTx: L2Tx;
+      withdrawBatchTx: L1TxStatus;
     } & WithdrawalBatchCommon)
   | ({
       status: 'BEING_EXPANDED';
       withdrawals: Withdrawal[];
-      hash: bigint;
-      closeWithdrawalBatchTx: L2TxHashAndStatus;
-      withdrawBatchTx: L1TxHashAndStatus;
-      expansionTxs: L1TxHashAndStatus[][];
+      hash: string;
+      closeWithdrawalBatchTx: L2Tx;
+      withdrawBatchTx: L1TxStatus;
+      expansionTxs: L1TxStatus[][];
     } & WithdrawalBatchCommon)
   | ({
       status: 'EXPANDED';
       withdrawals: Withdrawal[];
-      hash: bigint;
-      closeWithdrawalBatchTx: L2TxHashAndStatus;
-      withdrawBatchTx: L1TxHashAndStatus;
-      expansionTxs: L1TxHashAndStatus[][];
+      hash: string;
+      closeWithdrawalBatchTx: L2Tx;
+      withdrawBatchTx: L1TxStatus;
+      expansionTxs: L1TxStatus[][];
     } & WithdrawalBatchCommon);
 
-export class OperatorState {
-  l1BlockNumber: number = 0;
-  l2BlockNumber: number = 0;
-  total: bigint = 0n;
-  pendingDeposits: Deposit[] = [];
-  depositBatches: DepositBatch[] = [];
-  withdrawalBatches: WithdrawalBatch[] = [];
-}
+export type OperatorState = {
+  l1BlockNumber: number;
+  l2BlockNumber: number;
+  total: bigint;
+  pendingDeposits: Deposit[];
+  depositBatches: DepositBatch[];
+  withdrawalBatches: WithdrawalBatch[];
+};
 
-export type Event =
-  | ({ type: 'l2event' } & L2Event)
-  | ({ type: 'deposits'; blockNumber: number } & Deposit[]); // add blocknumber, etc
+export type Deposits = {
+  type: 'deposits';
+  deposits: Deposit[];
+};
 
-export type Transaction =
-  | ({ type: 'l2tx' } & L2TxHashAndStatus)
-  | ({ type: 'l1tx' } & L1TxHashAndStatus);
+export type BlockNumberEvent =
+  | { type: 'l1BlockNumber'; blockNumber: number }
+  | { type: 'l2BlockNumber'; blockNumber: number };
 
-export function l2TxHashAndStatusToTransaction(
-  tx: L2TxHashAndStatus
-): Transaction {
-  return { type: 'l2tx', ...tx };
-}
+export type BridgeEvent = L2Event | Deposits | BlockNumberEvent;
 
-export function l2EventToEvent(e: L2Event): Event {
-  return { type: 'l2event', ...e };
-}
+export type TransactionId = L1TxId | L2TxId;
 
-export function applyChange(
+export type TransactionStatus = L1TxStatus | L2TxStatus;
+
+export type Transaction = L1Tx | L2Tx;
+
+export type OperatorChange = BridgeEvent | TransactionStatus | BlockNumberEvent;
+
+export type BridgeEnvironment = {
+  MAX_DEPOSIT_BLOCK_AGE: number;
+  DEPOSIT_BATCH_SIZE: number;
+  MAX_WITHDRAWAL_BLOCK_AGE: number;
+  MAX_WITHDRAWAL_BATCH_SIZE: number;
+  aggregateDeposits: (txs: L1Tx[]) => Promise<L1Tx[]>;
+  finalizeBatch: (tx: L1Tx) => Promise<L1Tx>;
+  submitDepositsToL2: (hash: L1TxHash, deposits: Deposit[]) => Promise<L2Tx>;
+  closePendingWithdrawalBatch: () => Promise<L2Tx>;
+};
+
+let i = 0;
+
+export async function applyChange(
+  env: BridgeEnvironment,
   state: OperatorState,
-  change: Event | Transaction
-): Observable<OperatorState> {
-  let newState = { ...state };
-  // update recent block numbers, etc
+  change: OperatorChange
+): Promise<OperatorState> {
+  let li = i++;
+  console.log('================================');
+  console.log(li, 'change:');
+  console.dir(change, { depth: null });
+
+  const newState = cloneDeep(state);
+
   switch (change.type) {
-    case 'l2event': {
-      assert(change.blockNumber >= newState.l2BlockNumber);
-      newState.l2BlockNumber = change.blockNumber;
-      // `event` is of type L2Event here
-      console.log('Handling L2Event:', change);
-      break;
-    }
     case 'deposits': {
-      assert(change.blockNumber >= newState.l1BlockNumber);
-      newState.l1BlockNumber = change.blockNumber;
-      newState.pendingDeposits.push(...change);
-      if (newState.pendingDeposits.length >= 10) {
-        // TODO: add actual criteria to close the batch
-        const deposits = newState.pendingDeposits.splice(0, 10);
-        newState.pendingDeposits = newState.pendingDeposits.slice(10);
-        // TODO: send aggregation transactions, handle asyncronity
-        const aggregationTxs: L1TxHashAndStatus[][] = [];
-        newState.depositBatches.push({
-          status: 'BEING_AGGREGATED',
-          deposits,
-          aggregationTxs,
-        });
-      }
-      break;
-    }
-    case 'l2tx': {
-      console.log('Handling L2Tx:', change);
-      for (let i = 0; i < newState.depositBatches.length; i++) {
-        const depositBatch = newState.depositBatches[i];
-        switch (depositBatch.status) {
-          case 'SUBMITTED_TO_L2':
-            if (depositBatch.depositTx.hash === change.hash) {
-<<<<<<< Updated upstream
-              depositBatch.depositTx = change;
-=======
->>>>>>> Stashed changes
-              if (change.status.isSuccess()) {
-                // TODO: finality?
-                newState.depositBatches[i] = {
-                  ...depositBatch,
-                  depositTx: change,
-                  status: 'DEPOSITED',
-                };
-              } else {
-                depositBatch.depositTx = change;
-              }
-            }
-            break;
-        }
-      }
-      // TODO: handle withdrawal batches
+      newState.pendingDeposits.push(...change.deposits);
+      newState.l1BlockNumber = Math.max(
+        newState.l1BlockNumber,
+        max(change.deposits.map((d) => d.origin.blockNumber)) || 0
+      );
+      await initiateAggregation(env, newState);
       break;
     }
     case 'l1tx': {
-      // TODO: handle l1tx
-      console.log('Handling L1Tx:', change);
-      throw new Error('not implemented');
+      updateL1TxStatus(newState, change);
+      await manageAggregation(env, newState);
+      break;
+    }
+    case 'l1BlockNumber': {
+      newState.l1BlockNumber = Math.max(
+        newState.l1BlockNumber,
+        change.blockNumber
+      );
+      await initiateAggregation(env, newState);
+      await manageAggregation(env, newState);
+      break;
+    }
+    case 'l2BlockNumber': {
+      newState.l2BlockNumber = Math.max(
+        newState.l2BlockNumber,
+        change.blockNumber
+      );
+      await closeWithdrawalBatch(env, newState);
+      break;
+    }
+
+    case 'withdrawal': {
+      newState.l2BlockNumber = Math.max(
+        newState.l2BlockNumber,
+        change.blockNumber
+      );
+      await handleWithdrawal(newState, change);
+      await closeWithdrawalBatch(env, newState);
+      break;
+    }
+    case 'closeBatch': {
+      updateWithdrawalBatch(env, newState, change);
+      break;
+    }
+    case 'l2tx': {
+      updateL2TxStatus(newState, change);
+      updateDeposits(newState);
+      break;
     }
     default: {
       const _exhaustiveCheck: never = change;
@@ -237,5 +255,389 @@ export function applyChange(
     }
   }
 
-  return of(newState);
+  console.log(li, 'state:');
+  console.dir(newState, { depth: null });
+
+  return newState;
+}
+
+function updateL1TxStatus(state: OperatorState, tx: L1TxStatus) {
+  // TODO: make sure it is complete, generated by o1
+  for (const deposit of state.pendingDeposits) {
+    if (deposit.origin.hash === tx.hash) {
+      deposit.origin.status = tx.status;
+    }
+  }
+
+  for (const batch of state.depositBatches) {
+    for (const aggArray of batch.aggregationTxs) {
+      for (let i = 0; i < aggArray.length; i++) {
+        if (aggArray[i].hash === tx.hash) {
+          aggArray[i].status = tx.status;
+        }
+      }
+    }
+
+    if (
+      batch.status === 'FINALIZED' ||
+      batch.status === 'SUBMITTED_TO_L2' ||
+      batch.status === 'DEPOSITED' ||
+      batch.status === 'SUBMITTED_FOR_COMPLETION' ||
+      batch.status === 'COMPLETED' ||
+      batch.status === 'AGGREGATED'
+    ) {
+      if (batch.finalizeBatchTx.hash === tx.hash) {
+        batch.finalizeBatchTx.status = tx.status;
+      }
+    }
+
+    if (
+      batch.status === 'SUBMITTED_FOR_COMPLETION' ||
+      batch.status === 'COMPLETED'
+    ) {
+      if (batch.verifyTx.hash === tx.hash) {
+        batch.verifyTx.status = tx.status;
+      }
+    }
+  }
+
+  for (const wb of state.withdrawalBatches) {
+    if (
+      wb.status === 'SUBMITTED_FOR_EXPANSION' ||
+      wb.status === 'BEING_EXPANDED' ||
+      wb.status === 'EXPANDED'
+    ) {
+      if (wb.withdrawBatchTx.hash === tx.hash) {
+        wb.withdrawBatchTx.status = tx.status;
+      }
+    }
+
+    if (wb.status === 'BEING_EXPANDED' || wb.status === 'EXPANDED') {
+      for (const expansionArray of wb.expansionTxs) {
+        for (let i = 0; i < expansionArray.length; i++) {
+          if (expansionArray[i].hash === tx.hash) {
+            expansionArray[i].status = tx.status;
+          }
+        }
+      }
+    }
+  }
+
+  return state;
+}
+
+export function getAllL1Txs(state: OperatorState): Set<L1TxId> {
+  const l1Txs: L1TxStatus[] = [];
+
+  for (const deposit of state.pendingDeposits) {
+    l1Txs.push(deposit.origin);
+  }
+
+  for (const batch of state.depositBatches) {
+    for (const deposit of batch.deposits) {
+      l1Txs.push(deposit.origin);
+    }
+
+    for (const txArray of batch.aggregationTxs) {
+      l1Txs.push(...txArray);
+    }
+
+    if (
+      batch.status === 'FINALIZED' ||
+      batch.status === 'SUBMITTED_TO_L2' ||
+      batch.status === 'DEPOSITED' ||
+      batch.status === 'SUBMITTED_FOR_COMPLETION' ||
+      batch.status === 'COMPLETED' ||
+      batch.status === 'AGGREGATED'
+    ) {
+      l1Txs.push(batch.finalizeBatchTx);
+    }
+
+    if (
+      batch.status === 'SUBMITTED_FOR_COMPLETION' ||
+      batch.status === 'COMPLETED'
+    ) {
+      l1Txs.push(batch.verifyTx);
+    }
+  }
+
+  for (const wb of state.withdrawalBatches) {
+    if (
+      wb.status === 'SUBMITTED_FOR_EXPANSION' ||
+      wb.status === 'BEING_EXPANDED' ||
+      wb.status === 'EXPANDED'
+    ) {
+      l1Txs.push(wb.withdrawBatchTx);
+    }
+
+    if (wb.status === 'BEING_EXPANDED' || wb.status === 'EXPANDED') {
+      for (const expansionArr of wb.expansionTxs) {
+        l1Txs.push(...expansionArr);
+      }
+    }
+  }
+
+  return new Set(
+    l1Txs
+      .filter((tx) => tx.status !== 'MINED')
+      .map(({ type, hash }) => ({
+        type,
+        hash,
+      }))
+  );
+}
+
+function updateL2TxStatus(state: OperatorState, tx: L2TxStatus) {
+  for (const batch of state.depositBatches) {
+    if (
+      batch.status === 'SUBMITTED_TO_L2' ||
+      batch.status === 'DEPOSITED' ||
+      batch.status === 'SUBMITTED_FOR_COMPLETION' ||
+      batch.status === 'COMPLETED'
+    ) {
+      if (batch.depositTx.hash === tx.hash) {
+        batch.depositTx = { ...batch.depositTx, ...tx };
+      }
+    }
+  }
+
+  for (const wb of state.withdrawalBatches) {
+    if (
+      wb.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED' ||
+      wb.status === 'CLOSED' ||
+      wb.status === 'SUBMITTED_FOR_EXPANSION' ||
+      wb.status === 'BEING_EXPANDED' ||
+      wb.status === 'EXPANDED'
+    ) {
+      if (wb.closeWithdrawalBatchTx.hash === tx.hash) {
+        wb.closeWithdrawalBatchTx = { ...wb.closeWithdrawalBatchTx, ...tx };
+      }
+    }
+  }
+
+  return state;
+}
+
+export function getAllL2Txs(state: OperatorState): Set<L2TxId> {
+  const results: L2TxStatus[] = [];
+
+  for (const batch of state.depositBatches) {
+    if (
+      batch.status === 'SUBMITTED_TO_L2' ||
+      batch.status === 'DEPOSITED' ||
+      batch.status === 'SUBMITTED_FOR_COMPLETION' ||
+      batch.status === 'COMPLETED'
+    ) {
+      results.push(batch.depositTx);
+    }
+  }
+
+  for (const wb of state.withdrawalBatches) {
+    if (
+      wb.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED' ||
+      wb.status === 'CLOSED' ||
+      wb.status === 'SUBMITTED_FOR_EXPANSION' ||
+      wb.status === 'BEING_EXPANDED' ||
+      wb.status === 'EXPANDED'
+    ) {
+      results.push(wb.closeWithdrawalBatchTx);
+    }
+  }
+
+  return new Set(
+    results
+      .filter((tx) => tx.status === 'PENDING')
+      .map(({ type, hash }) => ({
+        type,
+        hash,
+      }))
+  );
+}
+
+async function initiateAggregation(
+  env: BridgeEnvironment,
+  state: OperatorState
+) {
+  while (
+    state.pendingDeposits.length >= env.DEPOSIT_BATCH_SIZE ||
+    depositsOldEnough(env, state)
+  ) {
+    const batchSize = Math.min(
+      2 ** Math.floor(Math.log2(state.pendingDeposits.length)),
+      env.DEPOSIT_BATCH_SIZE
+    );
+    console.log('aggregating', batchSize, 'deposits');
+
+    const deposits = state.pendingDeposits.splice(0, batchSize);
+    state.pendingDeposits = state.pendingDeposits.slice(batchSize);
+
+    if (batchSize === 1) {
+      state.depositBatches.push({
+        status: 'BEING_AGGREGATED',
+        deposits,
+        aggregationTxs: [[deposits[0].origin]],
+      });
+    } else {
+      const aggregationTxs: L1Tx[][] = [
+        await env.aggregateDeposits(deposits.map((d) => d.origin)),
+      ];
+      state.depositBatches.push({
+        status: 'BEING_AGGREGATED',
+        deposits,
+        aggregationTxs,
+      });
+    }
+  }
+}
+
+function depositsOldEnough(
+  env: BridgeEnvironment,
+  state: OperatorState
+): boolean {
+  for (const deposit of state.pendingDeposits) {
+    if (
+      deposit.origin.blockNumber + env.MAX_DEPOSIT_BLOCK_AGE <
+      state.l1BlockNumber
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function manageAggregation(
+  env: BridgeEnvironment,
+  newState: OperatorState
+) {
+  for (let i = 0; i < newState.depositBatches.length; i++) {
+    const batch = newState.depositBatches[i];
+    if (batch.status === 'BEING_AGGREGATED') {
+      const aggregationTxs = batch.aggregationTxs.at(-1);
+      if (
+        aggregationTxs &&
+        aggregationTxs.every((tx) => tx.status === 'MINED')
+      ) {
+        if (aggregationTxs.length === 1) {
+          const finalizeBatchTx = await env.finalizeBatch(aggregationTxs[0]);
+          newState.depositBatches[i] = {
+            ...batch,
+            status: 'AGGREGATED',
+            finalizeBatchTx,
+          };
+        } else {
+          const newAggregationLevel =
+            await env.aggregateDeposits(aggregationTxs);
+          batch.aggregationTxs.push(newAggregationLevel);
+        }
+      }
+    }
+    if (
+      batch.status === 'AGGREGATED' &&
+      batch.finalizeBatchTx.status === 'MINED'
+    ) {
+      console.log('Submitting to l2:', batch.finalizeBatchTx.hash);
+      newState.depositBatches[i] = {
+        ...batch,
+        status: 'SUBMITTED_TO_L2',
+        depositTx: await env.submitDepositsToL2(
+          batch.finalizeBatchTx.hash,
+          batch.deposits
+        ),
+      };
+    }
+  }
+}
+function updateDeposits(newState: OperatorState) {
+  for (let i = 0; i < newState.depositBatches.length; i++) {
+    const depositBatch = newState.depositBatches[i];
+    switch (depositBatch.status) {
+      case 'SUBMITTED_TO_L2':
+        if (depositBatch.depositTx.status === 'SUCCEEDED') {
+          newState.depositBatches[i] = {
+            ...depositBatch,
+            status: 'DEPOSITED',
+          };
+        }
+        break;
+    }
+  }
+}
+
+async function handleWithdrawal(state: OperatorState, change: L2Event) {
+  if (change.type === 'withdrawal') {
+    let batch = state.withdrawalBatches.find((b) => b.id === change.id);
+    if (!batch) {
+      assert(
+        state.withdrawalBatches.find((b) => b.status === 'PENDING') ===
+          undefined,
+        'No more than 1 pending batch'
+      );
+      batch = {
+        status: 'PENDING',
+        id: change.id,
+        withdrawals: [],
+      };
+      state.withdrawalBatches.push(batch);
+    }
+    batch.withdrawals.push({
+      amount: change.amount,
+      recipient: change.recipient,
+      origin: change.origin,
+      blockNumber: change.blockNumber,
+    });
+  }
+}
+async function closeWithdrawalBatch(
+  env: BridgeEnvironment,
+  state: OperatorState
+) {
+  for (let i = 0; i < state.withdrawalBatches.length; i++) {
+    const batch = state.withdrawalBatches[i];
+    if (
+      batch.status === 'PENDING' &&
+      (batch.withdrawals.length === env.MAX_WITHDRAWAL_BATCH_SIZE ||
+        withdrawalsOldEnough(env, state.l2BlockNumber, batch.withdrawals))
+    ) {
+      state.withdrawalBatches[i] = {
+        ...batch,
+        status: 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED',
+        closeWithdrawalBatchTx: await env.closePendingWithdrawalBatch(),
+      };
+    }
+  }
+}
+
+async function updateWithdrawalBatch(
+  env: BridgeEnvironment,
+  state: OperatorState,
+  change: L2Event
+) {
+  if (change.type === 'closeBatch') {
+    for (let i = 0; i < state.withdrawalBatches.length; i++) {
+      const batch = state.withdrawalBatches[i];
+      if (batch.id === change.id) {
+        assert(batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED');
+        if (batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED') {
+          state.withdrawalBatches[i] = {
+            ...batch,
+            status: 'CLOSED',
+            hash: change.root,
+          };
+        }
+      }
+    }
+  }
+}
+
+function withdrawalsOldEnough(
+  env: BridgeEnvironment,
+  blockNumber: number,
+  withdrawals: Withdrawal[]
+): boolean {
+  for (const withdrawal of withdrawals) {
+    if (withdrawal.blockNumber + env.MAX_WITHDRAWAL_BLOCK_AGE < blockNumber) {
+      return true;
+    }
+  }
+  return false;
 }

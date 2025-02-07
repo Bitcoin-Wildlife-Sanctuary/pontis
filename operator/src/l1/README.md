@@ -28,8 +28,6 @@ Assuming that aggregation happens in rounds:
 
 - `registerWithdrawalBatch(withdrawalBatchId: number, root: string) -> Promise<L1TxHashAndStatus>` - create and send a withdrawal batch registration transaction
 
-
-
 ### Withdrawals expansion
 
 Assuming that expansion happens in rounds:
