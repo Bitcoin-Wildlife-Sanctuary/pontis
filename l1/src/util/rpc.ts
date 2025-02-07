@@ -121,11 +121,9 @@ export async function rpc_importaddress(
   rpcUser: string,
   rpcPassword: string,
   walletName: string,
-  p2trAddress: string
+  address: string
 ): Promise<null | Error> {
-  const script = addressToScript(p2trAddress);
-  const pubkey = script.slice(4);   // witness tweaked public key
-  const desc = `rawtr(${pubkey})`
+  const desc = `addr(${address})`
   return rpc_importdescriptors(rpcUrl, rpcUser, rpcPassword, walletName, desc)
 }
 
