@@ -50,7 +50,7 @@ type DepositBatchCommon = {
   deposits: Deposit[];
 };
 
-type DepositBatch =
+export type DepositBatch =
   | ({
       status: 'BEING_AGGREGATED';
       aggregationTxs: L1Tx[][];
@@ -69,30 +69,30 @@ type DepositBatch =
       status: 'SUBMITTED_TO_L2';
       aggregationTxs: L1Tx[][];
       finalizeBatchTx: L1Tx;
-      depositTx: L2TxStatus;
+      depositTx: L2Tx;
     } & DepositBatchCommon)
   | ({
       status: 'DEPOSITED';
       aggregationTxs: L1Tx[][];
       finalizeBatchTx: L1Tx;
-      depositTx: L2TxStatus;
+      depositTx: L2Tx;
     } & DepositBatchCommon)
   | ({
       status: 'SUBMITTED_FOR_COMPLETION';
       aggregationTxs: L1Tx[][];
       finalizeBatchTx: L1Tx;
-      depositTx: L2TxStatus;
-      verifyTx: L1TxStatus;
+      depositTx: L2Tx;
+      verifyTx: L1Tx;
     } & DepositBatchCommon)
   | ({
       status: 'COMPLETED';
       aggregationTxs: L1Tx[][];
       finalizeBatchTx: L1Tx;
-      depositTx: L2TxStatus;
-      verifyTx: L1TxStatus;
+      depositTx: L2Tx;
+      verifyTx: L1Tx;
     } & DepositBatchCommon);
 
-type Withdrawal = {
+export type Withdrawal = {
   amount: bigint;
   recipient: L1Address;
   origin: L2TxHash;
@@ -104,7 +104,7 @@ type WithdrawalBatchCommon = {
   withdrawals: Withdrawal[];
 };
 
-type WithdrawalBatch =
+export type WithdrawalBatch =
   | ({
       status: 'PENDING';
       id: bigint;
@@ -126,23 +126,23 @@ type WithdrawalBatch =
       withdrawals: Withdrawal[];
       hash: string;
       closeWithdrawalBatchTx: L2Tx;
-      withdrawBatchTx: L1TxStatus;
+      withdrawBatchTx: L1Tx;
     } & WithdrawalBatchCommon)
   | ({
       status: 'BEING_EXPANDED';
       withdrawals: Withdrawal[];
       hash: string;
       closeWithdrawalBatchTx: L2Tx;
-      withdrawBatchTx: L1TxStatus;
-      expansionTxs: L1TxStatus[][];
+      withdrawBatchTx: L1Tx;
+      expansionTxs: L1Tx[][];
     } & WithdrawalBatchCommon)
   | ({
       status: 'EXPANDED';
       withdrawals: Withdrawal[];
       hash: string;
       closeWithdrawalBatchTx: L2Tx;
-      withdrawBatchTx: L1TxStatus;
-      expansionTxs: L1TxStatus[][];
+      withdrawBatchTx: L1Tx;
+      expansionTxs: L1Tx[][];
     } & WithdrawalBatchCommon);
 
 export type OperatorState = {

@@ -1,4 +1,4 @@
-import { Account, cairo, constants, RpcProvider } from 'starknet';
+import { Account, RpcProvider } from 'starknet';
 
 import { contractEvents, l2BlockNumber, l2Events } from './l2/events';
 import {
@@ -25,8 +25,9 @@ import {
 import { setupOperator } from './operator';
 import { mocked, MockEvent } from './mock';
 import { aggregateDeposits, finalizeBatch } from './l1/l1mocks';
-import { filter, merge } from 'rxjs';
+import { filter, merge, shareReplay } from 'rxjs';
 import { close } from 'fs';
+import { serve } from './server';
 
 async function mockedOperator() {
   const events: MockEvent[] = [
@@ -290,7 +291,7 @@ async function mockedOperator() {
     saveState
   );
 
-  operator.subscribe((_) => {});
+  operator.pipe(shareReplay(1));
 
   // operator.subscribe({
   //   next: (state) => {
@@ -301,7 +302,14 @@ async function mockedOperator() {
   //   complete: () => console.log('Complete'),
   // });
 
-  await start();
+  start();
+
+  return operator;
 }
 
-mockedOperator().catch(console.error);
+async function startServer() {
+  const operator = await mockedOperator()
+  serve(operator);
+}
+
+startServer().catch(console.error);
