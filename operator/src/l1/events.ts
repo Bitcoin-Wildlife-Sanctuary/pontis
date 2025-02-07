@@ -39,7 +39,9 @@ export function currentBlockRange(
 
 export function deposits(initialBlockNumber: number): Observable<Deposits> {
   return currentBlockRange(initialBlockNumber).pipe(
-    switchMap(([previous, current]) => from(depositsInRange(previous, current))),
+    switchMap(([previous, current]) =>
+      from(depositsInRange(previous, current))
+    ),
     filter((deposits) => deposits.length > 0),
     map((deposits) => ({ type: 'deposits', deposits }))
   );
@@ -51,6 +53,9 @@ async function getCurrentL1BlockNumber(): Promise<number> {
   throw new Error('Not implemented.');
 }
 
-async function depositsInRange(blockFrom: number, blockTo: number): Promise<Deposit[]> {
+async function depositsInRange(
+  blockFrom: number,
+  blockTo: number
+): Promise<Deposit[]> {
   return [];
 }
