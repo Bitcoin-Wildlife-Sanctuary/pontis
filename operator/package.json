@@ -16,14 +16,20 @@
     "play": "ts-node src/play.ts"
   },
   "dependencies": {
+    "express": "^4.21.2",
     "fs": "^0.0.1-security",
     "lodash": "^4.17.21",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
     "rxjs": "^7.8.1",
     "starknet": "^6.11.0"
   },
   "devDependencies": {
+    "@types/express": "^5.0.0",
     "@types/lodash": "^4.17.14",
     "@types/node": "^22.7.5",
+    "@types/react": "^19.0.8",
+    "@types/react-dom": "^19.0.3",
     "gts": "^6.0.2",
     "prettier": "^3.4.2",
     "ts-node": "^10.9.2",

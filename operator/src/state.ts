@@ -50,7 +50,7 @@ type DepositBatchCommon = {
   deposits: Deposit[];
 };
 
-type DepositBatch =
+export type DepositBatch =
   | ({
       status: 'BEING_AGGREGATED';
       aggregationTxs: L1Tx[][];
@@ -69,13 +69,13 @@ type DepositBatch =
       status: 'SUBMITTED_TO_L2';
       aggregationTxs: L1Tx[][];
       finalizeBatchTx: L1Tx;
-      depositTx: L2TxStatus;
+      depositTx: L2Tx;
     } & DepositBatchCommon)
   | ({
       status: 'DEPOSITED';
       aggregationTxs: L1Tx[][];
       finalizeBatchTx: L1Tx;
-      depositTx: L2TxStatus;
+      depositTx: L2Tx;
     } & DepositBatchCommon)
   | ({
       status: 'SUBMITTED_FOR_COMPLETION';
@@ -92,7 +92,7 @@ type DepositBatch =
       verifyTx: L1Tx;
     } & DepositBatchCommon);
 
-type Withdrawal = {
+export type Withdrawal = {
   amount: bigint;
   recipient: L1Address;
   origin: L2TxHash;
@@ -104,7 +104,7 @@ type WithdrawalBatchCommon = {
   withdrawals: Withdrawal[];
 };
 
-type WithdrawalBatch =
+export type WithdrawalBatch =
   | ({
       status: 'PENDING';
       id: bigint;
