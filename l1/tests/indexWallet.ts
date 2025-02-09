@@ -88,7 +88,7 @@ const main = async () => {
     )
 
     const startBlock = blockchainInfo.blocks - 1000
-    const endBlock = blockchainInfo.blocks + 100
+    const endBlock = blockchainInfo.blocks
     console.log(`rescanning blockchain from ${startBlock} to ${endBlock}`)
     await rpc_rescanblockchain(
       rpc_config.host,
