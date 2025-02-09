@@ -1,5 +1,5 @@
 import { PubKey, Sha256, UTXO } from 'scrypt-ts'
-import { Postage } from '../lib/constants'
+import { Postage, SupportedNetwork } from '../lib/constants'
 import { ChainProvider, markSpent, UtxoProvider } from '../lib/provider'
 import { Signer } from '../lib/signer'
 import {
@@ -16,7 +16,7 @@ import {
 import { ExtPsbt } from '../lib/extPsbt'
 import { getScriptPubKeys } from '../covenants/instance'
 import { pickLargeFeeUtxo } from './utils/pick'
-import { getDummyUtxo } from '../lib/utils'
+import { getDummyUtxo, supportedNetworkToBtcNetwork } from '../lib/utils'
 import { inputToPrevout, outputToUtxo, reverseTxId } from '../lib/txTools'
 import * as tools from 'uint8array-tools'
 import {
@@ -30,6 +30,7 @@ export async function deployBridge(
   operatorPubKey: PubKey,
 
   signer: Signer,
+  network: SupportedNetwork,
   utxoProvider: UtxoProvider,
   chainProvider: ChainProvider,
 
@@ -43,15 +44,26 @@ export async function deployBridge(
   const expanderSPK = scriptSPKs.withdrawExpander
   const state = BridgeCovenant.createEmptyState(depositAggregationSPK)
   const covenant = new BridgeCovenant(operatorPubKey, expanderSPK, state)
-  const est = estimateDeployBridgeTxVSize(covenant, l1Address, feeRate)
+  const est = estimateDeployBridgeTxVSize(network, covenant, l1Address, feeRate)
   const total = BigInt(Math.ceil(feeRate * est.vSize))
   const utxos = await utxoProvider.getUtxos(l1Address, { total: Number(total) })
   if (utxos.length === 0) {
-    throw new Error('Insufficient satoshis input amount')
+    throw new Error(`Insufficient satoshis input amount: no utxos found`)
   }
   // todo pick the exact amount of satoshis
   const feeUtxo = pickLargeFeeUtxo(utxos)
-  const psbt = buildDepolyBridgeTx(covenant, l1Address, feeUtxo, feeRate)
+  if (feeUtxo.satoshis < total) {
+    throw new Error(
+      `Insufficient satoshis input amount: fee utxo(${feeUtxo.satoshis}) < total(${total})`
+    )
+  }
+  const psbt = buildDepolyBridgeTx(
+    network,
+    covenant,
+    l1Address,
+    feeUtxo,
+    feeRate
+  )
 
   const [signedPsbt] = await signer.signPsbts([
     {
@@ -74,6 +86,7 @@ export async function deployBridge(
 
 export async function finalizeL1Deposit(
   signer: Signer,
+  network: SupportedNetwork,
   utxoProvider: UtxoProvider,
   chainProvider: ChainProvider,
 
@@ -126,6 +139,7 @@ export async function finalizeL1Deposit(
   )
 
   const est = estimateFinalizeL1DepositTxVSize(
+    network,
     bridgeUtxo,
     depositAggregatorUtxo,
     tracedBridge,
@@ -141,11 +155,17 @@ export async function finalizeL1Deposit(
     total: Number(total),
   })
   if (utxos.length === 0) {
-    throw new Error('Insufficient satoshis input amount')
+    throw new Error(`Insufficient satoshis input amount: no utxos found`)
   }
   const feeUtxo = pickLargeFeeUtxo(utxos)
+  if (feeUtxo.satoshis < total) {
+    throw new Error(
+      `Insufficient satoshis input amount: fee utxo(${feeUtxo.satoshis}) < total(${total})`
+    )
+  }
 
   const finalizeL1Tx = buildFinalizeL1DepositTx(
+    network,
     feeUtxo,
     bridgeUtxo,
     depositAggregatorUtxo,
@@ -178,6 +198,7 @@ export async function finalizeL1Deposit(
 
 export async function finalizeL2Deposit(
   signer: Signer,
+  network: SupportedNetwork,
   utxoProvider: UtxoProvider,
   chainProvider: ChainProvider,
 
@@ -215,6 +236,7 @@ export async function finalizeL2Deposit(
     newState
   )
   const est = estimateFinalizeL2DepositTxVSize(
+    network,
     bridgeUtxo,
     tracedBridge,
     outputBridgeCovenant,
@@ -227,11 +249,17 @@ export async function finalizeL2Deposit(
     total: Number(total),
   })
   if (utxos.length === 0) {
-    throw new Error('Insufficient satoshis input amount')
+    throw new Error(`Insufficient satoshis input amount: no utxos found`)
   }
   const feeUtxo = pickLargeFeeUtxo(utxos)
+  if (feeUtxo.satoshis < total) {
+    throw new Error(
+      `Insufficient satoshis input amount: fee utxo(${feeUtxo.satoshis}) < total(${total})`
+    )
+  }
 
   const finalizeL2Tx = buildFinalizeL2DepositTx(
+    network,
     feeUtxo,
     bridgeUtxo,
     tracedBridge,
@@ -262,6 +290,7 @@ export async function finalizeL2Deposit(
 
 export async function createWithdrawalExpander(
   signer: Signer,
+  network: SupportedNetwork,
   utxoProvider: UtxoProvider,
   chainProvider: ChainProvider,
 
@@ -311,6 +340,7 @@ export async function createWithdrawalExpander(
   )
 
   const est = estimateCreateWithdrawalTxVSize(
+    network,
     bridgeUtxo,
     tracedBridge,
     outputBridgeCovenant,
@@ -325,11 +355,17 @@ export async function createWithdrawalExpander(
     total: Number(total),
   })
   if (utxos.length === 0) {
-    throw new Error('Insufficient satoshis input amount')
+    throw new Error(`Insufficient satoshis input amount: no utxos found`)
   }
   const feeUtxo = pickLargeFeeUtxo(utxos)
+  if (feeUtxo.satoshis < total) {
+    throw new Error(
+      `Insufficient satoshis input amount: fee utxo(${feeUtxo.satoshis}) < total(${total})`
+    )
+  }
 
   const createWithdrawalTx = buildCreateWithdrawalTx(
+    network,
     feeUtxo,
     bridgeUtxo,
     tracedBridge,
@@ -362,6 +398,7 @@ export async function createWithdrawalExpander(
 }
 
 function estimateCreateWithdrawalTxVSize(
+  network: SupportedNetwork,
   bridgeUtxo: TraceableBridgeUtxo,
   tracedBridge: TracedBridge,
   outputBridgeCovenant: BridgeCovenant,
@@ -372,6 +409,7 @@ function estimateCreateWithdrawalTxVSize(
   feeRate: number
 ) {
   const dummyPsbt = buildCreateWithdrawalTx(
+    network,
     getDummyUtxo(changeAddress),
     bridgeUtxo,
     tracedBridge,
@@ -389,6 +427,7 @@ function estimateCreateWithdrawalTxVSize(
 }
 
 function buildCreateWithdrawalTx(
+  network: SupportedNetwork,
   feeUtxo: UTXO,
 
   bridgeUtxo: TraceableBridgeUtxo,
@@ -409,7 +448,9 @@ function buildCreateWithdrawalTx(
     throw new Error('fee utxo is not enough')
   }
 
-  const createWithdrawalTx = new ExtPsbt()
+  const createWithdrawalTx = new ExtPsbt({
+    network: supportedNetworkToBtcNetwork(network),
+  })
     .addCovenantInput(tracedBridge.covenant)
     .addFeeInputs([feeUtxo])
     .addStateOutput()
@@ -441,6 +482,7 @@ function buildCreateWithdrawalTx(
 }
 
 function buildFinalizeL2DepositTx(
+  network: SupportedNetwork,
   feeUtxo: UTXO,
 
   bridgeUtxo: TraceableBridgeUtxo,
@@ -458,7 +500,9 @@ function buildFinalizeL2DepositTx(
     throw new Error('fee utxo is not enough')
   }
 
-  const finalizeL2Tx = new ExtPsbt()
+  const finalizeL2Tx = new ExtPsbt({
+    network: supportedNetworkToBtcNetwork(network),
+  })
     .addCovenantInput(tracedBridge.covenant)
     .addFeeInputs([feeUtxo])
     .addStateOutput()
@@ -483,6 +527,7 @@ function buildFinalizeL2DepositTx(
 }
 
 function estimateFinalizeL2DepositTxVSize(
+  network: SupportedNetwork,
   bridgeUtxo: TraceableBridgeUtxo,
   tracedBridge: TracedBridge,
   outputBridgeCovenant: BridgeCovenant,
@@ -491,6 +536,7 @@ function estimateFinalizeL2DepositTxVSize(
   feeRate: number
 ) {
   const dummyPsbt = buildFinalizeL2DepositTx(
+    network,
     getDummyUtxo(changeAddress),
     bridgeUtxo,
     tracedBridge,
@@ -506,6 +552,7 @@ function estimateFinalizeL2DepositTxVSize(
 }
 
 function buildFinalizeL1DepositTx(
+  network: SupportedNetwork,
   feeUtxo: UTXO,
 
   bridgeUtxo: TraceableBridgeUtxo,
@@ -523,7 +570,9 @@ function buildFinalizeL1DepositTx(
   tracedBridge.covenant.bindToUtxo(bridgeUtxo.utxo)
   tracedDepositAggregator.covenant.bindToUtxo(depositAggregatorUtxo.utxo)
 
-  const finalizeL1Tx = new ExtPsbt()
+  const finalizeL1Tx = new ExtPsbt({
+    network: supportedNetworkToBtcNetwork(network),
+  })
     .addCovenantInput(tracedBridge.covenant)
     .addCovenantInput(tracedDepositAggregator.covenant)
     .addFeeInputs([feeUtxo])
@@ -572,6 +621,7 @@ function buildFinalizeL1DepositTx(
 }
 
 function estimateFinalizeL1DepositTxVSize(
+  network: SupportedNetwork,
   bridgeUtxo: TraceableBridgeUtxo,
   depositAggregatorUtxo: TraceableDepositAggregatorUtxo,
 
@@ -584,6 +634,7 @@ function estimateFinalizeL1DepositTxVSize(
   feeRate: number
 ) {
   const dummyPsbt = buildFinalizeL1DepositTx(
+    network,
     getDummyUtxo(changeAddress),
     bridgeUtxo,
     depositAggregatorUtxo,
@@ -601,11 +652,13 @@ function estimateFinalizeL1DepositTxVSize(
 }
 
 function estimateDeployBridgeTxVSize(
+  network: SupportedNetwork,
   bridgeCovenant: BridgeCovenant,
   changeAddress: string,
   feeRate: number
 ) {
   const dummyPsbt = buildDepolyBridgeTx(
+    network,
     bridgeCovenant,
     changeAddress,
     getDummyUtxo(changeAddress),
@@ -618,6 +671,7 @@ function estimateDeployBridgeTxVSize(
 }
 
 function buildDepolyBridgeTx(
+  network: SupportedNetwork,
   bridgeCovenant: BridgeCovenant,
   changeAddress: string,
   feeUtxo: UTXO,
@@ -631,7 +685,9 @@ function buildDepolyBridgeTx(
     throw new Error('fee utxo is not enough')
   }
 
-  const deployBridgeTx = new ExtPsbt()
+  const deployBridgeTx = new ExtPsbt({
+    network: supportedNetworkToBtcNetwork(network),
+  })
     .addFeeInputs([feeUtxo])
     .addStateOutput()
     .addCovenantOutput(bridgeCovenant, Postage.BRIDGE_POSTAGE)

@@ -8,7 +8,7 @@ import {
   TracedDepositAggregator,
 } from '../covenants'
 import { Postage, SupportedNetwork } from '../lib/constants'
-import { getDummyUtxo } from '../lib/utils'
+import { getDummyUtxo, supportedNetworkToBtcNetwork } from '../lib/utils'
 import { DUST_LIMIT, ExtPsbt } from '../lib/extPsbt'
 import { getScriptPubKeys } from '../covenants/instance'
 import { pickLargeFeeUtxo } from './utils/pick'
@@ -18,13 +18,13 @@ import { inputToPrevout, outputToUtxo } from '../lib/txTools'
 export async function createDeposit(
   operatorPubKey: PubKey,
   signer: Signer,
+  network: SupportedNetwork,
   utxoProvider: UtxoProvider,
   chainProvider: ChainProvider,
 
   l2Address: string,
   depositAmt: bigint,
 
-  network: SupportedNetwork,
   feeRate: number
 ) {
   const scriptSPKs = getScriptPubKeys(operatorPubKey)
@@ -41,17 +41,27 @@ export async function createDeposit(
     network
   )
 
-  const est = estimateCreateDepositTxVSize(depositAggregatorCovenant, l1address)
+  const est = estimateCreateDepositTxVSize(
+    network,
+    depositAggregatorCovenant,
+    l1address
+  )
   const total = BigInt(Math.ceil(feeRate * est.vSize)) + depositAmt
 
   const utxos = await utxoProvider.getUtxos(l1address, { total: Number(total) })
   if (utxos.length === 0) {
-    throw new Error('Insufficient satoshis input amount')
+    throw new Error(`Insufficient satoshis input amount: no utxos found`)
   }
   // todo pick the exact amount of satoshis
   const feeUtxo = pickLargeFeeUtxo(utxos)
+  if (feeUtxo.satoshis < total) {
+    throw new Error(
+      `Insufficient satoshis input amount: fee utxo(${feeUtxo.satoshis}) < total(${total})`
+    )
+  }
 
   const psbt = buildCreateDepositTx(
+    network,
     depositAggregatorCovenant,
     l1address,
     feeUtxo,
@@ -78,10 +88,12 @@ export async function createDeposit(
 }
 
 function estimateCreateDepositTxVSize(
+  network: SupportedNetwork,
   covenant: DepositAggregatorCovenant,
   changeAddress: string
 ) {
   const dummyPsbt = buildCreateDepositTx(
+    network,
     covenant,
     changeAddress,
     getDummyUtxo(changeAddress),
@@ -94,6 +106,7 @@ function estimateCreateDepositTxVSize(
 }
 
 function buildCreateDepositTx(
+  network: SupportedNetwork,
   depositAggregatorCovenant: DepositAggregatorCovenant,
   changeAddress: string,
   feeUtxo: UTXO,
@@ -107,7 +120,9 @@ function buildCreateDepositTx(
     throw new Error('fee utxo is not enough')
   }
 
-  const createDepositTx = new ExtPsbt()
+  const createDepositTx = new ExtPsbt({
+    network: supportedNetworkToBtcNetwork(network),
+  })
     .addFeeInputs([feeUtxo])
     .addStateOutput()
     .addCovenantOutput(
@@ -121,6 +136,7 @@ function buildCreateDepositTx(
 
 export async function aggregateDeposit(
   signer: Signer, // operator signer
+  network: SupportedNetwork,
   utxoProvider: UtxoProvider,
   chainProvider: ChainProvider,
 
@@ -152,6 +168,7 @@ export async function aggregateDeposit(
   const changeAddress = await signer.getAddress()
 
   const estSize = estimateAggregateDepositTxVSize(
+    network,
     getDummyUtxo(changeAddress),
     aggregatorUtxo0,
     aggregatorUtxo1,
@@ -166,11 +183,17 @@ export async function aggregateDeposit(
     total: Number(total),
   })
   if (utxos.length === 0) {
-    throw new Error('Insufficient satoshis input amount')
+    throw new Error(`Insufficient satoshis input amount: no utxos found`)
   }
   const feeUtxo = pickLargeFeeUtxo(utxos)
+  if (feeUtxo.satoshis < total) {
+    throw new Error(
+      `Insufficient satoshis input amount: fee utxo(${feeUtxo.satoshis}) < total(${total})`
+    )
+  }
 
   const aggregateTx = buildAggregateDepositTx(
+    network,
     feeUtxo,
     aggregatorUtxo0,
     aggregatorUtxo1,
@@ -202,6 +225,7 @@ export async function aggregateDeposit(
 }
 
 function buildAggregateDepositTx(
+  network: SupportedNetwork,
   feeUtxo: UTXO,
   aggregatorUtxo0: TraceableDepositAggregatorUtxo,
   aggregatorUtxo1: TraceableDepositAggregatorUtxo,
@@ -217,7 +241,9 @@ function buildAggregateDepositTx(
   tracedDepositAggregator0.covenant.bindToUtxo(aggregatorUtxo0.utxo)
   tracedDepositAggregator1.covenant.bindToUtxo(aggregatorUtxo1.utxo)
 
-  const aggregateTx = new ExtPsbt()
+  const aggregateTx = new ExtPsbt({
+    network: supportedNetworkToBtcNetwork(network),
+  })
     .addCovenantInput(tracedDepositAggregator0.covenant)
     .addCovenantInput(tracedDepositAggregator1.covenant)
     .addFeeInputs([feeUtxo])
@@ -275,6 +301,7 @@ function buildAggregateDepositTx(
 }
 
 function estimateAggregateDepositTxVSize(
+  network: SupportedNetwork,
   feeUtxo: UTXO,
   aggregatorUtxo0: TraceableDepositAggregatorUtxo,
   aggregatorUtxo1: TraceableDepositAggregatorUtxo,
@@ -287,6 +314,7 @@ function estimateAggregateDepositTxVSize(
   feeRate: number
 ) {
   return buildAggregateDepositTx(
+    network,
     feeUtxo,
     aggregatorUtxo0,
     aggregatorUtxo1,

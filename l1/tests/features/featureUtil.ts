@@ -1,6 +1,5 @@
 import { PubKey, Sha256 } from 'scrypt-ts'
 import { UtxoProvider, ChainProvider } from '../../src/lib/provider'
-import { SupportedNetwork } from '../../src/lib/constants'
 import { TraceableDepositAggregatorUtxo } from '../../src/covenants/depositAggregatorCovenant'
 import { testOperatorSigner, testUserSigner } from '../utils/testSigner'
 import { DepositAggregator } from '../../src/contracts/depositAggregator'
@@ -15,6 +14,7 @@ import { TraceableBridgeUtxo } from '../../src/covenants/bridgeCovenant'
 import { Withdrawal } from '../../src/util/merkleUtils'
 import { TraceableWithdrawalExpanderUtxo } from '../../src/covenants'
 import { Postage } from '../../src/lib/constants'
+import { NETWORK } from '../utils/env'
 
 export const MINIMAL_DEPOSIT_AMT = Postage.DEPOSIT_AGGREGATOR_POSTAGE * 2
 
@@ -32,14 +32,13 @@ export async function deposit(
   chainProvider: ChainProvider,
 
   l2Address: string,
-  depositAmt: bigint,
-
-  network: SupportedNetwork
+  depositAmt: bigint
 ) {
   const operatorPubKey = await testOperatorSigner.getPublicKey()
   const deposit = await depositFeature.createDeposit(
     PubKey(operatorPubKey),
     testOperatorSigner,
+    NETWORK,
 
     utxoProvider,
     chainProvider,
@@ -47,7 +46,6 @@ export async function deposit(
     l2Address,
     depositAmt,
 
-    network,
     FEE_RATE
   )
   return deposit
@@ -62,6 +60,7 @@ export async function aggregate(
 ) {
   return await depositFeature.aggregateDeposit(
     testOperatorSigner,
+    NETWORK,
     utxoProvider,
     chainProvider,
 
@@ -81,6 +80,7 @@ export async function finalizeL1Deposit(
 ) {
   return await bridgeFeature.finalizeL1Deposit(
     testOperatorSigner,
+    NETWORK,
     utxoProvider,
     chainProvider,
 
@@ -101,6 +101,7 @@ export async function finalizeL2Deposit(
 ) {
   return await bridgeFeature.finalizeL2Deposit(
     testUserSigner,
+    NETWORK,
     utxoProvider,
     chainProvider,
 
@@ -119,6 +120,7 @@ export async function deployBridge(
   return await bridgeFeature.deployBridge(
     PubKey(operatorPubKey),
     testOperatorSigner,
+    NETWORK,
     utxoProvider,
     chainProvider,
     FEE_RATE
@@ -134,6 +136,7 @@ export async function createWithdrawal(
 ) {
   return await bridgeFeature.createWithdrawalExpander(
     testUserSigner,
+    NETWORK,
     utxoProvider,
     chainProvider,
 
@@ -153,6 +156,7 @@ export async function distributeWithdrawals(
 ) {
   return await withdrawFeature.distributeWithdrawals(
     testOperatorSigner,
+    NETWORK,
     utxoProvider,
     chainProvider,
 
@@ -172,6 +176,7 @@ export async function expandWithdrawal(
 ) {
   return await withdrawFeature.expandWithdrawal(
     testOperatorSigner,
+    NETWORK,
     utxoProvider,
     chainProvider,
 

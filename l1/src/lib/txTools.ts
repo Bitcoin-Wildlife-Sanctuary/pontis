@@ -148,6 +148,19 @@ export const getOutpointString = function (tx: btc.Transaction, index: number) {
 export const checkDisableOpCode = function (scriptPubKey) {
   for (const chunk of scriptPubKey.chunks) {
     // New opcodes will be listed here. May use a different sigversion to modify existing opcodes.
+    // const opcode = chunk.opcodenum
+    // const isOpSuccess = opcode == 80 || opcode == 98 || (opcode >= 126 && opcode <= 129) ||
+    // (opcode >= 131 && opcode <= 134) || (opcode >= 137 && opcode <= 138) ||
+    // (opcode >= 141 && opcode <= 142) || (opcode >= 149 && opcode <= 153) ||
+    // (opcode >= 187 && opcode <= 254);
+
+    // if (isOpSuccess) {
+    //   if ( opcode != 126) {
+    //     console.log(chunk.opcodenum, btc.Opcode.reverseMap[chunk.opcodenum])
+    //     return true
+    //   }
+    // }
+
     if (btc.Opcode.isOpSuccess(chunk.opcodenum)) {
       console.log(chunk.opcodenum, btc.Opcode.reverseMap[chunk.opcodenum])
       return true

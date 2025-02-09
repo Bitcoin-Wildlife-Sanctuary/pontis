@@ -2,9 +2,8 @@ import {
   ByteString,
   hash256,
   method,
-  OpCode,
-  Sha256,
   sha256,
+  Sha256,
   SmartContractLib,
   toByteString,
 } from 'scrypt-ts'

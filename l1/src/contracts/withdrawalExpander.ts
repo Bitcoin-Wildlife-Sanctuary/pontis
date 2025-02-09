@@ -15,7 +15,6 @@ import {
   toByteString,
 } from 'scrypt-ts'
 import { SHPreimage, SigHashUtils } from './sigHashUtils'
-import { Bridge, BridgeTransaction } from './bridge'
 import { GeneralUtils } from './generalUtils'
 import { MerklePath } from './merklePath'
 import { InputsSegments, TxUtils } from './txUtil'

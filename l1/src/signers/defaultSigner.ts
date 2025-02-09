@@ -3,6 +3,7 @@ import ECPairFactory, { ECPairInterface } from 'ecpair'
 import { isTaprootInput, toXOnly } from '../lib/utils'
 import { PSBTOptions, Signer } from '../lib/signer'
 import * as bitcoinjs from '@scrypt-inc/bitcoinjs-lib'
+import { SupportedNetwork } from '../lib/constants'
 
 const ECPair = ECPairFactory(ecc)
 bitcoinjs.initEccLib(ecc)
@@ -15,6 +16,7 @@ export enum AddressType {
 export class DefaultSigner implements Signer {
   constructor(
     private readonly keyPair: ECPairInterface = ECPair.makeRandom(),
+    public readonly network: SupportedNetwork = 'fractal-testnet',
     public readonly addressType: AddressType = AddressType.P2TR
   ) {}
 
@@ -36,6 +38,7 @@ export class DefaultSigner implements Signer {
     const psbt = bitcoinjs.Psbt.fromHex(psbtHex)
     const { output } = bitcoinjs.payments.p2tr({
       address: this.getP2TRAddress(),
+      network: this._btcNetwork(),
     })
     const taprootHex = Buffer.from(output!).toString('hex')
     const xpubkey = await this.getXOnlyPublicKey()
@@ -125,6 +128,19 @@ export class DefaultSigner implements Signer {
     )
   }
 
+  private _btcNetwork() {
+    switch (this.network) {
+      case 'fractal-testnet':
+        return bitcoinjs.networks.bitcoin
+      case 'fractal-mainnet':
+        return bitcoinjs.networks.bitcoin
+      case 'btc-signet':
+        return bitcoinjs.networks.testnet
+      default:
+        throw new Error('Invalid network')
+    }
+  }
+
   private getKeyPair() {
     if (this.addressType === AddressType.P2TR) {
       return ECPair.fromPrivateKey(this.getTweakedPrivateKey())
@@ -140,6 +156,7 @@ export class DefaultSigner implements Signer {
     const internalPubkey = ketPair.publicKey.subarray(1, 33)
     const { address } = bitcoinjs.payments.p2tr({
       internalPubkey: internalPubkey,
+      network: this._btcNetwork(),
     })
     return address!
   }
@@ -148,6 +165,7 @@ export class DefaultSigner implements Signer {
     const pubkey = this.keyPair.publicKey
     const { address } = bitcoinjs.payments.p2wpkh({
       pubkey: pubkey,
+      network: this._btcNetwork(),
     })
     return address!
   }

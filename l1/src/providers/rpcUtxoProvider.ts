@@ -52,7 +52,7 @@ export class RPCUtxoProvider extends RPCChainProvider implements UtxoProvider {
         throw new Error(res.statusText)
       })
       .then((res: any) => {
-        if (res.result === null) {
+        if (res.result === null || res.result === undefined) {
           throw new Error(JSON.stringify(res))
         }
 

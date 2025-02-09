@@ -1,4 +1,4 @@
-import { int2ByteString, PubKey, Sha256 } from 'scrypt-ts'
+import { PubKey, Sha256 } from 'scrypt-ts'
 import { ByteString } from 'scrypt-ts'
 import { Covenant } from '../lib/covenant'
 import { SupportedNetwork } from '../lib/constants'
@@ -8,7 +8,6 @@ import { BridgeUtxo, ChainProvider } from '../lib/provider'
 import {
   createEmptySha256,
   inputsToSegmentByteString,
-  inputToByteString,
   isTxHashEqual,
   locktimeToByteString,
   outputToByteString,

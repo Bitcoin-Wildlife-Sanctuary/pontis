@@ -1,6 +1,5 @@
 import fetch from 'cross-fetch'
 import { descriptorChecksum } from './checksum'
-import { addressToScript } from '../lib/utils'
 import * as ecc from '@bitcoinerlab/secp256k1'
 import * as bitcoinjs from '@scrypt-inc/bitcoinjs-lib'
 
@@ -21,7 +20,7 @@ export async function rpc_create_watchonly_wallet(
   walletName: string
 ): Promise<null | Error> {
   const Authorization = httpAuth(rpcUser, rpcPassword)
-  return fetch(rpcUrl, {
+  const resp = await fetch(rpcUrl, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -41,22 +40,15 @@ export async function rpc_create_watchonly_wallet(
       },
     }),
   })
-    .then((res) => {
-      if (res.status === 200) {
-        return res.json()
-      }
-      throw new Error(res.statusText)
-    })
-    .then((res: any) => {
-      if (res.result === null) {
-        throw new Error(JSON.stringify(res))
-      }
-      return null
-    })
-    .catch((err: Error) => {
-      console.log('rpc_create_watchonly_wallet failed', err)
-      return err
-    })
+  if (resp.status !== 200) {
+    const text = await resp.text()
+    throw new Error(`createwallet failed: ${resp.statusText}: ${text}`)
+  }
+  const res = await resp.json()
+  if (res.result === null || res.result === undefined) {
+    throw new Error(`createwallet failed: ${JSON.stringify(res)}`)
+  }
+  return null
 }
 
 export const rpc_importdescriptors = async function (
@@ -71,7 +63,7 @@ export const rpc_importdescriptors = async function (
   const checksum = descriptorChecksum(desc)
 
   const timestamp = Math.ceil(new Date().getTime() / 1000)
-  return fetch(rpcWalletUrl(rpcUrl, walletName), {
+  const resp = await fetch(rpcWalletUrl(rpcUrl, walletName), {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -95,25 +87,18 @@ export const rpc_importdescriptors = async function (
       ],
     }),
   })
-    .then((res) => {
-      if (res.status === 200) {
-        return res.json()
-      }
-      throw new Error(res.statusText)
-    })
-    .then((res: any) => {
-      if (
-        res.result === null ||
-        res.result[0] === undefined ||
-        res.result[0].success !== true
-      ) {
-        throw new Error(JSON.stringify(res))
-      }
-      return null
-    })
-    .catch((e: Error) => {
-      return e
-    })
+  if (resp.status !== 200) {
+    const text = await resp.text()
+    throw new Error(`importdescriptors failed: ${resp.statusText}: ${text}`)
+  }
+  const res = await resp.json()
+  if (res.result === null || res.result === undefined) {
+    throw new Error(`importdescriptors failed: ${JSON.stringify(res)}`)
+  }
+  if (res.result[0].success !== true) {
+    throw new Error(`importdescriptors failed: ${JSON.stringify(res)}`)
+  }
+  return null
 }
 
 export async function rpc_importaddress(
@@ -127,14 +112,36 @@ export async function rpc_importaddress(
   return rpc_importdescriptors(rpcUrl, rpcUser, rpcPassword, walletName, desc)
 }
 
+export type WalletInfo = {
+  walletname: string
+  walletversion: number
+  format: string
+  balance: number
+  unconfirmed_balance: number
+  immature_balance: number
+  txcount: number
+  keypoololdest: number
+  keypoolsize: number
+  keypoolsize_hd_internal: number
+  unlocked_until: number
+  paytxfee: number
+  hdseedid: string
+  private_keys_enabled: boolean
+  avoid_reuse: boolean
+  scanning: {
+    duration: number
+    progress: number
+  }
+  descriptors: boolean
+}
 export async function rpc_getwalletinfo(
   rpcUrl: string,
   rpcUser: string,
   rpcPassword: string,
   walletName: string
-): Promise<any | Error> {
+): Promise<WalletInfo | Error> {
   const Authorization = httpAuth(rpcUser, rpcPassword)
-  return fetch(rpcWalletUrl(rpcUrl, walletName), {
+  const resp = await fetch(rpcWalletUrl(rpcUrl, walletName), {
     headers: { Authorization },
     method: 'POST',
     body: JSON.stringify({
@@ -144,22 +151,15 @@ export async function rpc_getwalletinfo(
       params: [],
     }),
   })
-    .then((res) => {
-      if (res.status === 200) {
-        return res.json()
-      }
-      throw new Error(res.statusText)
-    })
-    .then((res: any) => {
-      if (res.result === null) {
-        throw new Error(JSON.stringify(res))
-      }
-      return res.result
-    })
-    .catch((e: Error) => {
-      console.error('rpc_getwalletinfo failed', e)
-      return e
-    })
+  if (resp.status !== 200) {
+    const text = await resp.text()
+    throw new Error(`getwalletinfo failed: ${resp.statusText}: ${text}`)
+  }
+  const res = await resp.json()
+  if (res.result === null || res.result === undefined) {
+    throw new Error(`getwalletinfo failed: ${JSON.stringify(res)}`)
+  }
+  return res.result
 }
 
 export async function rpc_getbalance(
@@ -169,7 +169,7 @@ export async function rpc_getbalance(
   walletName: string
 ) {
   const Authorization = httpAuth(rpcUser, rpcPassword)
-  return fetch(rpcWalletUrl(rpcUrl, walletName), {
+  const resp = await fetch(rpcWalletUrl(rpcUrl, walletName), {
     headers: { Authorization },
     method: 'POST',
     body: JSON.stringify({
@@ -179,22 +179,16 @@ export async function rpc_getbalance(
       params: [],
     }),
   })
-    .then((res) => {
-      if (res.status === 200) {
-        return res.json()
-      }
-      throw new Error(res.statusText)
-    })  
-    .then((res: any) => {
-      if (res.result === null) {
-        throw new Error(JSON.stringify(res))
-      }
-      return res.result
-    })
-    .catch((e: Error) => {
-      return e
-    })  
-}   
+  if (resp.status !== 200) {
+    const text = await resp.text()
+    throw new Error(`getbalance failed: ${resp.statusText}: ${text}`)
+  }
+  const res = await resp.json()
+  if (res.result === null || res.result === undefined) {
+    throw new Error(`getbalance failed: ${JSON.stringify(res)}`)
+  }
+  return res.result
+}
 
 export async function rpc_getdescriptorinfo(
   rpcUrl: string,
@@ -204,7 +198,7 @@ export async function rpc_getdescriptorinfo(
   desc: string
 ) {
   const Authorization = httpAuth(rpcUser, rpcPassword)
-  return fetch(rpcWalletUrl(rpcUrl, walletName), {
+  const resp = await fetch(rpcWalletUrl(rpcUrl, walletName), {
     headers: { Authorization },
     method: 'POST',
     body: JSON.stringify({
@@ -214,32 +208,39 @@ export async function rpc_getdescriptorinfo(
       params: [desc],
     }),
   })
-    .then((res) => {
-      if (res.status === 200) {
-        return res.json()
-      }
-      throw new Error(res.statusText)
-    })
-    .then((res: any) => {
-      if (res.result === null) {
-        throw new Error(JSON.stringify(res))
-      }
-      return res.result
-    })
-    .catch((e: Error) => {
-      return e
-    })
+  if (resp.status !== 200) {
+    const text = await resp.text()
+    throw new Error(`getdescriptorinfo failed: ${resp.statusText}: ${text}`)
+  }
+  const res = await resp.json()
+  if (res.result === null || res.result === undefined) {
+    throw new Error(`getdescriptorinfo failed: ${JSON.stringify(res)}`)
+  }
+  return res.result
 }
 
+type AddressInfo = {
+  address: string
+  scriptPubKey: string
+  ismine: boolean
+  solvable: boolean
+  iswatchonly: boolean
+  isscript: boolean
+  iswitness: boolean
+  witness_version: number
+  witness_program: string
+  ischange: boolean
+  labels: string[]
+}
 export async function rpc_getaddressinfo(
   rpcUrl: string,
   rpcUser: string,
   rpcPassword: string,
   walletName: string,
   address: string
-) {
+): Promise<AddressInfo> {
   const Authorization = httpAuth(rpcUser, rpcPassword)
-  return fetch(rpcWalletUrl(rpcUrl, walletName), {
+  const resp = await fetch(rpcWalletUrl(rpcUrl, walletName), {
     headers: { Authorization },
     method: 'POST',
     body: JSON.stringify({
@@ -249,21 +250,16 @@ export async function rpc_getaddressinfo(
       params: [address],
     }),
   })
-    .then((res) => {    
-      if (res.status === 200) {
-        return res.json()
-      }
-      throw new Error(res.statusText)
-    })
-    .then((res: any) => {
-      if (res.result === null) {
-        throw new Error(JSON.stringify(res))
-      }
-      return res.result
-    })
-    .catch((e: Error) => {
-      return e
-    })
+
+  if (resp.status !== 200) {
+    const text = await resp.text()
+    throw new Error(`getaddressinfo failed: ${resp.statusText}: ${text}`)
+  }
+  const res = await resp.json()
+  if (res.result === null || res.result === undefined) {
+    throw new Error(`getaddressinfo failed: ${JSON.stringify(res)}`)
+  }
+  return res.result
 }
 
 export type BlockchainInfo = {
@@ -288,7 +284,7 @@ export async function rpc_getblockchaininfo(
   rpcPassword: string
 ) {
   const Authorization = httpAuth(rpcUser, rpcPassword)
-  return fetch(rpcUrl, {
+  const resp = await fetch(rpcUrl, {
     headers: { Authorization },
     method: 'POST',
     body: JSON.stringify({
@@ -298,18 +294,15 @@ export async function rpc_getblockchaininfo(
       params: [],
     }),
   })
-    .then((res) => {
-      if (res.status === 200) {
-        return res.json()
-      }
-      throw new Error(res.statusText)
-    })
-    .then((res: any) => {
-      return res.result
-    })
-    .catch((e: Error) => {
-      return e
-    })
+  if (resp.status !== 200) {
+    const text = await resp.text()
+    throw new Error(`getblockchaininfo failed: ${resp.statusText}: ${text}`)
+  }
+  const res = await resp.json()
+  if (res.result === null || res.result === undefined) {
+    throw new Error(`getblockchaininfo failed: ${JSON.stringify(res)}`)
+  }
+  return res.result
 }
 
 export async function rpc_rescanblockchain(
@@ -321,7 +314,7 @@ export async function rpc_rescanblockchain(
   endHeight: number
 ) {
   const Authorization = httpAuth(rpcUser, rpcPassword)
-  return fetch(rpcWalletUrl(rpcUrl, walletName), {
+  const resp = await fetch(rpcWalletUrl(rpcUrl, walletName), {
     headers: { Authorization },
     method: 'POST',
     body: JSON.stringify({
@@ -330,29 +323,44 @@ export async function rpc_rescanblockchain(
       method: 'rescanblockchain',
       params: [startHeight, endHeight],
     }),
-  })    
-    .then((res) => {
-      if (res.status === 200) {
-        return res.json()
-      }
-      throw new Error(res.statusText)
-    })  
-    .then((res: any) => {
-      if (res.result === null) {
-        throw new Error(JSON.stringify(res))
-      }
-      return res.result
-    })
-    .catch((e: Error) => {
-      return e
-    })  
-}   
+  })
+  if (resp.status !== 200) {
+    const text = await resp.text()
+    throw new Error(`rescanblockchain failed: ${resp.statusText}: ${text}`)
+  }
+  const res = await resp.json()
+  if (res.result === null || res.result === undefined) {
+    throw new Error(`rescanblockchain failed: ${JSON.stringify(res)}`)
+  }
+  return res.result
+}
 
-/**
-
-guide for index an address/make rpc return utxo of an address
-1. create a watchonly wallet by calling rpc_create_watchonly_wallet
-2. import the address to the wallet by calling rpc_importaddress
-3. call rpc_rescanblockchain to index the address
-
- */
+type WalletName = string
+export async function rpc_listwallets(
+  rpcUrl: string,
+  rpcUser: string,
+  rpcPassword: string
+): Promise<WalletName[]> {
+  const Authorization = httpAuth(rpcUser, rpcPassword)
+  const resp = await fetch(rpcUrl, {
+    headers: { Authorization },
+    method: 'POST',
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      id: 'cat-cli',
+      method: 'listwallets',
+      params: [],
+    }),
+  })
+  if (resp.status !== 200) {
+    const text = await resp.text()
+    throw new Error(
+      `listwallets failed: ${resp.status}(${resp.statusText}): ${text}`
+    )
+  }
+  const res = await resp.json()
+  if (res.result === null || res.result === undefined) {
+    throw new Error(`listwallets failed: ${JSON.stringify(res)}`)
+  }
+  return res.result
+}

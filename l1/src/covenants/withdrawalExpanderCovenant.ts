@@ -1,4 +1,4 @@
-import { ByteString, int2ByteString, PubKey, Sha256 } from 'scrypt-ts'
+import { ByteString, PubKey, Sha256 } from 'scrypt-ts'
 import { Covenant } from '../lib/covenant'
 import { SupportedNetwork } from '../lib/constants'
 import {
@@ -9,8 +9,6 @@ import { InputCtx, SubContractCall } from '../lib/extPsbt'
 import {
   createEmptySha256,
   inputsToSegmentByteString,
-  inputToByteString,
-  inputToPrevout,
   isTxHashEqual,
   locktimeToByteString,
   ONE_STATE_OUTPUT_SCRIPT_LENGTH,

@@ -15,8 +15,8 @@ import {
 import { testOperatorSigner, testUserSigner } from '../utils/testSigner'
 import { PubKey, Sha256 } from 'scrypt-ts'
 import { testUtxoProvider, testChainProvider } from '../utils/testProvider'
-import { Postage, SupportedNetwork } from '../../src/lib/constants'
-import { verifyInputSpent } from '../utils/txHelper'
+import { Postage } from '../../src/lib/constants'
+import { sleep, verifyInputSpent } from '../utils/txHelper'
 import {
   stateToBatchID,
   TraceableDepositAggregatorUtxo,
@@ -25,12 +25,9 @@ import { getScriptPubKeys } from '../../src/covenants/instance'
 import { reverseTxId } from '../../src/lib/txTools'
 import { createLogger } from './logUtil'
 import { sleepTxTime } from '../utils/sleep'
-import { toXOnly } from '../../src/lib/utils'
-import { AddressType } from '../../src/signers'
 
 use(chaiAsPromised)
 
-const network: SupportedNetwork = 'btc-signet'
 const l2Address1 =
   '01176a1bd84444c89232ec27754698e5d2e7e1a7f1539f12027f28b23ec9f3d8'
 const l2Address2 =
@@ -44,19 +41,13 @@ describe('Test the feature of deposit', async () => {
   let scriptSPKs: ReturnType<typeof getScriptPubKeys>
   let deployBridgeRes: Awaited<ReturnType<typeof deployBridge>>
   let operatorPubKey: PubKey
-  let operatorPubKeyXOnly: PubKey
 
   before(async () => {
     const logger = createLogger('deposit.test.before')
 
     operatorPubKey = PubKey(await testOperatorSigner.getPublicKey())
-    operatorPubKeyXOnly = PubKey(
-      toXOnly(
-        operatorPubKey,
-        testOperatorSigner.addressType === AddressType.P2TR
-      )
-    )
     console.log('operatorPubKey', operatorPubKey)
+    console.log('operatorAddress', await testOperatorSigner.getAddress())
 
     loadArtifacts()
     scriptSPKs = getScriptPubKeys(operatorPubKey)
@@ -82,8 +73,7 @@ describe('Test the feature of deposit', async () => {
       testUtxoProvider,
       testChainProvider,
       l2Address1,
-      BigInt(MINIMAL_DEPOSIT_AMT),
-      network
+      BigInt(MINIMAL_DEPOSIT_AMT)
     )
     logger.info('deposit1 txid', depositRes1.txid)
 
@@ -92,8 +82,7 @@ describe('Test the feature of deposit', async () => {
       testUtxoProvider,
       testChainProvider,
       l2Address2,
-      BigInt(MINIMAL_DEPOSIT_AMT + 1),
-      network
+      BigInt(MINIMAL_DEPOSIT_AMT + 1)
     )
     logger.info('deposit2 txid', depositRes2.txid)
 
@@ -119,14 +108,15 @@ describe('Test the feature of deposit', async () => {
     const level1Amt0 = MINIMAL_DEPOSIT_AMT * 2 + 1
     expect(level1Res0.aggregatorUtxo.satoshis).to.be.equal(level1Amt0)
     logger.info('level1 aggregate0 txid', level1Res0.txid)
+    await sleep(0.1)
+    await testChainProvider.getRawTransaction(level1Res0.txid)
 
     await sleepTxTime()
     const depositRes3 = await deposit(
       testUtxoProvider,
       testChainProvider,
       l2Address3,
-      BigInt(MINIMAL_DEPOSIT_AMT + 2),
-      network
+      BigInt(MINIMAL_DEPOSIT_AMT + 2)
     )
     logger.info('deposit3 txid', depositRes3.txid)
 
@@ -135,8 +125,7 @@ describe('Test the feature of deposit', async () => {
       testUtxoProvider,
       testChainProvider,
       l2Address4,
-      BigInt(MINIMAL_DEPOSIT_AMT + 3),
-      network
+      BigInt(MINIMAL_DEPOSIT_AMT + 3)
     )
     logger.info('deposit4 txid', depositRes4.txid)
 

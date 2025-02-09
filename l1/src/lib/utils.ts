@@ -374,13 +374,25 @@ export function isP2WPKH(scriptOrAddr: Buffer | string) {
   return isPaymentFactory(payments.p2wpkh)(scriptOrAddr)
 }
 
-export function script2Addr(script: Buffer) {
+export function script2Addr(script: Buffer, network: Network) {
   if (isP2TR(script)) {
-    return payments.p2tr({ output: script }).address
+    return payments.p2tr({ output: script, network }).address
   } else if (isP2WPKH(script)) {
-    return payments.p2wpkh({ output: script }).address
+    return payments.p2wpkh({ output: script, network }).address
   } else {
     throw new Error('invalid script type: ' + script.toString('hex'))
+  }
+}
+
+export function supportedNetworkToBtcNetwork(
+  network: SupportedNetwork
+): Network {
+  if (network === 'fractal-mainnet' || network === 'fractal-testnet') {
+    return networks.bitcoin
+  } else if (network === 'btc-signet') {
+    return networks.testnet
+  } else {
+    throw new Error('invalid network: ' + network)
   }
 }
 

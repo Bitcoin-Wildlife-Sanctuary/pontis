@@ -5,6 +5,7 @@ import { UtxoProvider } from '../lib/provider'
 import { SupportedNetwork } from '../lib/constants'
 import fetch from 'cross-fetch'
 import * as bitcoinjs from '@scrypt-inc/bitcoinjs-lib'
+import { supportedNetworkToBtcNetwork } from '../lib/utils'
 
 function getUtxoKey(utxo: UTXO) {
   return `${utxo.txId}:${utxo.outputIndex}`
@@ -34,7 +35,10 @@ export class MempoolUtxoProvider implements UtxoProvider {
     options?: { total?: number; maxCnt?: number }
   ): Promise<UTXO[]> {
     const script = Buffer.from(
-      bitcoinjs.address.toOutputScript(address)
+      bitcoinjs.address.toOutputScript(
+        address,
+        supportedNetworkToBtcNetwork(this.network)
+      )
     ).toString('hex')
 
     const url = `${this.getMempoolApiHost()}/api/address/${address}/utxo`
@@ -61,11 +65,9 @@ export class MempoolUtxoProvider implements UtxoProvider {
         })
       )
       .catch((e) => {
+        console.log('get utxos error', e)
         return []
       })
-
-    // console.log('address', address)
-    // console.log('utxos', utxos)
 
     return utxos
       .concat(Array.from(this.newUTXOs.values()))

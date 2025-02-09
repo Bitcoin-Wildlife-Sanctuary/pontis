@@ -1,4 +1,4 @@
-import { Psbt, Transaction } from '@scrypt-inc/bitcoinjs-lib'
+import { Psbt, PsbtOptsOptional, Transaction } from '@scrypt-inc/bitcoinjs-lib'
 import { checkForInput, PsbtInput } from 'bip174'
 import { MAX_INPUT, MAX_OUTPUT, SpentSPKs } from '../contracts/txUtil'
 import { PSBTOptions, ToSignInput } from './signer'
@@ -9,7 +9,6 @@ import {
   ByteString,
   DummyProvider,
   sha256,
-  Sha256,
   Sig,
   TestWallet,
   toByteString,
@@ -34,7 +33,6 @@ import {
   getSigHashSchnorr,
   toSHPreimageObj,
   getSpentScripts,
-  createEmptySha256,
 } from './txTools'
 import { GeneralUtils } from '../contracts/generalUtils'
 import * as tools from 'uint8array-tools'
@@ -110,8 +108,8 @@ export class ExtPsbt extends Psbt {
   private changeOutputIndex?: number
   private _stateHashes: string[] = []
 
-  constructor() {
-    super()
+  constructor(opts?: PsbtOptsOptional) {
+    super(opts)
   }
 
   get isFinalized(): boolean {
@@ -165,7 +163,9 @@ export class ExtPsbt extends Psbt {
         },
       })
       const index = this.txInputs.length - 1
-      this._addSigRequest(index, { address: script2Addr(script) })
+      this._addSigRequest(index, {
+        address: script2Addr(script, this.opts.network),
+      })
     }
     return this
   }
@@ -315,7 +315,9 @@ export class ExtPsbt extends Psbt {
       this.inputAmount - this.outputAmount - estVSize * feeRate
 
     if (changeAmount < 0) {
-      throw new Error('Insufficient input satoshis!')
+      throw new Error(
+        `Insufficient input satoshis! input(${this.inputAmount}) < output(${this.outputAmount})`
+      )
     }
 
     if (changeAmount >= DUST_LIMIT) {

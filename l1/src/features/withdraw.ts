@@ -11,11 +11,13 @@ import { TraceableWithdrawalExpanderUtxo } from '../covenants/withdrawalExpander
 import { ExtPsbt } from '../lib/extPsbt'
 import * as tools from 'uint8array-tools'
 import { inputToPrevout, outputToUtxo } from '../lib/txTools'
-import { getDummyUtxo } from '../lib/utils'
+import { getDummyUtxo, supportedNetworkToBtcNetwork } from '../lib/utils'
 import { pickLargeFeeUtxo } from './utils/pick'
+import { SupportedNetwork } from 'src/lib/constants'
 
 export async function expandWithdrawal(
   signer: Signer,
+  network: SupportedNetwork,
   utxoProvider: UtxoProvider,
   chainProvider: ChainProvider,
 
@@ -93,6 +95,7 @@ export async function expandWithdrawal(
   }
 
   const est = estimateExpandWithdrawalVSize(
+    network,
     expanderUtxo,
     tracedWithdrawalExpander,
     outputWithdrawalExpander0Covenant,
@@ -105,11 +108,17 @@ export async function expandWithdrawal(
     total: Number(total),
   })
   if (utxos.length === 0) {
-    throw new Error('Insufficient satoshis input amount')
+    throw new Error(`Insufficient satoshis input amount: no utxos found`)
   }
   const feeUtxo = pickLargeFeeUtxo(utxos)
+  if (feeUtxo.satoshis < total) {
+    throw new Error(
+      `Insufficient satoshis input amount: fee utxo(${feeUtxo.satoshis}) < total(${total})`
+    )
+  }
 
   const psbt = buildExpandWithdrawalTx(
+    network,
     feeUtxo,
     expanderUtxo,
     tracedWithdrawalExpander,
@@ -140,6 +149,7 @@ export async function expandWithdrawal(
 }
 
 function estimateExpandWithdrawalVSize(
+  network: SupportedNetwork,
   withdrawalExpanderUtxo: TraceableWithdrawalExpanderUtxo,
   tracedWithdrawalExpander: TracedWithdrawalExpander,
 
@@ -150,6 +160,7 @@ function estimateExpandWithdrawalVSize(
   feeRate: number
 ) {
   const psbt = buildExpandWithdrawalTx(
+    network,
     getDummyUtxo(changeAddress),
     withdrawalExpanderUtxo,
     tracedWithdrawalExpander,
@@ -165,6 +176,7 @@ function estimateExpandWithdrawalVSize(
 }
 
 function buildExpandWithdrawalTx(
+  network: SupportedNetwork,
   feeUtxo: UTXO,
 
   withdrawalExpanderUtxo: TraceableWithdrawalExpanderUtxo,
@@ -213,7 +225,9 @@ function buildExpandWithdrawalTx(
     throw new Error('right amt mismatch')
   }
 
-  const expandWithdrawalTx = new ExtPsbt()
+  const expandWithdrawalTx = new ExtPsbt({
+    network: supportedNetworkToBtcNetwork(network),
+  })
     .addCovenantInput(tracedWithdrawalExpander.covenant)
     .addFeeInputs([feeUtxo])
     .addStateOutput()
@@ -247,6 +261,7 @@ function buildExpandWithdrawalTx(
 
 export async function distributeWithdrawals(
   signer: Signer,
+  network: SupportedNetwork,
   utxoProvider: UtxoProvider,
   chainProvider: ChainProvider,
 
@@ -277,6 +292,7 @@ export async function distributeWithdrawals(
   }
 
   const est = estimateDistributeWithdrawalsVSize(
+    network,
     withdrawalExpanderUtxo,
     tracedWithdrawalExpander,
     levelWithdrawals.withdrawals,
@@ -288,11 +304,17 @@ export async function distributeWithdrawals(
     total: Number(total),
   })
   if (utxos.length === 0) {
-    throw new Error('Insufficient satoshis input amount')
+    throw new Error(`Insufficient satoshis input amount: no utxos found`)
   }
   const feeUtxo = pickLargeFeeUtxo(utxos)
+  if (feeUtxo.satoshis < total) {
+    throw new Error(
+      `Insufficient satoshis input amount: fee utxo(${feeUtxo.satoshis}) < total(${total})`
+    )
+  }
 
   const psbt = buildDistributeWithdrawalsTx(
+    network,
     feeUtxo,
     withdrawalExpanderUtxo,
     tracedWithdrawalExpander,
@@ -326,6 +348,7 @@ export async function distributeWithdrawals(
 }
 
 function estimateDistributeWithdrawalsVSize(
+  network: SupportedNetwork,
   withdrawalExpanderUtxo: TraceableWithdrawalExpanderUtxo,
   tracedWithdrawalExpander: TracedWithdrawalExpander,
   withdrawals: Withdrawal[],
@@ -334,6 +357,7 @@ function estimateDistributeWithdrawalsVSize(
   feeRate: number
 ) {
   const psbt = buildDistributeWithdrawalsTx(
+    network,
     getDummyUtxo(changeAddress),
     withdrawalExpanderUtxo,
     tracedWithdrawalExpander,
@@ -359,6 +383,7 @@ function estimateDistributeWithdrawalsVSize(
  * @returns
  */
 function buildDistributeWithdrawalsTx(
+  network: SupportedNetwork,
   feeUtxo: UTXO,
 
   withdrawalExpanderUtxo: TraceableWithdrawalExpanderUtxo,
@@ -399,7 +424,9 @@ function buildDistributeWithdrawalsTx(
     withdrawals.push({ l1Address: '', amt: 0n })
   }
 
-  const distributeWithdrawalsTx = new ExtPsbt()
+  const distributeWithdrawalsTx = new ExtPsbt({
+    network: supportedNetworkToBtcNetwork(network),
+  })
     .addCovenantInput(tracedWithdrawalExpander.covenant)
     .addFeeInputs([feeUtxo])
 

@@ -6,11 +6,9 @@ import {
   toByteString,
   assert,
   prop,
-  Sha256,
   len,
   OpCode,
   Addr,
-  sha256,
 } from 'scrypt-ts'
 
 export class GeneralUtils extends SmartContractLib {

@@ -59,7 +59,7 @@ export class RPCChainProvider implements ChainProvider {
         }
       })
       .then((res: any) => {
-        if (res.result === null) {
+        if (res.result === null || res.result === undefined) {
           throw new Error(JSON.stringify(res))
         }
         return res.result
@@ -105,7 +105,7 @@ export class RPCChainProvider implements ChainProvider {
         }
       })
       .then((res: any) => {
-        if (res.result === null) {
+        if (res.result === null || res.result === undefined) {
           throw new Error(JSON.stringify(res))
         }
         return {
@@ -173,7 +173,7 @@ export class RPCChainProvider implements ChainProvider {
         }
       })
       .then((res: any) => {
-        if (res.result === null) {
+        if (res.result === null || res.result === undefined) {
           throw new Error(JSON.stringify(res))
         }
         return res.result

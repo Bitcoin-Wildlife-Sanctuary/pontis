@@ -1,6 +1,6 @@
 import { expect, use } from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import { Postage, SupportedNetwork } from '../../src/lib/constants'
+import { Postage } from '../../src/lib/constants'
 import { getScriptPubKeys } from '../../src/covenants/instance'
 import {
   createWithdrawal,
@@ -13,10 +13,9 @@ import {
   MINIMAL_DEPOSIT_AMT,
 } from './featureUtil'
 import { PubKey } from 'scrypt-ts'
-import { testOperatorSigner, testUserSigner } from '../utils/testSigner'
+import { testOperatorSigner } from '../utils/testSigner'
 import { testUtxoProvider } from '../utils/testProvider'
 import { testChainProvider } from '../utils/testProvider'
-import { before } from 'node:test'
 import { verifyInputSpent } from '../utils/txHelper'
 import { createLogger } from './logUtil'
 import { Withdrawal } from '../../src/util/merkleUtils'
@@ -25,8 +24,6 @@ import { TraceableBridgeUtxo } from '../../src/covenants'
 import { sleepTxTime } from '../utils/sleep'
 
 use(chaiAsPromised)
-
-const network: SupportedNetwork = 'btc-signet'
 
 const l2Address1 =
   '01176a1bd84444c89232ec27754698e5d2e7e1a7f1539f12027f28b23ec9f3d8'
@@ -72,8 +69,7 @@ describe('Test the feature of withdraw', () => {
       testUtxoProvider,
       testChainProvider,
       l2Address1,
-      amt,
-      network
+      amt
     )
     logger.info('deposit txid', depositRes.txid)
 
