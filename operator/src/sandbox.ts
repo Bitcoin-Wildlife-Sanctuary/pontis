@@ -26,8 +26,8 @@ import {
   OperatorState,
 } from './state';
 import { setupOperator } from './operator';
-import { aggregateDeposits, finalizeBatch } from './l1/l1mocks';
-import { l1TransactionStatus } from './l1/transactions';
+// import { aggregateDeposits, finalizeBatch } from './l1/l1mocks';
+import { l1TransactionStatus, aggregateDeposits, finalizeBatch } from './l1/transactions';
 import { deposits, l1BlockNumber } from './l1/events';
 import { merge, of, Subject } from 'rxjs';
 
