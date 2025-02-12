@@ -34,8 +34,8 @@ class L1MempoolChainProvider extends MempoolChainProvider implements L1ChainProv
         
         const script = Buffer.from(
             bitcoinjs.address.toOutputScript(
-            address,
-            utils.supportedNetworkToBtcNetwork(this.network)
+                address,
+                utils.supportedNetworkToBtcNetwork(this.network)
             )
         ).toString('hex')
         const res = await fetch(`${this.getMempoolApiHost()}/api/address/${address}/utxo`)

@@ -1,5 +1,5 @@
 import { Account, cairo, constants, RpcProvider } from 'starknet';
-
+import {prepareL1} from './l1/utils/prepare'
 import { contractEvents, l2BlockNumber, l2Events } from './l2/events';
 import {
   closePendingWithdrawalBatch,
@@ -32,6 +32,7 @@ import { deposits, l1BlockNumber } from './l1/events';
 import { merge, of, Subject } from 'rxjs';
 
 async function sandboxOperator() {
+  await prepareL1()
   const initialState: OperatorState = {
     l1BlockNumber: 0,
     l2BlockNumber: 0,

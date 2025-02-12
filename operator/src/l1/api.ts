@@ -19,7 +19,7 @@ export async function listDeposits(
     const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
     // transfer scriptPubKey to address
     const address = spks.depositAggregator;
-    const utxos = await listUtxos(address, fromBlock, toBlock);
+    const utxos = await listUtxos(utils.p2trLockingScriptToAddr(address, env.l1Network), fromBlock, toBlock);
     let deposits: Deposit[] = [];
     for (const utxo of utxos) {
         const depositInfo = await offChainDB.getDepositInfo(utxo.txId as L1TxHash);
@@ -139,7 +139,7 @@ export async function finalizeDepositBatchOnL1(
 
     const operatorPubKey = await env.operatorSigner.getPublicKey();
     const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
-    const bridgeUtxos = await listUtxos(spks.bridge);
+    const bridgeUtxos = await listUtxos(utils.p2trLockingScriptToAddr(spks.bridge, env.l1Network));
     const latestBridgeTxid = await offChainDB.getLatestBridgeTxid();
     if (!latestBridgeTxid) {
         throw new Error('latest bridge txid not found');
@@ -215,7 +215,7 @@ export async function finalizeDepositBatchOnL2(
     const operatorPubKey = await env.operatorSigner.getPublicKey();
     const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
 
-    const bridgeUtxos = await listUtxos(spks.bridge);
+    const bridgeUtxos = await listUtxos(utils.p2trLockingScriptToAddr(spks.bridge, env.l1Network));
     const latestBridgeTxid = await offChainDB.getLatestBridgeTxid();
     if (!latestBridgeTxid) {
         throw new Error('latest bridge txid not found');

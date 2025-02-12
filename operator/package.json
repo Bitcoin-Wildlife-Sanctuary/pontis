@@ -13,7 +13,7 @@
     "posttest": "npm run lint",
     "devnet": "docker run -p 5050:5050 shardlabs/starknet-devnet-rs --seed 0",
     "main": "ts-node src/main.ts",
-    "sandbox": "ts-node src/sandbox.ts",
+    "sandbox": "tsx src/sandbox.ts",
     "deploy": "ts-node src/deploy.ts",
     "play": "ts-node src/play.ts"
   },
@@ -37,6 +37,7 @@
     "gts": "^6.0.2",
     "prettier": "^3.4.2",
     "ts-node": "^10.9.2",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.2"
   },
   "prettier": {

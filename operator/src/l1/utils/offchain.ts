@@ -1,7 +1,7 @@
 import { L2Address } from "../../state";
 import { readFileSync, existsSync, writeFileSync } from "node:fs";
 import { L1TxHash } from "../../state";
-
+import * as path from 'path'
 type OffChainDB = {
     getDepositInfo: (txid: L1TxHash) => Promise<{recipient: L2Address, amount: bigint} | null>;
     setDepositInfo: (txid: L1TxHash, recipient: L2Address, amount: bigint) => Promise<void>;
@@ -27,7 +27,7 @@ type Data = {
         }
     }
 }
-const jsonPath = './offchain_db.json';
+const jsonPath = path.join(__dirname, 'offchain_db.json');
 
 async function getDepositInfo(txid: L1TxHash): Promise<{recipient: L2Address, amount: bigint} | null> {
     const data: Data = JSON.parse(readFileSync(jsonPath, 'utf8'));

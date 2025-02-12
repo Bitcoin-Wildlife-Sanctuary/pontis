@@ -51,16 +51,16 @@ export const rpcConfig = {
   }
 }
 
-export const operatorPrivateKey = process.env.OPERATOR_PRIVATE_KEY!;
+export const operatorPrivateKey = process.env.L1_OPERATOR_PRIVATE_KEY!;
 {
-  // check if operator_private_key is set
+  // check if L1_OPERATOR_PRIVATE_KEY is set
   if (!operatorPrivateKey) {
-    throw new Error('OPERATOR_PRIVATE_KEY is not set');
+    throw new Error('L1_OPERATOR_PRIVATE_KEY is not set');
   }
   try {
     ECPair.fromWIF(operatorPrivateKey);
   } catch (e) {
-    throw new Error(`OPERATOR_PRIVATE_KEY ${operatorPrivateKey} is not a valid private key`);
+    throw new Error(`L1_OPERATOR_PRIVATE_KEY ${operatorPrivateKey} is not a valid private key`);
   }
 }
 
