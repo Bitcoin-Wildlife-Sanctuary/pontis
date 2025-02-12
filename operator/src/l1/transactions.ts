@@ -1,5 +1,7 @@
-import { L1Tx, L1TxId, L1TxStatus } from '../state';
+import { DepositBatch, L1Tx, L1TxId, L1TxStatus } from '../state';
 import { from, interval, Observable, switchMap, takeWhile } from 'rxjs';
+import * as l1Api from './api';
+import { UNCONFIRMED_BLOCK_NUMBER } from './utils/chain';
 
 export function l1TransactionStatus(
   // add whatever parameters you need
@@ -11,17 +13,33 @@ export function l1TransactionStatus(
   );
 }
 
-function getL1TransactionStatus(
+async function getL1TransactionStatus(
   tx: L1TxId
   // add whatever parameters you need
 ): Promise<L1TxStatus> {
-  throw new Error('Not implemented');
+  const status = await l1Api.getL1TransactionStatus(tx.hash);
+  return {
+    ...tx,
+    status: status,
+  };
 }
 
-export async function aggregateDeposits(txs: L1Tx[]): Promise<L1Tx[]> {
-  throw new Error('Not implemented');
+export async function aggregateDeposits(batch: DepositBatch): Promise<L1Tx[]> {
+  const txids = await l1Api.aggregateDeposits(batch);
+  return txids.map(txid => ({
+    type: 'l1tx',
+    hash: txid,
+    status: 'UNCONFIRMED',
+    blockNumber: UNCONFIRMED_BLOCK_NUMBER,
+  }));
 }
 
-export async function finalizeBatch(tx: L1Tx): Promise<L1Tx> {
-  throw new Error('Not implemented');
+export async function finalizeBatch(batch: DepositBatch): Promise<L1Tx> {
+  const txid = await l1Api.finalizeDepositBatchOnL1(batch);
+  return {
+    type: 'l1tx',
+    hash: txid,
+    status: 'UNCONFIRMED',
+    blockNumber: UNCONFIRMED_BLOCK_NUMBER,
+  };
 }

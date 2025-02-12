@@ -14,6 +14,7 @@ import {
   applyChange,
   BridgeEnvironment,
   Deposit,
+  DepositBatch,
   Deposits,
   L1Tx,
   L1TxHash,
@@ -47,8 +48,8 @@ async function sandboxOperator() {
     MAX_DEPOSIT_BLOCK_AGE: 4,
     MAX_WITHDRAWAL_BLOCK_AGE: 2,
     MAX_WITHDRAWAL_BATCH_SIZE: 2,
-    aggregateDeposits: async (txs: L1Tx[]) => aggregateDeposits(txs),
-    finalizeBatch: async (tx: L1Tx) => finalizeBatch(tx),
+    aggregateDeposits: async (batch: DepositBatch) => aggregateDeposits(batch),
+    finalizeBatch: async (batch: DepositBatch) => finalizeBatch(batch),
     submitDepositsToL2: async (
       hash: L1TxHash,
       deposits: Deposit[]

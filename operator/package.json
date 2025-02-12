@@ -1,4 +1,6 @@
 {
+  "name": "operator",
+  "version": "0.0.1",
   "scripts": {
     "lint": "gts lint",
     "clean": "gts clean",
@@ -16,9 +18,17 @@
     "play": "ts-node src/play.ts"
   },
   "dependencies": {
+    "@bitcoinerlab/secp256k1": "^1.1.1",
+    "@scrypt-inc/bitcoinjs-lib": "^1.0.6",
+    "cross-fetch": "^4.1.0",
+    "decimal.js": "^10.5.0",
+    "dotenv": "16",
+    "ecpair": "^2.1.0",
     "fs": "^0.0.1-security",
+    "l1": "file:../l1",
     "lodash": "^4.17.21",
     "rxjs": "^7.8.1",
+    "scrypt-ts": "^1.4.4",
     "starknet": "^6.11.0"
   },
   "devDependencies": {

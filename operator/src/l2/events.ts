@@ -7,7 +7,7 @@ import {
   mergeMap,
   map,
 } from 'rxjs/operators';
-import { EVENT } from 'starknet-types-07/dist/types/api/components';
+import { EMITTED_EVENT, EVENT } from 'starknet-types-07/dist/types/api/components';
 import { BlockNumberEvent, L1Address, L2TxHash } from '../state';
 import { BinaryLike } from 'crypto';
 import { fromDigest } from './contracts';
@@ -38,7 +38,7 @@ export function currentBlockRange(
 async function eventParser(
   provider: Provider,
   contractAddress: string
-): Promise<(rawEvent: EVENT) => ParsedEvent> {
+): Promise<(rawEvent: EMITTED_EVENT) => ParsedEvent> {
   const { abi } = await provider.getClassAt(contractAddress);
   if (abi === undefined) {
     throw 'no abi';
@@ -48,7 +48,7 @@ async function eventParser(
   const abiStructs = CallData.getAbiStruct(abi);
   const abiEnums = CallData.getAbiEnum(abi);
 
-  return (rawEvent: EVENT) =>
+  return (rawEvent: EMITTED_EVENT) =>
     events.parseEvents([rawEvent], abiEvents, abiStructs, abiEnums)[0];
 }
 

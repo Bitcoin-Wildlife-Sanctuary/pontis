@@ -14,6 +14,7 @@ import {
   applyChange,
   BridgeEnvironment,
   Deposit,
+  DepositBatch,
   L1Tx,
   L1TxHash,
   L1TxStatus,
@@ -116,13 +117,13 @@ async function mockedOperator() {
     {
       type: 'l1tx',
       hash: '0xabcabd',
-      status: 'SENT',
+      status: 'UNCONFIRMED',
     },
     // aggregation tx status
     {
       type: 'l1tx',
       hash: '0xabeabf',
-      status: 'SENT',
+      status: 'UNCONFIRMED',
     },
     // aggregation tx status
     {
@@ -140,7 +141,7 @@ async function mockedOperator() {
     {
       type: 'l1tx',
       hash: '0xabcabdabeabf',
-      status: 'SENT',
+      status: 'UNCONFIRMED',
     },
     // aggregation tx status
     {
@@ -152,7 +153,7 @@ async function mockedOperator() {
     {
       type: 'l1tx',
       hash: '0xfffabe',
-      status: 'SENT',
+      status: 'UNCONFIRMED',
     },
     // finalize tx status
     {
@@ -169,7 +170,7 @@ async function mockedOperator() {
     {
       type: 'l1tx',
       hash: '0xfffabcabdabeabf',
-      status: 'SENT',
+      status: 'UNCONFIRMED',
     },
     // finalize tx status
     {
@@ -181,7 +182,7 @@ async function mockedOperator() {
     {
       type: 'l1tx',
       hash: '0xfffabe',
-      status: 'SENT',
+      status: 'UNCONFIRMED',
     },
     // finalize tx status
     {
@@ -263,8 +264,8 @@ async function mockedOperator() {
     MAX_DEPOSIT_BLOCK_AGE: 4,
     MAX_WITHDRAWAL_BLOCK_AGE: 2,
     MAX_WITHDRAWAL_BATCH_SIZE: 2,
-    aggregateDeposits: async (txs: L1Tx[]) => aggregateDeposits(txs),
-    finalizeBatch: async (tx: L1Tx) => finalizeBatch(tx),
+    aggregateDeposits: async (batch: DepositBatch) => aggregateDeposits(batch),
+    finalizeBatch: async (batch: DepositBatch) => finalizeBatch(batch),
     submitDepositsToL2: async (
       hash: L1TxHash,
       deposits: Deposit[]

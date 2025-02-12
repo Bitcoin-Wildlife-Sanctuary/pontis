@@ -23,7 +23,7 @@ import { encodingLength, encode } from 'varuint-bitcoin'
 import * as tools from 'uint8array-tools'
 import * as bitcoinjs from '@scrypt-inc/bitcoinjs-lib'
 import * as ecc from '@bitcoinerlab/secp256k1'
-import ECPairFactory from 'ecpair'
+import {ECPairFactory} from 'ecpair'
 
 const ECPair = ECPairFactory(ecc)
 
@@ -176,6 +176,8 @@ export function getDummyUtxo(address?: string, satoshis?: number): UTXO {
     satoshis: satoshis || 210e4 * 1e8,
   }
 }
+
+getDummyUtxo('bc1papzwuquhrm7m06aq2ps8djwe28ssgphjy0dsnfmedzx644dy9gtshkghkh')
 
 export function getDummyUtxos(
   address: string,

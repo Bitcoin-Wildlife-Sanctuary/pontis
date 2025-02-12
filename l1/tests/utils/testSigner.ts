@@ -1,6 +1,6 @@
 import { DefaultSigner } from '../../src/signers'
 import * as ecc from '@bitcoinerlab/secp256k1'
-import ECPairFactory from 'ecpair'
+import {ECPairFactory} from 'ecpair'
 import * as bitcoinjs from '@scrypt-inc/bitcoinjs-lib'
 import { PRIVATE_KEY, NETWORK } from './env'
 

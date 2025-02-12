@@ -271,18 +271,22 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
   }
 
   serializedState(): ByteString {
-    if (this.state.level === 0n) {
+    return WithdrawalExpanderCovenant.serializeState(this.state)
+  }
+
+  static serializeState(state: WithdrawalExpanderState): ByteString {
+    if (state.level === 0n) {
       return WithdrawalExpander.getLeafNodeHash(
-        this.state.withdrawAddressScript,
-        this.state.withdrawAmt
+        state.withdrawAddressScript,
+        state.withdrawAmt 
       )
     } else {
       return WithdrawalExpander.getNodeHash(
-        this.state.level,
-        this.state.leftAmt,
-        this.state.leftChildRootHash,
-        this.state.rightAmt,
-        this.state.rightChildRootHash
+        state.level,
+        state.leftAmt,
+        state.leftChildRootHash,
+        state.rightAmt,
+        state.rightChildRootHash
       )
     }
   }

@@ -17,7 +17,7 @@ export type L1TxId = {
 };
 
 export type L1TxStatus = L1TxId & {
-  status: 'UNCONFIRMED' | 'SENT' | 'MINED'; // Orphaned, Droped?;
+  status: 'UNCONFIRMED' | 'MINED' | 'DROPPED'; // Orphaned, Droped?;
 };
 
 export type L1Tx = L1TxStatus & {
@@ -50,7 +50,7 @@ type DepositBatchCommon = {
   deposits: Deposit[];
 };
 
-type DepositBatch =
+export type DepositBatch =
   | ({
       status: 'BEING_AGGREGATED';
       aggregationTxs: L1Tx[][];
@@ -178,8 +178,8 @@ export type BridgeEnvironment = {
   DEPOSIT_BATCH_SIZE: number;
   MAX_WITHDRAWAL_BLOCK_AGE: number;
   MAX_WITHDRAWAL_BATCH_SIZE: number;
-  aggregateDeposits: (txs: L1Tx[]) => Promise<L1Tx[]>;
-  finalizeBatch: (tx: L1Tx) => Promise<L1Tx>;
+  aggregateDeposits: (batch: DepositBatch) => Promise<L1Tx[]>;
+  finalizeBatch: (batch: DepositBatch) => Promise<L1Tx>;
   submitDepositsToL2: (hash: L1TxHash, deposits: Deposit[]) => Promise<L2Tx>;
   closePendingWithdrawalBatch: () => Promise<L2Tx>;
 };
@@ -479,7 +479,14 @@ async function initiateAggregation(
       });
     } else {
       const aggregationTxs: L1Tx[][] = [
-        await env.aggregateDeposits(deposits.map((d) => d.origin)),
+        await env.aggregateDeposits(
+          // construct an dummy batch, with the deposits and an empty aggregation txs array 
+          {
+            status: 'BEING_AGGREGATED',
+            deposits,
+            aggregationTxs: [],
+          }
+        ),
       ];
       state.depositBatches.push({
         status: 'BEING_AGGREGATED',
@@ -518,7 +525,7 @@ async function manageAggregation(
         aggregationTxs.every((tx) => tx.status === 'MINED')
       ) {
         if (aggregationTxs.length === 1) {
-          const finalizeBatchTx = await env.finalizeBatch(aggregationTxs[0]);
+          const finalizeBatchTx = await env.finalizeBatch(batch);
           newState.depositBatches[i] = {
             ...batch,
             status: 'AGGREGATED',
@@ -526,7 +533,7 @@ async function manageAggregation(
           };
         } else {
           const newAggregationLevel =
-            await env.aggregateDeposits(aggregationTxs);
+            await env.aggregateDeposits(batch);
           batch.aggregationTxs.push(newAggregationLevel);
         }
       }

@@ -1,5 +1,5 @@
 import * as ecc from '@bitcoinerlab/secp256k1'
-import ECPairFactory, { ECPairInterface } from 'ecpair'
+import {ECPairFactory, ECPairInterface } from 'ecpair'
 import { isTaprootInput, toXOnly } from '../lib/utils'
 import { PSBTOptions, Signer } from '../lib/signer'
 import * as bitcoinjs from '@scrypt-inc/bitcoinjs-lib'
@@ -16,7 +16,7 @@ export enum AddressType {
 export class DefaultSigner implements Signer {
   constructor(
     private readonly keyPair: ECPairInterface = ECPair.makeRandom(),
-    public readonly network: SupportedNetwork = 'fractal-testnet',
+  public readonly network: SupportedNetwork = 'fractal-testnet',
     public readonly addressType: AddressType = AddressType.P2TR
   ) {}
 

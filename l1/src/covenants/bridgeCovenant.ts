@@ -19,7 +19,7 @@ import { InputCtx, SubContractCall } from '../lib/extPsbt'
 import { BatchMerkleTree, BridgeMerkle } from '../util/merkleUtils'
 import { Transaction } from '@scrypt-inc/bitcoinjs-lib'
 import { toXOnly } from '../lib/utils'
-
+import { MerklePath } from '../contracts/merklePath'
 export type BridgeState = {
   batchesRoot: Sha256
   merkleTree: BatchMerkleTree
@@ -44,6 +44,8 @@ export class BridgeCovenant extends Covenant<BridgeState> {
   // locked bridge artifact md5 hash
   static readonly LOCKED_ASM_VERSION = '6e405d9709ed98c1807becc5e2f1f921'
 
+  static readonly EMPTY_BATCH_ID = MerklePath.NULL_NODE
+
   constructor(
     readonly operator: PubKey,
     readonly expanderSPK: ByteString,
@@ -67,9 +69,13 @@ export class BridgeCovenant extends Covenant<BridgeState> {
   }
 
   serializedState(): ByteString {
+    return BridgeCovenant.serializeState(this.state)
+  }
+
+  static serializeState(state: BridgeState): ByteString {
     return Bridge.getStateHash(
-      this.state.batchesRoot,
-      this.state.depositAggregatorSPK
+      state.batchesRoot,
+      state.depositAggregatorSPK
     )
   }
 

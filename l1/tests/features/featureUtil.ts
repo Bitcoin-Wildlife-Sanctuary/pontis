@@ -70,7 +70,6 @@ export async function aggregate(
     FEE_RATE
   )
 }
-
 export async function finalizeL1Deposit(
   utxoProvider: UtxoProvider,
   chainProvider: ChainProvider,

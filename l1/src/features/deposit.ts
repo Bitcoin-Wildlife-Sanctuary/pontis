@@ -134,6 +134,7 @@ function buildCreateDepositTx(
   return createDepositTx
 }
 
+// todo: split signer into operator signer and fee signer
 export async function aggregateDeposit(
   signer: Signer, // operator signer
   network: SupportedNetwork,

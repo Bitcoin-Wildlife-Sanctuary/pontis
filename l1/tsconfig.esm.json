@@ -1,0 +1,15 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+      "declaration": true,
+      "declarationMap": true,
+      "outDir": "./dist/esm",
+      "declarationDir": "./dist/types",
+      "rootDir": "./src",
+      "module": "ESNext",
+      "noImplicitAny": false,
+      "strict": false /* Enable all strict type-checking options. */
+    },
+    "include": ["./src/**/*"]
+  }
+  

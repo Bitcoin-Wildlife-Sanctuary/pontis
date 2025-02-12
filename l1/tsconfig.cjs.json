@@ -1,0 +1,16 @@
+{
+    "extends": "./tsconfig.json",
+    "compilerOptions": {
+      "outDir": "./dist/cjs",
+      "module": "CommonJS",
+      "moduleResolution": "node",
+      "declarationDir": "./dist/types",
+      "rootDir": "./src",
+
+      "noImplicitAny": false,
+      "resolveJsonModule": true,
+      "strict": false /* Enable all strict type-checking options. */
+    },
+    "include": ["./src/**/*"]
+  }
+  

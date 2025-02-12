@@ -262,21 +262,10 @@ export async function rpc_getaddressinfo(
   return res.result
 }
 
+// only list what we need, full fields refs at https://developer.bitcoin.org/reference/rpc/getblockchaininfo.html
 export type BlockchainInfo = {
-  chain: string
   blocks: number
-  headers: number
   bestblockhash: string
-  difficulty: number
-  mediantime: number
-  verificationprogress: number
-  initialblockdownload: boolean
-  chainwork: string
-  size_on_disk: number
-  pruned: boolean
-  pruneheight: number
-  automatic_pruning: boolean
-  prune_target_size: number
 }
 export async function rpc_getblockchaininfo(
   rpcUrl: string,
@@ -361,6 +350,86 @@ export async function rpc_listwallets(
   const res = await resp.json()
   if (res.result === null || res.result === undefined) {
     throw new Error(`listwallets failed: ${JSON.stringify(res)}`)
+  }
+  return res.result
+}
+
+// only list what we need, full fields refs at https://developer.bitcoin.org/reference/rpc/gettransaction.html
+export type RpcTransaction = {
+  confirmations: number
+  blockhash: string
+  blockheight: number
+  txid: string
+  hex: string
+}
+export async function rpc_gettransaction(
+  rpcUrl: string,
+  rpcUser: string,
+  rpcPassword: string,
+  walletName: string,
+  txid: string
+): Promise<RpcTransaction> {
+  const Authorization = httpAuth(rpcUser, rpcPassword)
+  const resp = await fetch(rpcWalletUrl(rpcUrl, walletName), {
+    headers: { Authorization },
+    method: 'POST',
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      id: 'cat-cli',
+      method: 'gettransaction',
+      params: [txid, false],
+    }),
+  })
+  if (resp.status !== 200) {
+    const text = await resp.text()
+    throw new Error(`gettransaction failed: ${resp.statusText}: ${text}`)
+  }
+  const res = await resp.json()
+  if (res.result === null || res.result === undefined) {
+    throw new Error(`gettransaction failed: ${JSON.stringify(res)}`)
+  }
+  return res.result
+}
+
+// only list what we need, full fields refs at https://developer.bitcoin.org/reference/rpc/listunspent.html
+export type RpcUnspent = {
+  txid: string
+  vout: number
+  address: string
+  scriptPubKey: string
+  amount: number
+  confirmations: number
+}
+export async function rpc_listunspent(
+  rpcUrl: string,
+  rpcUser: string,
+  rpcPassword: string,
+  walletName: string,
+  address: string,
+  minConfirmations?: number,
+  maxConfirmations?: number
+): Promise<RpcUnspent[]> {
+  minConfirmations = minConfirmations ?? 0;
+  maxConfirmations = maxConfirmations ?? 999999;
+
+  const Authorization = httpAuth(rpcUser, rpcPassword)
+  const resp = await fetch(rpcWalletUrl(rpcUrl, walletName), {
+    headers: { Authorization },
+    method: 'POST',
+    body: JSON.stringify({
+      jsonrpc: '2.0',
+      id: 'cat-cli',
+      method: 'listunspent',
+      params: [minConfirmations, maxConfirmations, [address]],
+    }), 
+  })
+  if (resp.status !== 200) {
+    const text = await resp.text()
+    throw new Error(`listunspent failed: ${resp.statusText}: ${text}`)
+  }
+  const res = await resp.json()
+  if (res.result === null || res.result === undefined) {
+    throw new Error(`listunspent failed: ${JSON.stringify(res)}`)
   }
   return res.result
 }

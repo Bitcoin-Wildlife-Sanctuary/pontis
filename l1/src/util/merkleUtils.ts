@@ -77,15 +77,15 @@ function calcMerkleProof(
   }
   return proof
 }
-
+export const BATCH_MERKLE_TREE_LENGTH = 16;
 export type BatchID = string
-export type BatchMerkleTree = Array<BatchID> & { length: 16 }
+export type BatchMerkleTree = Array<BatchID> & { length: typeof BATCH_MERKLE_TREE_LENGTH }
 export class BridgeMerkle {
   static readonly EMPTY_BATCH_ID: BatchID = Sha256(MerklePath.NULL_NODE)
 
   static getEmptyTree(): BatchMerkleTree {
     const arr: BatchID[] = []
-    for (let i = 0; i < 16; i++) {
+    for (let i = 0; i < BATCH_MERKLE_TREE_LENGTH; i++) {
       arr.push(BridgeMerkle.EMPTY_BATCH_ID)
     }
     return arr as BatchMerkleTree
@@ -97,15 +97,15 @@ export class BridgeMerkle {
   }
 
   static calcMerkleRoot(tree: BatchMerkleTree) {
-    if (tree.length > 16) {
-      throw new Error('nodes exceed max 16')
+    if (tree.length > BATCH_MERKLE_TREE_LENGTH) {
+      throw new Error('nodes exceed max BATCH_MERKLE_TREE_LENGTH')
     }
     return calcMerkleRoot(tree as Array<Sha256>)
   }
 
   static getMerkleProof(tree: BatchMerkleTree, nodeIndex: number) {
-    if (tree.length > 16) {
-      throw new Error('nodes exceed max 16')
+    if (tree.length > BATCH_MERKLE_TREE_LENGTH) {
+      throw new Error('nodes exceed max BATCH_MERKLE_TREE_LENGTH')
     }
     return calcMerkleProof(tree as Array<Sha256>, nodeIndex)
   }

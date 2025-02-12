@@ -62,6 +62,13 @@ export function stateToBatchID(
   return sha256(prevTxid + hash)
 }
 
+export function stateHashToBatchID(
+  stateHash: Sha256,
+  prevTxid: string
+): BatchID {
+  return sha256(prevTxid + stateHash)
+}
+
 type InputTrace1 = {
   prevTx0: AggregatorTransaction
   prevTx1: AggregatorTransaction
@@ -140,17 +147,21 @@ export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> 
   }
 
   serializedState(): ByteString {
-    if (this.state.level === 0n) {
+    return DepositAggregatorCovenant.serializeState(this.state)
+  }
+
+  static serializeState(state: DepositAggregatorState): ByteString {
+    if (state.level === 0n) {
       return DepositAggregator.hashDepositData(
         0n,
-        this.state.depositAddress,
-        this.state.depositAmt
+        state.depositAddress,
+        state.depositAmt
       )
     } else {
       return DepositAggregator.hashAggregatedDepositData(
-        this.state.level,
-        this.state.prevHashData0,
-        this.state.prevHashData1
+        state.level,
+        state.prevHashData0,
+        state.prevHashData1
       )
     }
   }

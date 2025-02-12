@@ -10,6 +10,7 @@ import {
   filter,
 } from 'rxjs';
 import { BlockNumberEvent, Deposit, Deposits } from '../state';
+import * as l1Api from './api';
 
 const POLL_INTERVAL = 5000;
 
@@ -47,15 +48,13 @@ export function deposits(initialBlockNumber: number): Observable<Deposits> {
   );
 }
 
-// functions to be implemented
-// add whatever parameters you need
 async function getCurrentL1BlockNumber(): Promise<number> {
-  throw new Error('Not implemented.');
+  return l1Api.getL1CurrentBlockNumber();
 }
 
 async function depositsInRange(
   blockFrom: number,
   blockTo: number
 ): Promise<Deposit[]> {
-  return [];
+  return l1Api.listDeposits(blockFrom, blockTo);
 }

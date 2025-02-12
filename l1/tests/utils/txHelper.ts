@@ -81,7 +81,6 @@ export function getDummyGenesisTx(seckey, address: btc.Address) {
   }
   return { genesisTx, genesisUtxo }
 }
-
 export const interpreter = new btc.Script.Interpreter()
 export const flags =
   btc.Script.Interpreter.SCRIPT_VERIFY_WITNESS |

@@ -420,3 +420,15 @@ export function createEmptySha256(): Sha256 {
 export function isTxHashEqual(tx: Transaction, txhash: string): boolean {
   return tools.toHex(tx.getHash()) === txhash
 }
+
+export function txToUtxo(tx: Transaction | string, outputIndex: number): UTXO {
+  if (typeof tx === 'string') {
+    tx = Transaction.fromHex(tx)
+  }
+  return {
+    txId: tx.getId(),
+    outputIndex: outputIndex,
+    script: tools.toHex(tx.outs[outputIndex].script),
+    satoshis: Number(tx.outs[outputIndex].value),
+  }
+}
