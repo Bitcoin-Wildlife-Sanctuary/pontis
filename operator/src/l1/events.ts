@@ -11,6 +11,9 @@ import {
 } from 'rxjs';
 import { BlockNumberEvent, Deposit, Deposits } from '../state';
 import * as l1Api from './api';
+import * as env from './env';
+import { createL1ChainProvider } from './utils/chain';
+import { getOffChainDB } from './utils/offchain';
 
 const POLL_INTERVAL = 5000;
 
@@ -49,14 +52,19 @@ export function deposits(initialBlockNumber: number): Observable<Deposits> {
 }
 
 async function getCurrentL1BlockNumber(): Promise<number> {
-  return l1Api.getL1CurrentBlockNumber();
+  return l1Api.getL1CurrentBlockNumber(createL1ChainProvider());
 }
 
 async function depositsInRange(
   blockFrom: number,
   blockTo: number
 ): Promise<Deposit[]> {
-  const deposits = await  l1Api.listDeposits(blockFrom, blockTo);
+  const deposits = await  l1Api.listDeposits(
+   blockFrom,
+   blockTo,
+   createL1ChainProvider(),
+   getOffChainDB()
+  );
   // console.log('deposits', blockFrom, blockTo, deposits)
   return deposits
 }

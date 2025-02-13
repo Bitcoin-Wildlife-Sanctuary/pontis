@@ -13,9 +13,9 @@ import { UTXO } from "scrypt-ts";
  * L1ChainProvider fetch more fields like block_height
  */
 
-type L1ChainProvider = {
+export type L1ChainProvider = {
     getCurrentBlockNumber: () => Promise<number>;
-    listUtxos: (address: string, fromBlock: number, toBlock: number) => Promise<Utxo[]>;
+    listUtxos: (address: string, fromBlock?: number, toBlock?: number) => Promise<Utxo[]>;
     getTransactionStatus: (txid: string) => Promise<L1TxStatus['status']>;
 }
 
@@ -30,7 +30,9 @@ class L1MempoolChainProvider extends MempoolChainProvider implements L1ChainProv
         }
         return parseInt(data)
     }
-    async listUtxos(address: string, fromBlock: number, toBlock: number): Promise<Utxo[]> {
+    async listUtxos(address: string, fromBlock?: number, toBlock?: number): Promise<Utxo[]> {
+        fromBlock = fromBlock ?? DEFAULT_FROM_BLOCK;
+        toBlock = toBlock ?? DEFAULT_TO_BLOCK;
         
         const script = Buffer.from(
             bitcoinjs.address.toOutputScript(
@@ -97,7 +99,9 @@ class L1RPCChainProvider extends RPCChainProvider implements L1ChainProvider {
         const data = await btcRpc.rpc_getblockchaininfo(this.url, this.username, this.password)
         return data.blocks
     }
-    async listUtxos(address: string, fromBlock: number, toBlock: number): Promise<Utxo[]> {
+    async listUtxos(address: string, fromBlock?: number, toBlock?: number): Promise<Utxo[]> {
+        fromBlock = fromBlock ?? DEFAULT_FROM_BLOCK;
+        toBlock = toBlock ?? DEFAULT_TO_BLOCK;
         const data = await btcRpc.rpc_listunspent(this.url, this.username, this.password, this.walletName, address, fromBlock, toBlock)
         const blockNumber = await this.getCurrentBlockNumber();
 
@@ -116,38 +120,40 @@ class L1RPCChainProvider extends RPCChainProvider implements L1ChainProvider {
         const data = await btcRpc.rpc_gettransaction(this.url, this.username, this.password, this.walletName, txid)
         return data.confirmations > 0 ? 'MINED' as const : 'UNCONFIRMED' as const
     }
-}   
-export async function getCurrentBlockNumber(): Promise<number> {
-    if (env.useRpc) {
-        return new L1RPCChainProvider(env.rpcConfig.host, env.rpcConfig.user, env.rpcConfig.password, env.rpcConfig.wallet).getCurrentBlockNumber()
-    }
-    return new L1MempoolChainProvider(env.l1Network).getCurrentBlockNumber()
 }
+export class MockL1ChainProvider implements L1ChainProvider {
+    private blockNumber = 0;
+    private utxos: Utxo[] = [];
+    private transactionStatus: L1TxStatus['status'] = 'UNCONFIRMED'
+    async getCurrentBlockNumber(): Promise<number> {
+        return this.blockNumber++
+    }
+    setListUtxos(utxos: Utxo[]) {
+        this.utxos = utxos
+    }
+    async listUtxos(_address: string, _fromBlock: number, _toBlock: number): Promise<Utxo[]> {
+        return this.utxos
+    }
+    setGetTransactionStatus(status: L1TxStatus['status']) {
+        this.transactionStatus = status
+    }
+    async getTransactionStatus(_txid: string): Promise<L1TxStatus['status']> {
+        return this.transactionStatus
+    }
+}
+
+export function createL1ChainProvider(): L1ChainProvider {
+    if (env.useRpc) {
+        return new L1RPCChainProvider(env.rpcConfig.host, env.rpcConfig.user, env.rpcConfig.password, env.rpcConfig.wallet)
+    }
+    return new L1MempoolChainProvider(env.l1Network)
+}
+
+
 
 export type Utxo = UTXO & {
-    // txId: string;
-    // outputIndex: number;
-    // satoshis: number;
-    // script: string;
     blockNumber: number;
 }
-export async function listUtxos(
-    address: string,
-    fromBlock?: number,
-    toBlock?: number
-): Promise<Utxo[]> {
-    fromBlock = fromBlock ?? 0;
-    toBlock = toBlock ?? 999999;
-    if (env.useRpc) {
-        return new L1RPCChainProvider(env.rpcConfig.host, env.rpcConfig.user, env.rpcConfig.password, env.rpcConfig.wallet).listUtxos(address, fromBlock, toBlock)
-    }
-    return new L1MempoolChainProvider(env.l1Network).listUtxos(address, fromBlock, toBlock)
-}
 
-export async function getTransactionStatus(txid: string): Promise<L1TxStatus['status']> {
-    if (env.useRpc) {
-        return new L1RPCChainProvider(env.rpcConfig.host, env.rpcConfig.user, env.rpcConfig.password, env.rpcConfig.wallet).getTransactionStatus(txid)
-    }
-    return new L1MempoolChainProvider(env.l1Network).getTransactionStatus(txid)
-}
-
+export const DEFAULT_FROM_BLOCK = 0;
+export const DEFAULT_TO_BLOCK = 9999999;

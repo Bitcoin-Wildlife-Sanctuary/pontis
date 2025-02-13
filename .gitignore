@@ -7,3 +7,4 @@ build/
 node_modules/
 operator/out
 .env
+offchain_db.json

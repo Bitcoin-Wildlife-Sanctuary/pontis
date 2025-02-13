@@ -1,23 +1,25 @@
 import { DepositBatch, L1TxHash, L2Address } from "../../state";
-import { DepositAggregatorCovenant, DepositAggregatorState, getContractScriptPubKeys, utils } from "l1";
+import { DepositAggregatorCovenant, DepositAggregatorState, getContractScriptPubKeys, Signer, SupportedNetwork, utils } from "l1";
 import { Deposit } from "../../state";
 import { ByteString, PubKey, Sha256 } from "scrypt-ts"; 
 import { stateHashToBatchID } from "l1";
-import * as env from '../env'
 
-export async function getContractAddresses(): Promise<{
+export async function getContractAddresses(
+    operatorSigner: Signer,
+    l1Network: SupportedNetwork
+): Promise<{
     bridge: string;
     depositAggregator: string;
     withdrawExpander: string;
     operator: string;
 }> {
-    const operatorPubKey = await env.operatorSigner.getPublicKey();
+    const operatorPubKey = await operatorSigner.getPublicKey();
     const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
     const addressess =  {
-        bridge: utils.p2trLockingScriptToAddr(spks.bridge, env.l1Network),
-        depositAggregator: utils.p2trLockingScriptToAddr(spks.depositAggregator, env.l1Network),
-        withdrawExpander: utils.p2trLockingScriptToAddr(spks.withdrawExpander, env.l1Network),
-        operator: await env.operatorSigner.getAddress(),
+        bridge: utils.p2trLockingScriptToAddr(spks.bridge, l1Network),
+        depositAggregator: utils.p2trLockingScriptToAddr(spks.depositAggregator, l1Network),
+        withdrawExpander: utils.p2trLockingScriptToAddr(spks.withdrawExpander, l1Network),
+        operator: await operatorSigner.getAddress(),
     }
     return addressess;
 }

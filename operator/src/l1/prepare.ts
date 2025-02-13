@@ -2,18 +2,19 @@ import {loadContractArtifacts, getContractScriptPubKeys, btcRpc, utils, BridgeCo
 import * as env from './env'
 import { PubKey } from 'scrypt-ts'
 import { createDbFile, getOffChainDB } from './utils/offchain'
-import { listUtxos } from './utils/chain'
+import { createL1ChainProvider } from './utils/chain'
 import { L1TxHash } from '../state'
 import { getContractAddresses } from './utils/contractUtil';
 export async function createBridgeContract() {
     const operatorPubKey = await env.operatorSigner.getPublicKey()
-    const addresses = await getContractAddresses();
+    const addresses = await getContractAddresses(env.operatorSigner, env.l1Network);
+    const l1ChainProvider = createL1ChainProvider();
     
     let shouldCreateBridge = false;
     const offchainDB = getOffChainDB();
     const bridgeTxid = await offchainDB.getLatestBridgeTxid();
     if (bridgeTxid) {
-        const utxos = await listUtxos(addresses.bridge);
+        const utxos = await l1ChainProvider.listUtxos(addresses.bridge);
         const findUtxo = utxos.find(utxo => utxo.txId === bridgeTxid);
         shouldCreateBridge = findUtxo ? false : true;
     } else {
@@ -41,7 +42,7 @@ export async function createBridgeContract() {
 export async function importAddressesIntoNode() {
     const operatorPubKey = await env.operatorSigner.getPublicKey()
 
-    const addresses = await getContractAddresses();
+    const addresses = await getContractAddresses(env.operatorSigner, env.l1Network);
 
     console.log('l1 addresses:')
     console.log('bridgeAddr', addresses.bridge)
