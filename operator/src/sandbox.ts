@@ -1,5 +1,5 @@
 import { Account, cairo, constants, RpcProvider } from 'starknet';
-import {prepareL1} from './l1/utils/prepare'
+import {prepareL1} from './l1/prepare'
 import { contractEvents, l2BlockNumber, l2Events } from './l2/events';
 import {
   closePendingWithdrawalBatch,

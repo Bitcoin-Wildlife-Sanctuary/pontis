@@ -6,7 +6,7 @@ import { cloneDeep, max } from 'lodash';
 export type L1Address = `0x${string}`;
 export type L2Address = `0x${string}`;
 
-export type L1TxHash = `0x${string}`;
+export type L1TxHash = string;
 export type L2TxHash = `0x${string}`;
 
 // TODO: everything about L1 is very WIP, should be checked with sCrypt team
@@ -472,12 +472,22 @@ async function initiateAggregation(
     state.pendingDeposits = state.pendingDeposits.slice(batchSize);
 
     if (batchSize === 1) {
+      // if there is only one deposit, we can finalize the batch directly
+      const finalizeBatchTx = await env.finalizeBatch(
+        {
+          status: 'BEING_AGGREGATED',
+          deposits,
+          aggregationTxs: [],
+        }
+      );
       state.depositBatches.push({
-        status: 'BEING_AGGREGATED',
+        status: 'AGGREGATED',
         deposits,
-        aggregationTxs: [[deposits[0].origin]],
+        aggregationTxs: [],
+        finalizeBatchTx,
       });
     } else {
+      // if there is more than one deposit, we need to aggregate them first
       const aggregationTxs: L1Tx[][] = [
         await env.aggregateDeposits(
           // construct an dummy batch, with the deposits and an empty aggregation txs array 

@@ -18,6 +18,7 @@ async function getL1TransactionStatus(
   // add whatever parameters you need
 ): Promise<L1TxStatus> {
   const status = await l1Api.getL1TransactionStatus(tx.hash);
+  // console.log(`getL1TransactionStatus(${tx.hash}) status: ${status}`)
   return {
     ...tx,
     status: status,

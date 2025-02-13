@@ -3,23 +3,20 @@ import { Deposit, DepositBatch, L1TxHash, L1TxStatus, L2Address } from "../state
 import { PubKey, Sha256 } from 'scrypt-ts'
 import {  bridgeFeatures, depositFeatures } from "l1";
 import * as env from "./env";
-import { calculateDepositState, checkDepositBatch, getDepositBatchHeight, getDepositBatchID } from "./utils/contractUtil";
+import { calculateDepositState, checkDepositBatch, getDepositBatchHeight, getDepositBatchID, l2AddressToHex, getContractAddresses } from "./utils/contractUtil";
 import { listUtxos, UNCONFIRMED_BLOCK_NUMBER, getTransactionStatus, getCurrentBlockNumber } from "./utils/chain";
 import { getOffChainDB } from "./utils/offchain";
-
 
 /// list all deposits from l1
 export async function listDeposits(
     fromBlock: number,
     toBlock: number,
 ): Promise<Deposit[]> {
+    // console.log(`listDeposits(${fromBlock}, ${toBlock})`)
     // query utxo(address = depositAggregator) from node;
     const offChainDB = getOffChainDB();
-    const operatorPubKey = await env.operatorSigner.getPublicKey();
-    const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
-    // transfer scriptPubKey to address
-    const address = spks.depositAggregator;
-    const utxos = await listUtxos(utils.p2trLockingScriptToAddr(address, env.l1Network), fromBlock, toBlock);
+    const addresses = await getContractAddresses();
+    const utxos = await listUtxos(addresses.depositAggregator, fromBlock, toBlock);
     let deposits: Deposit[] = [];
     for (const utxo of utxos) {
         const depositInfo = await offChainDB.getDepositInfo(utxo.txId as L1TxHash);
@@ -46,6 +43,7 @@ export async function createDeposit(
     l2Address: L2Address,
     depositAmt: bigint,
 ): Promise<Deposit>{
+    // console.log(`createDeposit(signer,${l2Address}, ${depositAmt})`)
     const operatorPubKey = await env.operatorSigner.getPublicKey();
     const depositTx = await depositFeatures.createDeposit(
         PubKey(operatorPubKey),
@@ -53,7 +51,7 @@ export async function createDeposit(
         env.l1Network,
         env.createUtxoProvider(),
         env.createChainProvider(),
-        l2Address,
+        l2AddressToHex(l2Address),
         depositAmt,
 
         env.l1FeeRate
@@ -70,6 +68,7 @@ export async function createDeposit(
     }
     const offChainDB = getOffChainDB();
     await offChainDB.setDepositInfo(deposit.origin.hash, deposit.recipient, deposit.amount);
+    // console.log(`createDeposit(signer,${l2Address}, ${depositAmt}) done, txid: ${deposit.origin.hash}`)
     return deposit;
 }
 
@@ -77,7 +76,7 @@ export async function createDeposit(
 export async function aggregateDeposits(
     batch: DepositBatch,
 ): Promise<L1TxHash[]> {
-    
+    // console.log(`aggregateDeposits(batch)`)
     const utxoProvider = env.createUtxoProvider();
     const chainProvider = env.createChainProvider();
     const operatorPubKey = await env.operatorSigner.getPublicKey();
@@ -123,6 +122,7 @@ export async function aggregateDeposits(
         );
         txs.push(tx.txid as L1TxHash);
     }
+    // console.log(`aggregateDeposits(batch) done, txids: ${txs.join(', ')}`)
     return txs;
 }
 
@@ -130,7 +130,7 @@ export async function aggregateDeposits(
 export async function finalizeDepositBatchOnL1(
     batch: DepositBatch,
 ): Promise<L1TxHash> {
-
+    // console.log(`finalizeDepositBatchOnL1(batch)`)
     checkDepositBatch(batch.deposits);
 
     const utxoProvider = env.createUtxoProvider();
@@ -139,15 +139,15 @@ export async function finalizeDepositBatchOnL1(
 
     const operatorPubKey = await env.operatorSigner.getPublicKey();
     const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
-    const bridgeUtxos = await listUtxos(utils.p2trLockingScriptToAddr(spks.bridge, env.l1Network));
+    const addresses = await getContractAddresses();
+    const bridgeUtxos = await listUtxos(addresses.bridge);
     const latestBridgeTxid = await offChainDB.getLatestBridgeTxid();
     if (!latestBridgeTxid) {
         throw new Error('latest bridge txid not found');
     }
     const bridgeUtxo = bridgeUtxos.find(utxo => utxo.txId === latestBridgeTxid);
-
-
     if (!bridgeUtxo) {
+        // console.log('latestBridgeTxid', latestBridgeTxid)
         throw new Error('bridge utxo not found');
     }
 
@@ -167,7 +167,7 @@ export async function finalizeDepositBatchOnL1(
     if (height !== batch.aggregationTxs.length) {
         throw new Error('deposits are being aggregated');
     }
-    const lastLevelAggs = batch.aggregationTxs.at(-1)!;
+    const lastLevelAggs = height === 0 ? batch.deposits.map(v => v.origin) : batch.aggregationTxs.at(-1)!;
     if (lastLevelAggs.length !== 1) {
         throw new Error('last level aggregation txs is not 1');
     }
@@ -198,7 +198,8 @@ export async function finalizeDepositBatchOnL1(
     );
 
     await offChainDB.setLatestBridgeTxid(res.txid as L1TxHash);
-    await offChainDB.setBridgeState(res.txid as L1TxHash, res.state.toString(), res.state.merkleTree, res.state.depositAggregatorSPK);
+    await offChainDB.setBridgeState(res.txid as L1TxHash, res.state.batchesRoot, res.state.merkleTree, res.state.depositAggregatorSPK);
+    // console.log(`finalizeDepositBatchOnL1(batch) done, txid: ${res.txid}`)
     return res.txid as L1TxHash;
 }
 
@@ -206,6 +207,7 @@ export async function finalizeDepositBatchOnL1(
 export async function finalizeDepositBatchOnL2(
     batch: DepositBatch,
 ): Promise<L1TxHash> {
+    // console.log(`finalizeDepositBatchOnL2(batch)`)
     checkDepositBatch(batch.deposits);
 
     const utxoProvider = env.createUtxoProvider();
@@ -214,8 +216,8 @@ export async function finalizeDepositBatchOnL2(
 
     const operatorPubKey = await env.operatorSigner.getPublicKey();
     const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
-
-    const bridgeUtxos = await listUtxos(utils.p2trLockingScriptToAddr(spks.bridge, env.l1Network));
+    const addresses = await getContractAddresses();
+    const bridgeUtxos = await listUtxos(addresses.bridge);
     const latestBridgeTxid = await offChainDB.getLatestBridgeTxid();
     if (!latestBridgeTxid) {
         throw new Error('latest bridge txid not found');
@@ -243,7 +245,6 @@ export async function finalizeDepositBatchOnL2(
     if (batchIDIndex === -1) {
         throw new Error('batch id not found');
     }
-    const batchProof = BridgeMerkle.getMerkleProof(bridgeState.merkleTree as BatchMerkleTree, batchIDIndex);
     const bridgeTraceableUtxo: TraceableBridgeUtxo = {
         operator: PubKey(operatorPubKey),
         expanderSPK: spks.withdrawExpander,
@@ -261,13 +262,16 @@ export async function finalizeDepositBatchOnL2(
         bridgeTraceableUtxo,
         env.l1FeeRate,
     );
+    // console.log(`finalizeDepositBatchOnL2(batch) done, txid: ${res.txid}`)
     return res.txid as L1TxHash;
 }
 
 export function getL1TransactionStatus(txid: L1TxHash): Promise<L1TxStatus['status']> {
+    // console.log(`getL1TransactionStatus(${txid})`)
     return getTransactionStatus(txid);
 }
 
 export function getL1CurrentBlockNumber(): Promise<number> {
+    // console.log(`getL1CurrentBlockNumber()`)
     return getCurrentBlockNumber();
 }

@@ -1,9 +1,35 @@
-import { DepositBatch, L1TxHash } from "../../state";
-import { DepositAggregatorCovenant, DepositAggregatorState } from "l1";
+import { DepositBatch, L1TxHash, L2Address } from "../../state";
+import { DepositAggregatorCovenant, DepositAggregatorState, getContractScriptPubKeys, utils } from "l1";
 import { Deposit } from "../../state";
-import { ByteString, Sha256 } from "scrypt-ts"; 
+import { ByteString, PubKey, Sha256 } from "scrypt-ts"; 
 import { stateHashToBatchID } from "l1";
+import * as env from '../env'
 
+export async function getContractAddresses(): Promise<{
+    bridge: string;
+    depositAggregator: string;
+    withdrawExpander: string;
+    operator: string;
+}> {
+    const operatorPubKey = await env.operatorSigner.getPublicKey();
+    const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
+    const addressess =  {
+        bridge: utils.p2trLockingScriptToAddr(spks.bridge, env.l1Network),
+        depositAggregator: utils.p2trLockingScriptToAddr(spks.depositAggregator, env.l1Network),
+        withdrawExpander: utils.p2trLockingScriptToAddr(spks.withdrawExpander, env.l1Network),
+        operator: await env.operatorSigner.getAddress(),
+    }
+    return addressess;
+}
+
+export function l2AddressToHex(l2Address: L2Address): string {
+    let hex: string = l2Address;
+    if (l2Address.startsWith('0x')) {
+        hex = hex.slice(2);
+    }
+    hex = hex.padStart(64, '0');
+    return hex;
+}
 
 export function checkDepositBatch(
     deposits: Deposit[],
@@ -56,7 +82,7 @@ export function calculateDepositState(
     let currentLevel = 0;
     let currentLevelStates: DepositAggregatorState[] = [];
     currentLevelStates = deposits.map(deposit => DepositAggregatorCovenant.createDepositState(
-        deposit.recipient,
+        l2AddressToHex(deposit.recipient),
         deposit.amount
     ));
     let currentLevelStateHashes: ByteString[] = currentLevelStates.map(state => DepositAggregatorCovenant.serializeState(state));

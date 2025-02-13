@@ -3,8 +3,8 @@ import {MempoolChainProvider, MempoolUtxoProvider, RPCChainProvider, RPCUtxoProv
 import * as bitcoinjs from '@scrypt-inc/bitcoinjs-lib'
 import * as ecc from '@bitcoinerlab/secp256k1'
 import {ECPairFactory} from 'ecpair'
-
-dotenv.config();
+import * as path from 'path'
+dotenv.config({path: path.join(__dirname, '../../.env')});
 
 const ECPair = ECPairFactory(ecc)
 bitcoinjs.initEccLib(ecc)
@@ -67,7 +67,7 @@ export const operatorPrivateKey = process.env.L1_OPERATOR_PRIVATE_KEY!;
 export const operatorSigner = new DefaultSigner(ECPair.fromWIF(operatorPrivateKey), l1Network);
 export const mockUserSigner = operatorSigner;
 
-export const use_rpc = !!rpcConfig.host
+export const useRpc = !!rpcConfig.host
 
 export function createUtxoProvider() {
   if (rpcConfig.host) {

@@ -118,7 +118,7 @@ class L1RPCChainProvider extends RPCChainProvider implements L1ChainProvider {
     }
 }   
 export async function getCurrentBlockNumber(): Promise<number> {
-    if (env.use_rpc) {
+    if (env.useRpc) {
         return new L1RPCChainProvider(env.rpcConfig.host, env.rpcConfig.user, env.rpcConfig.password, env.rpcConfig.wallet).getCurrentBlockNumber()
     }
     return new L1MempoolChainProvider(env.l1Network).getCurrentBlockNumber()
@@ -138,14 +138,14 @@ export async function listUtxos(
 ): Promise<Utxo[]> {
     fromBlock = fromBlock ?? 0;
     toBlock = toBlock ?? 999999;
-    if (env.use_rpc) {
+    if (env.useRpc) {
         return new L1RPCChainProvider(env.rpcConfig.host, env.rpcConfig.user, env.rpcConfig.password, env.rpcConfig.wallet).listUtxos(address, fromBlock, toBlock)
     }
     return new L1MempoolChainProvider(env.l1Network).listUtxos(address, fromBlock, toBlock)
 }
 
 export async function getTransactionStatus(txid: string): Promise<L1TxStatus['status']> {
-    if (env.use_rpc) {
+    if (env.useRpc) {
         return new L1RPCChainProvider(env.rpcConfig.host, env.rpcConfig.user, env.rpcConfig.password, env.rpcConfig.wallet).getTransactionStatus(txid)
     }
     return new L1MempoolChainProvider(env.l1Network).getTransactionStatus(txid)

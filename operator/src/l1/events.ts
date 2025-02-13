@@ -56,5 +56,7 @@ async function depositsInRange(
   blockFrom: number,
   blockTo: number
 ): Promise<Deposit[]> {
-  return l1Api.listDeposits(blockFrom, blockTo);
+  const deposits = await  l1Api.listDeposits(blockFrom, blockTo);
+  // console.log('deposits', blockFrom, blockTo, deposits)
+  return deposits
 }
