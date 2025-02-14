@@ -1,7 +1,7 @@
 import { expect, use } from 'chai'
 import chaiAsPromised from 'chai-as-promised'
 import { Postage } from '../../src/lib/constants'
-import { getScriptPubKeys } from '../../src/covenants/instance'
+import { CONTRACT_INDEXES, getScriptPubKeys } from '../../src/covenants/util'
 import {
   createWithdrawal,
   deployBridge,
@@ -86,8 +86,8 @@ describe('Test the feature of withdraw', () => {
         state: depositRes.state,
       }
     )
-    expect(verifyInputSpent(finalizeL1DepositTx.psbt, 0)).to.be.true
-    expect(verifyInputSpent(finalizeL1DepositTx.psbt, 1)).to.be.true
+    expect(verifyInputSpent(finalizeL1DepositTx.psbt, CONTRACT_INDEXES.inputIndex.bridge)).to.be.true
+    expect(verifyInputSpent(finalizeL1DepositTx.psbt, CONTRACT_INDEXES.inputIndex.depositAggregator.inFinalizeL1Tx)).to.be.true
     expect(finalizeL1DepositTx.bridgeUtxo.satoshis).equals(
       bridgeTraceableUtxo.utxo.satoshis + Number(amt)
     )
@@ -150,7 +150,7 @@ describe('Test the feature of withdraw', () => {
       withdrawals
     )
     logger.info('createWithdrawal txid', createWithdrawalRes.txid)
-    expect(verifyInputSpent(createWithdrawalRes.psbt, 0)).to.be.true
+    expect(verifyInputSpent(createWithdrawalRes.psbt, CONTRACT_INDEXES.inputIndex.bridge)).to.be.true
     expect(createWithdrawalRes.bridgeUtxo.satoshis).equals(
       bridgeTraceableUtxo.utxo.satoshis - Number(totalWithdrawAmt)
     )
@@ -172,7 +172,7 @@ describe('Test the feature of withdraw', () => {
       withdrawals
     )
     logger.info('expandWithdrawal txid', expandWithdrawalRes.txid)
-    expect(verifyInputSpent(expandWithdrawalRes.psbt, 0)).to.be.true
+    expect(verifyInputSpent(expandWithdrawalRes.psbt, CONTRACT_INDEXES.inputIndex.withdrawalExpander)).to.be.true
     const withdrawAmt0 = withdrawals
       .slice(0, 4)
       .reduce((acc, w) => acc + w.amt, BigInt(0))
@@ -198,7 +198,7 @@ describe('Test the feature of withdraw', () => {
       withdrawals
     )
     logger.info('distributeWithdrawals0 txid', distrubiteRes0.txid)
-    expect(verifyInputSpent(distrubiteRes0.psbt, 0)).to.be.true
+    expect(verifyInputSpent(distrubiteRes0.psbt, CONTRACT_INDEXES.inputIndex.withdrawalExpander)).to.be.true
     expect(distrubiteRes0.withdrawalUtxos.length).equals(4)
     distrubiteRes0.withdrawalUtxos.forEach((utxo, index) => {
       expect(utxo.satoshis).equals(Number(withdrawals[index].amt))
@@ -217,7 +217,7 @@ describe('Test the feature of withdraw', () => {
       withdrawals
     )
     logger.info('distributeWithdrawals1 txid', distrubiteRes1.txid)
-    expect(verifyInputSpent(distrubiteRes1.psbt, 0)).to.be.true
+    expect(verifyInputSpent(distrubiteRes1.psbt, CONTRACT_INDEXES.inputIndex.withdrawalExpander)).to.be.true
     expect(distrubiteRes1.withdrawalUtxos.length).equals(3)
     distrubiteRes1.withdrawalUtxos.forEach((utxo, index) => {
       expect(utxo.satoshis).equals(Number(withdrawals[index + 4].amt))

@@ -1,6 +1,6 @@
 // used outside of contract
 
-import { ByteString, hash256, Sha256, toByteString } from 'scrypt-ts'
+import { ByteString, hash256, len, Sha256, toByteString } from 'scrypt-ts'
 import { MerklePath, Node, NodePos } from '../contracts/merklePath'
 import { WithdrawalExpander } from '../contracts/withdrawalExpander'
 import { cloneDeep } from 'lodash-es'
@@ -265,6 +265,25 @@ export class WithdrawalMerkle {
     // todo: check address is valid
     if (withdrawal.amt <= 0n) {
       throw new Error('withdrawal amt must be greater than 0')
+    }
+    // only support witness script
+    // p2tr script: 5120 + tweakedPubKey(32 bytes)
+    if (withdrawal.l1Address.startsWith('5120')) {
+      if (len(withdrawal.l1Address) !== 34n) {
+        throw new Error('p2tr address length must be 34')
+      }
+    }
+    // p2wsh script: 0020 + scriptHash(32 bytes)
+    if (withdrawal.l1Address.startsWith('0020')) {
+      if (len(withdrawal.l1Address) !== 34n) {
+        throw new Error('p2wsh address length must be 34')
+      }
+    }
+    // p2wpkh script: 0014 + pubKeyHash(20 bytes)
+    if (withdrawal.l1Address.startsWith('0014')) {
+      if (len(withdrawal.l1Address) !== 22n) {
+        throw new Error('p2wpkh address length must be 22')
+      }
     }
   }
 }

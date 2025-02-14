@@ -21,7 +21,7 @@ import {
   stateToBatchID,
   TraceableDepositAggregatorUtxo,
 } from '../../src/covenants/depositAggregatorCovenant'
-import { getScriptPubKeys } from '../../src/covenants/instance'
+import { CONTRACT_INDEXES, getScriptPubKeys } from '../../src/covenants/util'
 import { reverseTxId } from '../../src/lib/txTools'
 import { createLogger } from './logUtil'
 import { sleepTxTime } from '../utils/sleep'
@@ -103,8 +103,8 @@ describe('Test the feature of deposit', async () => {
         utxo: depositRes1.aggregatorUtxo,
       }
     )
-    expect(verifyInputSpent(level1Res0.psbt, 0)).to.be.true
-    expect(verifyInputSpent(level1Res0.psbt, 1)).to.be.true
+    expect(verifyInputSpent(level1Res0.psbt, CONTRACT_INDEXES.inputIndex.depositAggregator.inAggregateDepositTx.first)).to.be.true
+    expect(verifyInputSpent(level1Res0.psbt, CONTRACT_INDEXES.inputIndex.depositAggregator.inAggregateDepositTx.second)).to.be.true
     const level1Amt0 = MINIMAL_DEPOSIT_AMT * 2 + 1
     expect(level1Res0.aggregatorUtxo.satoshis).to.be.equal(level1Amt0)
     logger.info('level1 aggregate0 txid', level1Res0.txid)
@@ -146,8 +146,8 @@ describe('Test the feature of deposit', async () => {
         utxo: depositRes4.aggregatorUtxo,
       }
     )
-    expect(verifyInputSpent(level1Res1.psbt, 0)).to.be.true
-    expect(verifyInputSpent(level1Res1.psbt, 1)).to.be.true
+    expect(verifyInputSpent(level1Res1.psbt, CONTRACT_INDEXES.inputIndex.depositAggregator.inAggregateDepositTx.first)).to.be.true
+    expect(verifyInputSpent(level1Res1.psbt, CONTRACT_INDEXES.inputIndex.depositAggregator.inAggregateDepositTx.second)).to.be.true
     const level1Amt1 = MINIMAL_DEPOSIT_AMT * 2 + 2 + 3
     expect(level1Res1.aggregatorUtxo.satoshis).to.be.equal(level1Amt1)
     logger.info('level1 aggregate1 txid', level1Res1.txid)
@@ -169,7 +169,8 @@ describe('Test the feature of deposit', async () => {
         utxo: level1Res1.aggregatorUtxo,
       }
     )
-    expect(verifyInputSpent(level2Res.psbt, 0)).to.be.true
+    expect(verifyInputSpent(level2Res.psbt, CONTRACT_INDEXES.inputIndex.depositAggregator.inAggregateDepositTx.first)).to.be.true
+    expect(verifyInputSpent(level2Res.psbt, CONTRACT_INDEXES.inputIndex.depositAggregator.inAggregateDepositTx.second)).to.be.true
     const level2Amt = level1Amt0 + level1Amt1
     expect(level2Res.aggregatorUtxo.satoshis).to.be.equal(level2Amt)
     logger.info('level2 aggregate txid', level2Res.txid)
@@ -193,8 +194,8 @@ describe('Test the feature of deposit', async () => {
       },
       level2AggregatorUtxo
     )
-    expect(verifyInputSpent(finalizeL1Res.psbt, 0)).to.be.true
-    expect(verifyInputSpent(finalizeL1Res.psbt, 1)).to.be.true
+    expect(verifyInputSpent(finalizeL1Res.psbt, CONTRACT_INDEXES.inputIndex.bridge)).to.be.true
+    expect(verifyInputSpent(finalizeL1Res.psbt, CONTRACT_INDEXES.inputIndex.depositAggregator.inFinalizeL1Tx)).to.be.true
     logger.info('finalizeL1 deposit txid', finalizeL1Res.txid)
 
     await sleepTxTime()
@@ -211,7 +212,7 @@ describe('Test the feature of deposit', async () => {
         state: finalizeL1Res.state,
       }
     )
-    expect(verifyInputSpent(finalizeL2Res.psbt, 0)).to.be.true
+    expect(verifyInputSpent(finalizeL2Res.psbt, CONTRACT_INDEXES.inputIndex.bridge)).to.be.true
     expect(finalizeL2Res.bridgeUtxo.satoshis).to.be.equal(
       Postage.BRIDGE_POSTAGE + level2Amt
     )

@@ -279,14 +279,6 @@ export class WithdrawalExpander extends SmartContract {
     )
   }
 
-  // @method()
-  // static getEmptyLeafHash(): Sha256 {
-  //   return Sha256(
-  //     MerklePath.levelToByteString(0n) +
-  //     sha256(sha256(toByteString('')) + GeneralUtils.padAmt(0n))
-  //   )
-  // }
-
   @method()
   static getNodeHash(
     level: bigint,

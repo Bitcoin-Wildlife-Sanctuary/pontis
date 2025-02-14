@@ -14,7 +14,7 @@ import {
   WithdrawalExpanderState,
 } from '../covenants'
 import { ExtPsbt } from '../lib/extPsbt'
-import { getScriptPubKeys } from '../covenants/instance'
+import { getScriptPubKeys } from '../covenants/util'
 import { pickLargeFeeUtxo } from './utils/pick'
 import { getDummyUtxo, supportedNetworkToBtcNetwork } from '../lib/utils'
 import { inputToPrevout, outputToUtxo, reverseTxId } from '../lib/txTools'

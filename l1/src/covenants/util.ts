@@ -36,3 +36,29 @@ export function getScriptPubKeys(operatorPubKey: PubKey) {
     depositAggregator: depositAggregator.lockingScriptHex,
   }
 }
+
+export const CONTRACT_INDEXES = {
+  outputIndex: {
+    state: 0,
+    bridge: 1,
+    withdrawalExpander: {
+      inBridgeTx: 2,
+      inDepositAggregatorTx: {
+        first: 1,
+        second: 2,
+      }
+    },
+    depositAggregator: 1,
+  },
+  inputIndex: {
+    bridge: 0,
+    depositAggregator: {
+      inAggregateDepositTx: {
+        first: 0,
+        second: 1,
+      },
+      inFinalizeL1Tx: 1
+    },
+    withdrawalExpander: 0
+  }
+}

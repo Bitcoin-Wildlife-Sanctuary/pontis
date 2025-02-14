@@ -10,7 +10,7 @@ import {
 import { Postage, SupportedNetwork } from '../lib/constants'
 import { getDummyUtxo, supportedNetworkToBtcNetwork } from '../lib/utils'
 import { DUST_LIMIT, ExtPsbt } from '../lib/extPsbt'
-import { getScriptPubKeys } from '../covenants/instance'
+import { getScriptPubKeys } from '../covenants/util'
 import { pickLargeFeeUtxo } from './utils/pick'
 import { markSpent } from '../lib/provider'
 import { inputToPrevout, outputToUtxo } from '../lib/txTools'

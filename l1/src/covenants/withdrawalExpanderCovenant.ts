@@ -20,6 +20,7 @@ import { ChainProvider, WithdrawalExpanderUtxo } from '../lib/provider'
 import { Transaction } from '@scrypt-inc/bitcoinjs-lib'
 import * as tools from 'uint8array-tools'
 import { toXOnly } from '../lib/utils'
+import { CONTRACT_INDEXES } from './util'
 export type WithdrawalExpanderState = {
   level: bigint
 
@@ -213,17 +214,17 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
     let bridgeAmt = 0n
     let bridgeStateHash = createEmptySha256()
     if (isCreateWithdrawalTx) {
-      bridgeSPK = tools.toHex(tx.outs[1].script)
-      bridgeAmt = tx.outs[1].value
+      bridgeSPK = tools.toHex(tx.outs[CONTRACT_INDEXES.outputIndex.bridge].script)
+      bridgeAmt = tx.outs[CONTRACT_INDEXES.outputIndex.bridge].value
       bridgeStateHash = Sha256(splitHashFromStateOutput(tx)[0])
     }
 
     const contractSPK = isCreateWithdrawalTx
-      ? tools.toHex(tx.outs[2].script)
-      : tools.toHex(tx.outs[1].script)
+      ? tools.toHex(tx.outs[CONTRACT_INDEXES.outputIndex.withdrawalExpander.inBridgeTx].script)
+      : tools.toHex(tx.outs[CONTRACT_INDEXES.outputIndex.withdrawalExpander.inDepositAggregatorTx.first].script)
     const output0Amt = isCreateWithdrawalTx
-      ? tx.outs[2].value
-      : tx.outs[1].value
+      ? tx.outs[CONTRACT_INDEXES.outputIndex.withdrawalExpander.inBridgeTx].value
+      : tx.outs[CONTRACT_INDEXES.outputIndex.withdrawalExpander.inDepositAggregatorTx.first].value
     const stateHash0 = isCreateWithdrawalTx
       ? Sha256(splitHashFromStateOutput(tx)[1])
       : Sha256(splitHashFromStateOutput(tx)[0])
@@ -231,7 +232,7 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
     let output1Amt = 0n
     let stateHash1 = createEmptySha256()
     if (!isCreateWithdrawalTx && !isSingleExpanderOutput) {
-      output1Amt = tx.outs[2].value
+      output1Amt = tx.outs[CONTRACT_INDEXES.outputIndex.withdrawalExpander.inDepositAggregatorTx.second].value
       stateHash1 = Sha256(splitHashFromStateOutput(tx)[1])
     }
 

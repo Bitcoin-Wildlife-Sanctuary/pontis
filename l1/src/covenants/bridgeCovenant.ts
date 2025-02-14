@@ -20,6 +20,7 @@ import { BatchMerkleTree, BridgeMerkle } from '../util/merkleUtils'
 import { Transaction } from '@scrypt-inc/bitcoinjs-lib'
 import { toXOnly } from '../lib/utils'
 import { MerklePath } from '../contracts/merklePath'
+import { CONTRACT_INDEXES } from './util'
 export type BridgeState = {
   batchesRoot: Sha256
   merkleTree: BatchMerkleTree
@@ -271,7 +272,7 @@ export class BridgeCovenant extends Covenant<BridgeState> {
       inputs: inputsToSegmentByteString(tx),
 
       contractSPK,
-      contractAmt: tx.outs[1].value,
+      contractAmt: tx.outs[CONTRACT_INDEXES.outputIndex.bridge].value,
       expanderSPK,
       expanderAmt,
       expanderStateHash,

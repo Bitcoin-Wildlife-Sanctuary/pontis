@@ -30,7 +30,7 @@ export {
     TracedWithdrawalExpander, 
     WithdrawalExpanderState
 } from './covenants/withdrawalExpanderCovenant'
-export { getScriptPubKeys as getContractScriptPubKeys } from './covenants/instance'
+export { getScriptPubKeys as getContractScriptPubKeys } from './covenants/util'
 
 
 
