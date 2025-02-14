@@ -4,6 +4,7 @@ import { ByteString, hash256, len, Sha256, toByteString } from 'scrypt-ts'
 import { MerklePath, Node, NodePos } from '../contracts/merklePath'
 import { WithdrawalExpander } from '../contracts/withdrawalExpander'
 import { cloneDeep } from 'lodash-es'
+import { WithdrawalExpanderCovenant, WithdrawalExpanderState } from '../covenants/index'
 
 // node length = 32 bytes (sha256) + 8 bytes (amt)
 export const WithdrawalLength = 32 + 8
@@ -206,11 +207,7 @@ export class WithdrawalMerkle {
     throw new Error('should not reach here')
   }
 
-  static getMerkleRoot(withdrawals: Withdrawal[]) {
-    withdrawals = cloneDeep(withdrawals)
-    if (withdrawals.length == 0) {
-      throw new Error('withdrawals length must be greater than 0')
-    }
+  private static padEmptyWithdrawals(withdrawals: Withdrawal[]) {
     const treeHeight = Math.ceil(Math.log2(withdrawals.length))
     const totalLeafCount = 1 << treeHeight
     // padRight empty leafHashes
@@ -220,23 +217,70 @@ export class WithdrawalMerkle {
         amt: 0n,
       })
     }
+    return withdrawals
+  }
+
+  static getMerkleRoot(withdrawals: Withdrawal[]) {
+    withdrawals = cloneDeep(withdrawals)
+    withdrawals = this.padEmptyWithdrawals(withdrawals)
     return this.calculateMerkle(withdrawals).root
   }
 
-  static getMerkleLevels(withdrawals: Withdrawal[]) {
+  static getRootState(withdrawals: Withdrawal[]): WithdrawalExpanderState {
     withdrawals = cloneDeep(withdrawals)
+    withdrawals = this.padEmptyWithdrawals(withdrawals)
+    const levels = this.getMerkleLevels(withdrawals)
+    if (levels.length === 1) {
+      return WithdrawalExpanderCovenant.createLeafState(
+        withdrawals[0].l1Address,
+        withdrawals[0].amt
+      )
+    } else {
+      return WithdrawalExpanderCovenant.createNonLeafState(
+        BigInt(levels.length - 1),
+        levels[1][0].hash,
+        levels[1][1].hash,
+        levels[1][0].amt,
+        levels[1][1].amt
+      )
+    }
+  }
+
+  static assertHashExists(allWithdrawals: Withdrawal[], hash: Sha256) {
+    const levels = this.getMerkleLevels(allWithdrawals)
+    const node = levels.flat().find((v) => v.hash === hash)
+    if (!node) {
+      throw new Error(`expander hash: ${hash} not found in any level`)
+    }
+  }
+
+  static getStateForHash(allWithdrawals: Withdrawal[], hash: Sha256) {
+    this.assertHashExists(allWithdrawals, hash)
+    const levels = this.getMerkleLevels(allWithdrawals)
+    const node = levels.flat().find((v) => v.hash === hash)
+    if (node.level === 0n) {
+      return WithdrawalExpanderCovenant.createLeafState(
+        node.withdrawals[0].l1Address,
+        node.withdrawals[0].amt
+      )
+    } else {
+      const children = this.getHashChildren(allWithdrawals, hash)
+      return WithdrawalExpanderCovenant.createNonLeafState(
+        node.level,
+        children.leftChild.hash,
+        children.rightChild.hash,
+        children.leftChild.amt,
+        children.rightChild.amt
+      )
+    }
+  }
+
+  static getMerkleLevels(withdrawals: Withdrawal[]) {
     if (withdrawals.length == 0) {
       throw new Error('withdrawals length must be greater than 0')
     }
-    const treeHeight = Math.ceil(Math.log2(withdrawals.length))
-    const totalLeafCount = 1 << treeHeight
-    // padRight empty leafHashes
-    while (totalLeafCount > withdrawals.length) {
-      withdrawals.push({
-        l1Address: toByteString(''),
-        amt: 0n,
-      })
-    }
+    withdrawals = cloneDeep(withdrawals)
+    withdrawals = this.padEmptyWithdrawals(withdrawals)
     return this.calculateMerkle(withdrawals).levels
   }
 

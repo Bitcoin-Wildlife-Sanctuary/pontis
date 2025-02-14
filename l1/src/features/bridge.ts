@@ -12,7 +12,7 @@ import {
   TracedDepositAggregator,
   WithdrawalExpanderCovenant,
   WithdrawalExpanderState,
-} from '../covenants'
+} from '../covenants/index'
 import { ExtPsbt } from '../lib/extPsbt'
 import { getScriptPubKeys } from '../covenants/util'
 import { pickLargeFeeUtxo } from './utils/pick'
@@ -301,7 +301,6 @@ export async function createWithdrawalExpander(
 ) {
   const changeAddress = await signer.getAddress()
   const withdrawalMerkleRoot = WithdrawalMerkle.getMerkleRoot(withdrawals)
-  const withdrawalLevels = WithdrawalMerkle.getMerkleLevels(withdrawals)
 
   withdrawals.forEach((withdrawal) =>
     WithdrawalMerkle.checkWithdrawalValid(withdrawal)
@@ -321,19 +320,8 @@ export async function createWithdrawalExpander(
     tracedBridge.covenant.state
   )
 
-  const outputWithdrawalState: WithdrawalExpanderState =
-    withdrawalLevels.length === 1
-      ? WithdrawalExpanderCovenant.createLeafState(
-          withdrawals[0].l1Address,
-          withdrawals[0].amt
-        )
-      : WithdrawalExpanderCovenant.createNonLeafState(
-          BigInt(withdrawalLevels.length - 1),
-          withdrawalLevels[1][0].hash,
-          withdrawalLevels[1][1].hash,
-          withdrawalLevels[1][0].amt,
-          withdrawalLevels[1][1].amt
-        )
+  const outputWithdrawalState = WithdrawalMerkle.getRootState(withdrawals)
+  
   const outputWithdrawalExpanderCovenant = new WithdrawalExpanderCovenant(
     tracedBridge.covenant.operator,
     outputWithdrawalState

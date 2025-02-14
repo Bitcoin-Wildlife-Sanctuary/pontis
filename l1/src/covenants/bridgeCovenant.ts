@@ -69,11 +69,11 @@ export class BridgeCovenant extends Covenant<BridgeState> {
     this.state = state
   }
 
-  serializedState(): ByteString {
+  serializedState() {
     return BridgeCovenant.serializeState(this.state)
   }
 
-  static serializeState(state: BridgeState): ByteString {
+  static serializeState(state: BridgeState) {
     return Bridge.getStateHash(
       state.batchesRoot,
       state.depositAggregatorSPK

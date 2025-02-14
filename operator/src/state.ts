@@ -92,7 +92,7 @@ export type DepositBatch =
       verifyTx: L1Tx;
     } & DepositBatchCommon);
 
-type Withdrawal = {
+export type Withdrawal = {
   amount: bigint;
   recipient: L1Address;
   origin: L2TxHash;
@@ -104,7 +104,7 @@ type WithdrawalBatchCommon = {
   withdrawals: Withdrawal[];
 };
 
-type WithdrawalBatch =
+export type WithdrawalBatch =
   | ({
       status: 'PENDING';
       id: bigint;

@@ -1,21 +1,21 @@
 import {loadContractArtifacts, getContractScriptPubKeys, btcRpc, utils, BridgeCovenant, bridgeFeatures} from 'l1'
 import * as env from './env'
 import { PubKey } from 'scrypt-ts'
-import { createDbFile, getOffChainDB } from './utils/offchain'
-import { createL1ChainProvider } from './utils/chain'
+import { getFileOffChainDataProvider } from './deps/offchainDataProvider'
+import { createL1Provider, Utxo } from './deps/l1Provider'
 import { L1TxHash } from '../state'
 import { getContractAddresses } from './utils/contractUtil';
 export async function createBridgeContract() {
     const operatorPubKey = await env.operatorSigner.getPublicKey()
     const addresses = await getContractAddresses(env.operatorSigner, env.l1Network);
-    const l1ChainProvider = createL1ChainProvider();
+    const l1Provider = createL1Provider(env.useRpc, env.rpcConfig, env.l1Network);
     
     let shouldCreateBridge = false;
-    const offchainDB = getOffChainDB();
+    const offchainDB = getFileOffChainDataProvider();
     const bridgeTxid = await offchainDB.getLatestBridgeTxid();
     if (bridgeTxid) {
-        const utxos = await l1ChainProvider.listUtxos(addresses.bridge);
-        const findUtxo = utxos.find(utxo => utxo.txId === bridgeTxid);
+        const utxos = await l1Provider.listUtxos(addresses.bridge);
+        const findUtxo = utxos.find((utxo: Utxo) => utxo.txId === bridgeTxid);
         shouldCreateBridge = findUtxo ? false : true;
     } else {
         shouldCreateBridge = true;
@@ -98,9 +98,6 @@ export async function prepareL1() {
     
     // 2. add contract spks and operator signer to node if using rpc providers
     await importAddressesIntoNode()
-
-    // 3. create l1 offchain db if not exists
-    createDbFile()
 
     // 4. create bridge contract instance if not exists
     await createBridgeContract()

@@ -52,7 +52,8 @@ export type TracedWithdrawalExpander = {
 
 export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState> {
   static readonly LOCKED_ASM_VERSION = 'a2d3f1ef3ca7aaf5f6698d2254adbdc4'
-
+  static readonly MAX_LEVEL_FOR_DISTRIBUTE = 2n;
+  
   constructor(
     readonly operator: PubKey,
     state: WithdrawalExpanderState,
@@ -271,11 +272,11 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
     return res
   }
 
-  serializedState(): ByteString {
+  serializedState() {
     return WithdrawalExpanderCovenant.serializeState(this.state)
   }
 
-  static serializeState(state: WithdrawalExpanderState): ByteString {
+  static serializeState(state: WithdrawalExpanderState) {
     if (state.level === 0n) {
       return WithdrawalExpander.getLeafNodeHash(
         state.withdrawAddressScript,

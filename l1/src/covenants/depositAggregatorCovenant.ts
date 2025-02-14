@@ -147,11 +147,11 @@ export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> 
     this.state = state
   }
 
-  serializedState(): ByteString {
+  serializedState() {
     return DepositAggregatorCovenant.serializeState(this.state)
   }
 
-  static serializeState(state: DepositAggregatorState): ByteString {
+  static serializeState(state: DepositAggregatorState) {
     if (state.level === 0n) {
       return DepositAggregator.hashDepositData(
         0n,

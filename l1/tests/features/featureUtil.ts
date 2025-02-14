@@ -12,7 +12,7 @@ import * as withdrawFeature from '../../src/features/withdraw'
 
 import { TraceableBridgeUtxo } from '../../src/covenants/bridgeCovenant'
 import { Withdrawal } from '../../src/util/merkleUtils'
-import { TraceableWithdrawalExpanderUtxo } from '../../src/covenants'
+import { TraceableWithdrawalExpanderUtxo } from '../../src/covenants/index'
 import { Postage } from '../../src/lib/constants'
 import { NETWORK } from '../utils/env'
 

@@ -1,6 +1,5 @@
-import { DepositBatch, L1TxHash, L2Address } from "../../state";
+import { DepositBatch, L1TxHash, L2Address, Deposit, Withdrawal } from "../../state";
 import { DepositAggregatorCovenant, DepositAggregatorState, getContractScriptPubKeys, Signer, SupportedNetwork, utils } from "l1";
-import { Deposit } from "../../state";
 import { ByteString, PubKey, Sha256 } from "scrypt-ts"; 
 import { stateHashToBatchID } from "l1";
 

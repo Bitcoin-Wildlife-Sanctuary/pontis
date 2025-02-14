@@ -20,7 +20,7 @@ import { verifyInputSpent } from '../utils/txHelper'
 import { createLogger } from './logUtil'
 import { Withdrawal } from '../../src/util/merkleUtils'
 import { addressToScript } from '../../src/lib/utils'
-import { TraceableBridgeUtxo } from '../../src/covenants'
+import { TraceableBridgeUtxo } from '../../src/covenants/index'
 import { sleepTxTime } from '../utils/sleep'
 
 use(chaiAsPromised)

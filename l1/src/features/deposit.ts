@@ -6,7 +6,7 @@ import {
   DepositAggregatorCovenant,
   TraceableDepositAggregatorUtxo,
   TracedDepositAggregator,
-} from '../covenants'
+} from '../covenants/index'
 import { Postage, SupportedNetwork } from '../lib/constants'
 import { getDummyUtxo, supportedNetworkToBtcNetwork } from '../lib/utils'
 import { DUST_LIMIT, ExtPsbt } from '../lib/extPsbt'

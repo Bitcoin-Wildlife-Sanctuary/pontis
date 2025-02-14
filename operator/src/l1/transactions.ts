@@ -1,9 +1,9 @@
 import { DepositBatch, L1Tx, L1TxId, L1TxStatus } from '../state';
-import { from, interval, Observable, switchMap, takeWhile } from 'rxjs';
+import { from, interval, Observable, switchMap, takeWhile, tap } from 'rxjs';
 import * as l1Api from './api';
-import { createL1ChainProvider, UNCONFIRMED_BLOCK_NUMBER } from './utils/chain';
+import { createL1Provider, UNCONFIRMED_BLOCK_NUMBER } from './deps/l1Provider';
 import * as env from './env';
-import { getOffChainDB } from './utils/offchain';
+import { getFileOffChainDataProvider } from './deps/offchainDataProvider';
 
 export function l1TransactionStatus(
   // add whatever parameters you need
@@ -11,17 +11,17 @@ export function l1TransactionStatus(
 ): Observable<L1TxStatus> {
   return interval(5000).pipe(
     switchMap(() => from(getL1TransactionStatus(tx))),
-    takeWhile((tx) => tx.status === 'MINED')
-  );
+    takeWhile((tx) => tx.status === 'MINED'),
+  )
 }
 
 async function getL1TransactionStatus(
   tx: L1TxId
   // add whatever parameters you need
 ): Promise<L1TxStatus> {
-  const l1ChainProvider = createL1ChainProvider();
+  const l1ChainProvider = createL1Provider(env.useRpc, env.rpcConfig, env.l1Network);
   const status = await l1Api.getL1TransactionStatus(l1ChainProvider, tx.hash);
-  // console.log(`getL1TransactionStatus(${tx.hash}) status: ${status}`)
+  console.log(`getL1TransactionStatus(${tx.hash}) status: ${status}`)
   return {
     ...tx,
     status: status,
@@ -29,7 +29,7 @@ async function getL1TransactionStatus(
 }
 
 export async function aggregateDeposits(batch: DepositBatch): Promise<L1Tx[]> {
-  const txids = await l1Api.aggregateDeposits(
+  const txids = await l1Api.aggregateLevelDeposits(
     env.operatorSigner,
     env.l1Network,
     env.createUtxoProvider(),
@@ -53,8 +53,8 @@ export async function finalizeBatch(batch: DepositBatch): Promise<L1Tx> {
     env.l1Network,
     env.createUtxoProvider(),
     env.createChainProvider(),
-    createL1ChainProvider(),
-    getOffChainDB(),
+    createL1Provider(env.useRpc, env.rpcConfig, env.l1Network),
+    getFileOffChainDataProvider(),
 
     env.l1FeeRate,
 

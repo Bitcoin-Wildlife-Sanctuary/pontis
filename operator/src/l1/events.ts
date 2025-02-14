@@ -12,8 +12,8 @@ import {
 import { BlockNumberEvent, Deposit, Deposits } from '../state';
 import * as l1Api from './api';
 import * as env from './env';
-import { createL1ChainProvider } from './utils/chain';
-import { getOffChainDB } from './utils/offchain';
+import { createL1Provider } from './deps/l1Provider';
+import { getFileOffChainDataProvider } from './deps/offchainDataProvider';
 
 const POLL_INTERVAL = 5000;
 
@@ -52,7 +52,7 @@ export function deposits(initialBlockNumber: number): Observable<Deposits> {
 }
 
 async function getCurrentL1BlockNumber(): Promise<number> {
-  return l1Api.getL1CurrentBlockNumber(createL1ChainProvider());
+  return l1Api.getL1CurrentBlockNumber(createL1Provider(env.useRpc, env.rpcConfig, env.l1Network));
 }
 
 async function depositsInRange(
@@ -62,8 +62,8 @@ async function depositsInRange(
   const deposits = await  l1Api.listDeposits(
    blockFrom,
    blockTo,
-   createL1ChainProvider(),
-   getOffChainDB()
+   createL1Provider(env.useRpc, env.rpcConfig, env.l1Network),
+   getFileOffChainDataProvider()
   );
   // console.log('deposits', blockFrom, blockTo, deposits)
   return deposits

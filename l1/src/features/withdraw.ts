@@ -27,58 +27,31 @@ export async function expandWithdrawal(
   feeRate: number
 ) {
   const changeAddress = await signer.getAddress()
-
-  const withdrawalLevels =
-    WithdrawalMerkle.getMerkleLevels(allWithdrawals).flat()
+  const hash = WithdrawalExpanderCovenant.serializeState(
+    expanderUtxo.state
+  )
+  WithdrawalMerkle.assertHashExists(allWithdrawals, hash);
+  if (expanderUtxo.state.level <= WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE) {
+    throw new Error(`withdrawal expander level should be greater than ${WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE}`)
+  }
 
   const tracedWithdrawalExpander = await WithdrawalExpanderCovenant.backtrace(
     expanderUtxo,
     chainProvider
   )
 
-  const hash = tracedWithdrawalExpander.covenant.serializedState()
-  const levelWithdrawals = withdrawalLevels.find((v) => v.hash === hash)
-  if (!levelWithdrawals) {
-    throw new Error(`cannot find withdrawals for ${hash}`)
-  }
-  if (levelWithdrawals.withdrawals.length <= 4) {
-    throw new Error(
-      `withdrawals length should be greater than 4, but got ${levelWithdrawals.withdrawals.length}`
-    )
-  }
-
-  const childrenForCurrent = WithdrawalMerkle.getHashChildren(
+  const children = WithdrawalMerkle.getHashChildren(
     allWithdrawals,
-    Sha256(hash)
-  )
-  const childrenForLeft = WithdrawalMerkle.getHashChildren(
-    allWithdrawals,
-    Sha256(childrenForCurrent.leftChild.hash)
-  )
-  const childrenForRight = WithdrawalMerkle.getHashChildren(
-    allWithdrawals,
-    Sha256(childrenForCurrent.rightChild.hash)
+    hash
   )
 
   const outputWithdrawalExpander0Covenant = new WithdrawalExpanderCovenant(
     tracedWithdrawalExpander.covenant.operator,
-    WithdrawalExpanderCovenant.createNonLeafState(
-      childrenForCurrent.leftChild.level,
-      childrenForLeft.leftChild.hash,
-      childrenForLeft.rightChild.hash,
-      childrenForLeft.leftChild.amt,
-      childrenForLeft.rightChild.amt
-    )
-  )
+    WithdrawalMerkle.getStateForHash(allWithdrawals, children.leftChild.hash)
+  ) 
   const outputWithdrawalExpander1Covenant = new WithdrawalExpanderCovenant(
     tracedWithdrawalExpander.covenant.operator,
-    WithdrawalExpanderCovenant.createNonLeafState(
-      childrenForCurrent.rightChild.level,
-      childrenForRight.leftChild.hash,
-      childrenForRight.rightChild.hash,
-      childrenForRight.leftChild.amt,
-      childrenForRight.rightChild.amt
-    )
+    WithdrawalMerkle.getStateForHash(allWithdrawals, children.rightChild.hash)
   )
 
   if (
@@ -275,27 +248,25 @@ export async function distributeWithdrawals(
   const withdrawalLevels =
     WithdrawalMerkle.getMerkleLevels(allWithdrawals).flat()
 
+  const hash = WithdrawalExpanderCovenant.serializeState(
+    withdrawalExpanderUtxo.state
+  )
+  WithdrawalMerkle.assertHashExists(allWithdrawals, hash);
+  if (withdrawalExpanderUtxo.state.level > WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE) {
+    throw new Error(`withdrawal expander level should be less than ${WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE}`)
+  }
+  const {withdrawals} = withdrawalLevels.find((v) => v.hash === hash)
+  
   const tracedWithdrawalExpander = await WithdrawalExpanderCovenant.backtrace(
     withdrawalExpanderUtxo,
     chainProvider
   )
 
-  const hash = tracedWithdrawalExpander.covenant.serializedState()
-  const levelWithdrawals = withdrawalLevels.find((v) => v.hash === hash)
-  if (!levelWithdrawals) {
-    throw new Error(`cannot find withdrawals for ${hash}`)
-  }
-  if (levelWithdrawals.withdrawals.length > 4) {
-    throw new Error(
-      `withdrawals length should be less than 4, but got ${levelWithdrawals.withdrawals.length}`
-    )
-  }
-
   const est = estimateDistributeWithdrawalsVSize(
     network,
     withdrawalExpanderUtxo,
     tracedWithdrawalExpander,
-    levelWithdrawals.withdrawals,
+    withdrawals,
     changeAddress,
     feeRate
   )
@@ -318,7 +289,7 @@ export async function distributeWithdrawals(
     feeUtxo,
     withdrawalExpanderUtxo,
     tracedWithdrawalExpander,
-    levelWithdrawals.withdrawals,
+    withdrawals,
     changeAddress,
     feeRate
   )

@@ -354,7 +354,10 @@ export function outputToByteString(
   return tools.toHex(buffer)
 }
 
-export function outputToUtxo(tx: Transaction, outputIndex: number): UTXO {
+export function outputToUtxo(tx: Transaction | string, outputIndex: number): UTXO {
+  if (typeof tx === 'string') {
+    tx = Transaction.fromHex(tx)
+  }
   return {
     txId: tx.getId(),
     outputIndex: outputIndex,
@@ -431,4 +434,14 @@ export function txToUtxo(tx: Transaction | string, outputIndex: number): UTXO {
     script: tools.toHex(tx.outs[outputIndex].script),
     satoshis: Number(tx.outs[outputIndex].value),
   }
+}
+
+export function getUtxoByScript(tx: Transaction, scriptHex: string): UTXO[] {
+  const utxos: UTXO[] = []
+  for (let i = 0; i < tx.outs.length; i++) {
+    if (tools.toHex(tx.outs[i].script) === scriptHex) {
+      utxos.push(txToUtxo(tx, i))
+    }
+  }
+  return utxos
 }
