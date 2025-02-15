@@ -5,6 +5,7 @@ import { MerklePath, Node, NodePos } from '../contracts/merklePath'
 import { WithdrawalExpander } from '../contracts/withdrawalExpander'
 import { cloneDeep } from 'lodash-es'
 import { WithdrawalExpanderCovenant, WithdrawalExpanderState } from '../covenants/index'
+import { isP2trScript, isP2wpkhScript, isP2wshScript } from '../lib/utils'
 
 // node length = 32 bytes (sha256) + 8 bytes (amt)
 export const WithdrawalLength = 32 + 8
@@ -312,22 +313,8 @@ export class WithdrawalMerkle {
     }
     // only support witness script
     // p2tr script: 5120 + tweakedPubKey(32 bytes)
-    if (withdrawal.l1Address.startsWith('5120')) {
-      if (len(withdrawal.l1Address) !== 34n) {
-        throw new Error('p2tr address length must be 34')
-      }
-    }
-    // p2wsh script: 0020 + scriptHash(32 bytes)
-    if (withdrawal.l1Address.startsWith('0020')) {
-      if (len(withdrawal.l1Address) !== 34n) {
-        throw new Error('p2wsh address length must be 34')
-      }
-    }
-    // p2wpkh script: 0014 + pubKeyHash(20 bytes)
-    if (withdrawal.l1Address.startsWith('0014')) {
-      if (len(withdrawal.l1Address) !== 22n) {
-        throw new Error('p2wpkh address length must be 22')
-      }
+    if (!isP2trScript(withdrawal.l1Address) && !isP2wshScript(withdrawal.l1Address) && !isP2wpkhScript(withdrawal.l1Address)) {
+      throw new Error('withdrawal address must be p2tr, p2wsh or p2wpkh script')
     }
   }
 }

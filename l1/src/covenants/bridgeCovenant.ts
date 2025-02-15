@@ -43,7 +43,7 @@ export interface TraceableBridgeUtxo extends BridgeUtxo {
 
 export class BridgeCovenant extends Covenant<BridgeState> {
   // locked bridge artifact md5 hash
-  static readonly LOCKED_ASM_VERSION = '6e405d9709ed98c1807becc5e2f1f921'
+  static readonly LOCKED_ASM_VERSION = '38414eda5e0961c7aaf9ef43bcf592e5'
 
   static readonly EMPTY_BATCH_ID = MerklePath.NULL_NODE
 

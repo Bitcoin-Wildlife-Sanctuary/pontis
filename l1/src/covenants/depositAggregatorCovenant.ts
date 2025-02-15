@@ -117,7 +117,7 @@ export interface TraceableDepositAggregatorUtxo extends DepositAggregatorUtxo {
 }
 
 export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> {
-  static readonly LOCKED_ASM_VERSION = 'dc1b263974ed04fc15d9f67f57a4e881'
+  static readonly LOCKED_ASM_VERSION = 'e96aa2300add2d4c09fd96735460917d'
 
   constructor(
     readonly operator: PubKey,

@@ -14,6 +14,7 @@ import { randomBytes } from 'crypto'
 import {
   ByteString,
   hash160,
+  len,
   PubKey,
   Ripemd160,
   toByteString,
@@ -110,6 +111,30 @@ export function bigintToByteString(n: bigint, size: bigint): ByteString {
 
 export function toPsbtHex(tx: btc.Transaction): string {
   return toPsbt(tx).toHex()
+}
+
+export function isP2trScript(script: string): boolean {
+  // p2tr script: 5120 + tweakedPubKey(32 bytes)
+  if (script.startsWith('5120')) {
+    return len(script) === 34n
+  }
+  return false
+}
+
+export function isP2wshScript(script: string): boolean {
+  // p2wsh script: 0020 + scriptHash(32 bytes)
+  if (script.startsWith('0020')) {
+    return len(script) === 34n
+  }
+  return false
+}
+
+export function isP2wpkhScript(script: string): boolean {
+  // p2wpkh script: 0014 + pubKeyHash(20 bytes)
+  if (script.startsWith('0014')) {
+    return len(script) === 22n
+  }
+  return false
 }
 
 export function toXOnly(pubKeyHex: string, isP2TR: boolean): string {

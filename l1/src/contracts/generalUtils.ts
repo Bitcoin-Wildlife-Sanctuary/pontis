@@ -24,19 +24,28 @@ export class GeneralUtils extends SmartContractLib {
 
     // check the amt is less or equal than int32.max, avoid overflow
     assert(amt <= 0x7fffffff)
+
+    assert(amt >= 0n)
     // const res = int2ByteString(amt, 8n)
     let res = int2ByteString(amt)
-    if (res == toByteString('')) {
+    if (len(res) == 0n) {
       res = toByteString('0000000000000000')
-    } else if (amt < 0x0100n) {
-      res += toByteString('00000000000000')
-    } else if (amt < 0x010000n) {
-      res += toByteString('000000000000')
-    } else if (amt < 0x01000000n) {
-      res += toByteString('0000000000')
-    } else if (amt <= 0x7fffffffn) {
-      res += toByteString('00000000')
-    } else {
+    } else if (len(res) == 1n) {
+      res = res + toByteString('00000000000000')
+    } else if (len(res) == 2n) {
+      res = res + toByteString('000000000000')
+    } else if (len(res) == 3n) {
+      res = res + toByteString('0000000000')
+    } else if (len(res) == 4n) {
+      res = res + toByteString('00000000')
+    } else if (len(res) == 5n) {
+      res = res + toByteString('000000')
+    } else if (len(res) == 6n) {
+      res = res + toByteString('0000')
+    } else if (len(res) == 7n) {
+      res = res + toByteString('00')
+    }
+    if (len(res) > 8n) {
       assert(false)
     }
     return res

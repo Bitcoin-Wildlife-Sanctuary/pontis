@@ -49,6 +49,7 @@ export {MempoolChainProvider} from './providers/mempoolChainProvider'
 export {MempoolUtxoProvider} from './providers/mempoolUtxoProvider'
 export {RPCChainProvider} from './providers/rpcChainProvider'
 export {RPCUtxoProvider} from './providers/rpcUtxoProvider'
+export { TestUtxoProvider, TestChainProvider } from './providers/testProvider'
 
 export * from './lib/signer'
 export {DefaultSigner} from './signers/defaultSigner'

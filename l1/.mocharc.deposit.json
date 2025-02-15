@@ -2,7 +2,7 @@
   "diff": true,
   "node-option": ["import=tsx"],
   "extensions": ["ts"],
-  "spec": ["./tests/**/deposit.test.ts"],
+  "spec": ["./tests/**/util.test.ts", "./tests/**/deposit.test.ts"],
   "package": "./package.json",
   "reporter": "spec",
   "slow": "75",
