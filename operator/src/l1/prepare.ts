@@ -1,47 +1,10 @@
-import {loadContractArtifacts, getContractScriptPubKeys, btcRpc, utils, BridgeCovenant, bridgeFeatures} from 'l1'
+import {loadContractArtifacts, btcRpc} from 'l1'
 import * as env from './env'
-import { PubKey } from 'scrypt-ts'
 import { getFileOffChainDataProvider } from './deps/offchainDataProvider'
-import { createL1Provider, Utxo } from './deps/l1Provider'
-import { L1TxHash } from '../state'
+import { createL1Provider } from './deps/l1Provider'
 import { getContractAddresses } from './utils/contractUtil';
-export async function createBridgeContract() {
-    const operatorPubKey = await env.operatorSigner.getPublicKey()
-    const addresses = await getContractAddresses(env.operatorSigner, env.l1Network);
-    const l1Provider = createL1Provider(env.useRpc, env.rpcConfig, env.l1Network);
-    
-    let shouldCreateBridge = false;
-    const offchainDB = getFileOffChainDataProvider();
-    const bridgeTxid = await offchainDB.getLatestBridgeTxid();
-    if (bridgeTxid) {
-        const utxos = await l1Provider.listUtxos(addresses.bridge);
-        const findUtxo = utxos.find((utxo: Utxo) => utxo.txId === bridgeTxid);
-        shouldCreateBridge = findUtxo ? false : true;
-    } else {
-        shouldCreateBridge = true;
-    }
-
-    if (!shouldCreateBridge) {
-        return;
-    }
-
-    const { txid, state } = await bridgeFeatures.deployBridge(
-        PubKey(operatorPubKey),
-        env.operatorSigner,
-        env.l1Network,
-        env.createUtxoProvider(),
-        env.createChainProvider(),
-        env.l1FeeRate
-    )
-    console.log('prev bridge txid', bridgeTxid)
-    console.log('deployBridge txid', txid)
-    await offchainDB.setLatestBridgeTxid(txid as L1TxHash);
-    await offchainDB.setBridgeState(txid as L1TxHash, state.batchesRoot, state.merkleTree, state.depositAggregatorSPK);
-}
-
+import * as api from './api';
 export async function importAddressesIntoNode() {
-    const operatorPubKey = await env.operatorSigner.getPublicKey()
-
     const addresses = await getContractAddresses(env.operatorSigner, env.l1Network);
 
     console.log('l1 addresses:')
@@ -100,5 +63,13 @@ export async function prepareL1() {
     await importAddressesIntoNode()
 
     // 4. create bridge contract instance if not exists
-    await createBridgeContract()
+    await api.createBridgeContractIfNotExists(
+        env.operatorSigner,
+        env.l1Network,
+        env.createUtxoProvider(),
+        env.createChainProvider(),
+        getFileOffChainDataProvider(),
+        createL1Provider(env.useRpc, env.rpcConfig, env.l1Network),
+        env.l1FeeRate
+    )
 }

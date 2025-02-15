@@ -1,8 +1,7 @@
-import { BridgeCovenant, DepositAggregatorCovenant, getContractScriptPubKeys, Signer, TraceableDepositAggregatorUtxo, utils, BridgeMerkle, BatchMerkleTree, BATCH_MERKLE_TREE_LENGTH, BridgeState, TraceableBridgeUtxo, SupportedNetwork, UtxoProvider, ChainProvider, TraceableWithdrawalExpanderUtxo, WithdrawalMerkle, Withdrawal as L1Withdrawal, withdrawFeatures } from "l1";
-import { Deposit, DepositBatch, L1Tx, L1TxHash, L1TxStatus, L2Address, WithdrawalBatch } from "../state";
+import { BridgeCovenant, getContractScriptPubKeys, Signer, TraceableDepositAggregatorUtxo, utils, BATCH_MERKLE_TREE_LENGTH, BridgeState, TraceableBridgeUtxo, SupportedNetwork, UtxoProvider, ChainProvider, TraceableWithdrawalExpanderUtxo, WithdrawalMerkle, Withdrawal as L1Withdrawal, withdrawFeatures } from "l1";
+import { Deposit, DepositBatch, L1TxHash, L1TxStatus, L2Address, WithdrawalBatch } from "../state";
 import { PubKey, Sha256, UTXO } from 'scrypt-ts'
 import { bridgeFeatures, depositFeatures } from "l1";
-import * as env from "./env";
 import { calculateDepositState, checkDepositBatch, getDepositBatchHeight, getDepositBatchID, l2AddressToHex, getContractAddresses } from "./utils/contractUtil";
 import { UNCONFIRMED_BLOCK_NUMBER, L1Provider, DEFAULT_FROM_BLOCK, DEFAULT_TO_BLOCK, Utxo } from "./deps/l1Provider";
 import { OffchainDataProvider } from "./deps/offchainDataProvider";
@@ -37,16 +36,63 @@ async function checkBridgeUtxo(
     ] as const
 }
 
+export async function createBridgeContractIfNotExists(
+    operatorSigner: Signer,
+    l1Network: SupportedNetwork,
+    utxoProvider: UtxoProvider,
+    chainProvider: ChainProvider,
+    offchainDataProvider: OffchainDataProvider, 
+    l1Provider: L1Provider,
+    feeRate: number,
+    logTxids: boolean = true
+) {
+    const operatorPubKey = await operatorSigner.getPublicKey();
+    const addresses = await getContractAddresses(operatorSigner, l1Network);
+
+    let shouldCreateBridge = false;
+    const latestBridgeTxid = await offchainDataProvider.getLatestBridgeTxid();
+    if (latestBridgeTxid) {
+        const utxos = await l1Provider.listUtxos(addresses.bridge);
+        const findUtxo = utxos.find((utxo: Utxo) => utxo.txId === latestBridgeTxid);
+        shouldCreateBridge = findUtxo ? false : true;
+    } else {
+        shouldCreateBridge = true;
+    }
+
+    if (!shouldCreateBridge) {
+        return latestBridgeTxid as L1TxHash;
+    }
+
+    const { txid, state } = await bridgeFeatures.deployBridge(
+        PubKey(operatorPubKey),
+        operatorSigner,
+        l1Network,
+        utxoProvider,
+        chainProvider,
+        feeRate
+    )
+    if (logTxids) {
+        console.log('prev bridge txid', latestBridgeTxid)
+        console.log('deployBridge txid', txid)
+    }
+    await offchainDataProvider.setLatestBridgeTxid(txid as L1TxHash);
+    await offchainDataProvider.setBridgeState(txid as L1TxHash, state.batchesRoot, state.merkleTree, state.depositAggregatorSPK);
+
+    return txid as L1TxHash;
+}
+
 /// list all deposits from l1
 export async function listDeposits(
     fromBlock: number,
     toBlock: number,
+    operatorSigner: Signer,
+    l1Network: SupportedNetwork,
     l1Provider: L1Provider,
     offchainDataProvider: OffchainDataProvider
 ): Promise<Deposit[]> {
     // console.log(`listDeposits(${fromBlock}, ${toBlock})`)
     // query utxo(address = depositAggregator) from node;
-    const addresses = await getContractAddresses(env.operatorSigner, env.l1Network);
+    const addresses = await getContractAddresses(operatorSigner, l1Network);
     const utxos = await l1Provider.listUtxos(addresses.depositAggregator, fromBlock, toBlock);
     let deposits: Deposit[] = [];
     for (const utxo of utxos) {
@@ -184,6 +230,10 @@ export async function finalizeDepositBatchOnL1(
 ): Promise<L1TxHash> {
     // console.log(`finalizeDepositBatchOnL1(batch)`)
     checkDepositBatch(batch.deposits);
+
+    if ((batch as DepositBatch & { status: 'FINALIZED' }).finalizeBatchTx) {
+        throw new Error('batch is already finalized, should not finalize again');
+    }
 
 
     const operatorPubKey = await operatorSigner.getPublicKey();

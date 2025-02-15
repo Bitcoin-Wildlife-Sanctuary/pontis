@@ -2,7 +2,7 @@ import { L1TxHash, L2Address } from "../../../state";
 import { OffchainFileStruct } from "./fileOffchainDataProvider";
 import { OffchainDataProvider } from "./type";
 
-class InMemoryOffchainDataProvider implements OffchainDataProvider {
+class MemoryOffchainDataProvider implements OffchainDataProvider {
     public data: OffchainFileStruct;
 
     constructor(initData: OffchainFileStruct) {
@@ -49,11 +49,11 @@ class InMemoryOffchainDataProvider implements OffchainDataProvider {
 }
 
 
-export function getInMemoryOffChainDB(): OffchainDataProvider {
+export function createMemoryOffChainDB(): OffchainDataProvider {
     let memoryDB: OffchainFileStruct = {
         depositInfo: {},
         latestBridgeTxid: '',
         bridgeState: {}
     }
-    return new InMemoryOffchainDataProvider(memoryDB);
+    return new MemoryOffchainDataProvider(memoryDB);
 }

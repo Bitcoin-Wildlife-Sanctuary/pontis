@@ -62,6 +62,8 @@ async function depositsInRange(
   const deposits = await  l1Api.listDeposits(
    blockFrom,
    blockTo,
+   env.operatorSigner,
+   env.l1Network,
    createL1Provider(env.useRpc, env.rpcConfig, env.l1Network),
    getFileOffChainDataProvider()
   );

@@ -11,6 +11,7 @@
     "prepare": "npm run compile",
     "pretest": "npm run compile",
     "posttest": "npm run lint",
+    "td": "mocha --config=.mocharc.json",
     "devnet": "docker run -p 5050:5050 shardlabs/starknet-devnet-rs --seed 0",
     "main": "ts-node src/main.ts",
     "sandbox": "tsx src/sandbox.ts",
@@ -32,9 +33,15 @@
     "starknet": "^6.11.0"
   },
   "devDependencies": {
+    "@types/chai": "^4.3.19",
+    "@types/chai-as-promised": "^7.1.8",
     "@types/lodash": "^4.17.14",
+    "@types/mocha": "^10.0.10",
     "@types/node": "^22.7.5",
+    "chai": "^4.5.0",
+    "chai-as-promised": "^7.1.2",
     "gts": "^6.0.2",
+    "mocha": "^10.1.0",
     "prettier": "^3.4.2",
     "ts-node": "^10.9.2",
     "tsx": "^4.19.2",
