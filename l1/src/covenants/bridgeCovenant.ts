@@ -20,7 +20,7 @@ import { BatchMerkleTree, BridgeMerkle } from '../util/merkleUtils'
 import { Transaction } from '@scrypt-inc/bitcoinjs-lib'
 import { toXOnly } from '../lib/utils'
 import { MerklePath } from '../contracts/merklePath'
-import { CONTRACT_INDEXES } from './util'
+import { CONTRACT_INDEXES, getChangeOutput } from './util'
 export type BridgeState = {
   batchesRoot: Sha256
   merkleTree: BatchMerkleTree
@@ -259,13 +259,7 @@ export class BridgeCovenant extends Covenant<BridgeState> {
       expanderStateHash = Sha256(splitHashFromStateOutput(tx)[1])
       expanderSPK = utxo.expanderSPK
     }
-    let changeOutput: ByteString = ''
-    const hasChangeOutput = isPrevTxCreateWithdrawal
-      ? tx.outs.length === 5
-      : tx.outs.length === 3
-    if (hasChangeOutput) {
-      changeOutput = outputToByteString(tx, tx.outs.length - 1)
-    }
+    let changeOutput: ByteString = getChangeOutput(tx, [contractSPK, expanderSPK])
 
     const prevTx: BridgeTransaction = {
       ver: versionToByteString(tx),

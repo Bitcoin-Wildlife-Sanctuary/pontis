@@ -61,11 +61,18 @@ export function getFinalizeL1Txid(depositBatch: DepositBatch): L1TxHash {
     throw new Error('deposit batch is not finalized, status: ' + depositBatch.status);
 }
 
+
+
 export function getDepositBatchID(depositBatch: DepositBatch): ByteString {
-    const l1Txid = getFinalizeL1Txid(depositBatch);
+
+    let depoositAggregatorTxid = 
+        depositBatch.aggregationTxs.length > 0 ? 
+        depositBatch.aggregationTxs.at(-1)![0].hash : // the last aggregation tx
+        depositBatch.deposits[0].origin.hash; // the only deposit
+    
     const height = getDepositBatchHeight(depositBatch.deposits);
     const state = calculateDepositState(depositBatch.deposits, height);
-    return stateHashToBatchID(Sha256(DepositAggregatorCovenant.serializeState(state[0])), l1Txid);
+    return stateHashToBatchID(DepositAggregatorCovenant.serializeState(state[0]), utils.reverseTxId(depoositAggregatorTxid));
 }
 
 export function calculateDepositState(

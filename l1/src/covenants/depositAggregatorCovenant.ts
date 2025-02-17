@@ -28,7 +28,7 @@ import {
 } from '../lib/txTools'
 import * as tools from 'uint8array-tools'
 import { BatchID } from '../util/merkleUtils'
-import { CONTRACT_INDEXES } from './util'
+import { CONTRACT_INDEXES, getChangeOutput } from './util'
 
 export type DepositAggregatorState = {
   level: bigint
@@ -275,6 +275,8 @@ export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> 
       }
     }
 
+    const outputContractSPK = tools.toHex(tx.outs[CONTRACT_INDEXES.outputIndex.depositAggregator].script)
+
     return {
       ver: versionToByteString(tx),
       inputContract0: level === 0n ? '' : inputToByteString(tx, 0),
@@ -286,9 +288,9 @@ export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> 
       // the hash data output is always the second output
       // the change output is always the third output, if exists
       outputContractAmt: tx.outs[CONTRACT_INDEXES.outputIndex.depositAggregator].value,
-      outputContractSPK: tools.toHex(tx.outs[CONTRACT_INDEXES.outputIndex.depositAggregator].script),
+      outputContractSPK,
       hashData: Sha256(splitHashFromStateOutput(tx)[0]),
-      changeOutput: tx.outs.length > 2 ? outputToByteString(tx, 2) : '',
+      changeOutput: getChangeOutput(tx, [outputContractSPK]),
       locktime: locktimeToByteString(tx),
     }
   }

@@ -14,7 +14,7 @@ import {
   WithdrawalExpanderState,
 } from '../covenants/index'
 import { ExtPsbt } from '../lib/extPsbt'
-import { getScriptPubKeys } from '../covenants/util'
+import { CONTRACT_INDEXES, getScriptPubKeys } from '../covenants/util'
 import { pickLargeFeeUtxo } from './utils/pick'
 import { getDummyUtxo, supportedNetworkToBtcNetwork } from '../lib/utils'
 import { inputToPrevout, outputToUtxo, reverseTxId } from '../lib/txTools'
@@ -80,7 +80,7 @@ export async function deployBridge(
     psbt: txPsbt,
     txid: tx.getId(),
     state,
-    bridgeUtxo: outputToUtxo(tx, 1) as UTXO,
+    bridgeUtxo: outputToUtxo(tx, CONTRACT_INDEXES.outputIndex.bridge) as UTXO,
   }
 }
 
@@ -192,7 +192,7 @@ export async function finalizeL1Deposit(
     psbt: txPsbt,
     txid: tx.getId(),
     state: newState,
-    bridgeUtxo: outputToUtxo(tx, 1) as UTXO,
+    bridgeUtxo: outputToUtxo(tx, CONTRACT_INDEXES.outputIndex.bridge) as UTXO,
   }
 }
 
@@ -284,7 +284,7 @@ export async function finalizeL2Deposit(
     psbt: txPsbt,
     txid: tx.getId(),
     state: newState,
-    bridgeUtxo: outputToUtxo(tx, 1) as UTXO,
+    bridgeUtxo: outputToUtxo(tx, CONTRACT_INDEXES.outputIndex.bridge) as UTXO,
   }
 }
 
@@ -380,8 +380,8 @@ export async function createWithdrawalExpander(
     txid: tx.getId(),
     bridgeState: outputBridgeCovenant.state,
     withdrawalState: outputWithdrawalExpanderCovenant.state,
-    bridgeUtxo: outputToUtxo(tx, 1) as UTXO,
-    withdrawalUtxo: outputToUtxo(tx, 2) as UTXO,
+    bridgeUtxo: outputToUtxo(tx, CONTRACT_INDEXES.outputIndex.bridge) as UTXO,
+    withdrawalUtxo: outputToUtxo(tx, CONTRACT_INDEXES.outputIndex.withdrawalExpander.inBridgeTx) as UTXO,
   }
 }
 

@@ -13,7 +13,8 @@ import * as tools from 'uint8array-tools'
 import { inputToPrevout, outputToUtxo } from '../lib/txTools'
 import { getDummyUtxo, supportedNetworkToBtcNetwork } from '../lib/utils'
 import { pickLargeFeeUtxo } from './utils/pick'
-import { SupportedNetwork } from 'src/lib/constants'
+import { SupportedNetwork } from '../lib/constants'
+import { CONTRACT_INDEXES } from '../covenants'
 
 export async function expandWithdrawal(
   signer: Signer,
@@ -114,10 +115,11 @@ export async function expandWithdrawal(
   return {
     psbt,
     txid: tx.getId(),
-    withdrawalExpander0Utxo: outputToUtxo(tx, 1),
+    withdrawalExpander0Utxo: outputToUtxo(tx, CONTRACT_INDEXES.outputIndex.withdrawalExpander.inDepositAggregatorTx.first),
     withdrawalExpander0State: outputWithdrawalExpander0Covenant.state!,
-    withdrawalExpander1Utxo: outputToUtxo(tx, 2),
-    withdrawalExpander1State: outputWithdrawalExpander1Covenant.state!,
+
+    withdrawalExpander1Utxo: expanderUtxo.state.rightAmt > 0n ? outputToUtxo(tx, CONTRACT_INDEXES.outputIndex.withdrawalExpander.inDepositAggregatorTx.second) : undefined,
+    withdrawalExpander1State: expanderUtxo.state.rightAmt > 0n ? outputWithdrawalExpander1Covenant.state! : undefined,
   }
 }
 
@@ -208,11 +210,14 @@ function buildExpandWithdrawalTx(
       outputWithdrawalExpander0Covenant,
       Number(withdrawalExpanderUtxo.state.leftAmt)
     )
-    .addCovenantOutput(
+
+  if (withdrawalExpanderUtxo.state.rightAmt > 0n) {
+    expandWithdrawalTx.addCovenantOutput(
       outputWithdrawalExpander1Covenant,
       Number(withdrawalExpanderUtxo.state.rightAmt)
     )
-    .change(changeAddress, feeRate)
+  }
+  expandWithdrawalTx.change(changeAddress, feeRate)
 
   const inputCtxs = expandWithdrawalTx.calculateInputCtxs()
   expandWithdrawalTx.updateCovenantInput(

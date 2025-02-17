@@ -20,7 +20,7 @@ import { ChainProvider, WithdrawalExpanderUtxo } from '../lib/provider'
 import { Transaction } from '@scrypt-inc/bitcoinjs-lib'
 import * as tools from 'uint8array-tools'
 import { toXOnly } from '../lib/utils'
-import { CONTRACT_INDEXES } from './util'
+import { CONTRACT_INDEXES, getChangeOutput } from './util'
 export type WithdrawalExpanderState = {
   level: bigint
 
@@ -237,17 +237,7 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
       stateHash1 = Sha256(splitHashFromStateOutput(tx)[1])
     }
 
-    let changeOutput = ''
-    if (
-      !isCreateWithdrawalTx &&
-      isSingleExpanderOutput &&
-      tx.outs.length === 3
-    ) {
-      changeOutput = outputToByteString(tx, 2)
-    }
-    if (tx.outs.length === 4) {
-      changeOutput = outputToByteString(tx, 3)
-    }
+    let changeOutput = getChangeOutput(tx, [contractSPK, bridgeSPK])
 
     const res = {
       ver: versionToByteString(tx),
