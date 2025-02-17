@@ -16,13 +16,17 @@ export type L1TxId = {
   hash: L1TxHash;
 };
 
-export type L1TxStatus = L1TxId & {
-  status: 'UNCONFIRMED' | 'MINED' | 'DROPPED'; // Orphaned, Droped?;
-};
+export type L1TxStatus = L1TxId & (
+  | {
+    status: 'UNCONFIRMED' | 'DROPPED'
+  }
+  | {
+    status: 'MINED',
+    blockNumber: number;
+  }
+);
 
-export type L1Tx = L1TxStatus & {
-  blockNumber: number;
-}; // TODO: What else should go into a l1 tx?
+export type L1Tx = L1TxStatus;
 
 export type L2TxId = {
   type: 'l2tx';
@@ -126,14 +130,14 @@ export type WithdrawalBatch =
       withdrawals: Withdrawal[];
       hash: string;
       closeWithdrawalBatchTx: L2Tx;
-      withdrawBatchTx: L1Tx;
+      withdrawalExpanderTx: L1Tx;
     } & WithdrawalBatchCommon)
   | ({
       status: 'BEING_EXPANDED';
       withdrawals: Withdrawal[];
       hash: string;
       closeWithdrawalBatchTx: L2Tx;
-      withdrawBatchTx: L1Tx;
+      withdrawalExpanderTx: L1Tx;
       expansionTxs: L1Tx[][];
     } & WithdrawalBatchCommon)
   | ({
@@ -141,7 +145,7 @@ export type WithdrawalBatch =
       withdrawals: Withdrawal[];
       hash: string;
       closeWithdrawalBatchTx: L2Tx;
-      withdrawBatchTx: L1Tx;
+      withdrawalExpanderTx: L1Tx;
       expansionTxs: L1Tx[][];
     } & WithdrawalBatchCommon);
 
@@ -182,6 +186,8 @@ export type BridgeEnvironment = {
   finalizeBatch: (batch: DepositBatch) => Promise<L1Tx>;
   submitDepositsToL2: (hash: L1TxHash, deposits: Deposit[]) => Promise<L2Tx>;
   closePendingWithdrawalBatch: () => Promise<L2Tx>;
+  createWithdrawalExpander: (withdrawals: Withdrawal[], hash: string) => Promise<L1Tx>;
+  expandWithdrawals: (withdrawals: Withdrawal[], hash: string, expansionTxs: L1Tx[]) => Promise<L1Tx[]>;
 };
 
 let i = 0;
@@ -203,14 +209,15 @@ export async function applyChange(
       newState.pendingDeposits.push(...change.deposits);
       newState.l1BlockNumber = Math.max(
         newState.l1BlockNumber,
-        max(change.deposits.map((d) => d.origin.blockNumber)) || 0
+        max(change.deposits.map((d) => d.origin.status === 'MINED' && d.origin.blockNumber || 0)) || 0
       );
-      await initiateAggregation(env, newState);
+      await initiateDepositAggregation(env, newState);
       break;
     }
     case 'l1tx': {
       updateL1TxStatus(newState, change);
       await manageAggregation(env, newState);
+      await manageExpansion(env, newState);
       break;
     }
     case 'l1BlockNumber': {
@@ -218,7 +225,7 @@ export async function applyChange(
         newState.l1BlockNumber,
         change.blockNumber
       );
-      await initiateAggregation(env, newState);
+      await initiateDepositAggregation(env, newState);
       await manageAggregation(env, newState);
       break;
     }
@@ -247,6 +254,7 @@ export async function applyChange(
     case 'l2tx': {
       updateL2TxStatus(newState, change);
       updateDeposits(newState);
+      await initiateWithdrawalsExpansion(env, newState);
       break;
     }
     default: {
@@ -307,8 +315,8 @@ function updateL1TxStatus(state: OperatorState, tx: L1TxStatus) {
       wb.status === 'BEING_EXPANDED' ||
       wb.status === 'EXPANDED'
     ) {
-      if (wb.withdrawBatchTx.hash === tx.hash) {
-        wb.withdrawBatchTx.status = tx.status;
+      if (wb.withdrawalExpanderTx.hash === tx.hash) {
+        wb.withdrawalExpanderTx.status = tx.status;
       }
     }
 
@@ -367,7 +375,7 @@ export function getAllL1Txs(state: OperatorState): Set<L1TxId> {
       wb.status === 'BEING_EXPANDED' ||
       wb.status === 'EXPANDED'
     ) {
-      l1Txs.push(wb.withdrawBatchTx);
+      l1Txs.push(wb.withdrawalExpanderTx);
     }
 
     if (wb.status === 'BEING_EXPANDED' || wb.status === 'EXPANDED') {
@@ -454,7 +462,7 @@ export function getAllL2Txs(state: OperatorState): Set<L2TxId> {
   );
 }
 
-async function initiateAggregation(
+async function initiateDepositAggregation(
   env: BridgeEnvironment,
   state: OperatorState
 ) {
@@ -513,6 +521,7 @@ function depositsOldEnough(
 ): boolean {
   for (const deposit of state.pendingDeposits) {
     if (
+      deposit.origin.status === 'MINED' &&
       deposit.origin.blockNumber + env.MAX_DEPOSIT_BLOCK_AGE <
       state.l1BlockNumber
     ) {
@@ -657,4 +666,54 @@ function withdrawalsOldEnough(
     }
   }
   return false;
+}
+
+
+async function initiateWithdrawalsExpansion(env: BridgeEnvironment, state: OperatorState) {
+  // iterate over withdrawal batches and find CLOSED one
+  for (let i = 0; i < state.withdrawalBatches.length; i++) {
+    const batch = state.withdrawalBatches[i];
+    if (batch.status === 'CLOSED') {
+      const withdrawalExpanderTx = await env.createWithdrawalExpander(batch.withdrawals, batch.hash);
+      state.withdrawalBatches[i] = {
+        ...batch,
+        status: 'SUBMITTED_FOR_EXPANSION',
+        withdrawalExpanderTx,
+      };
+    }
+  }
+}
+
+async function manageExpansion(env: BridgeEnvironment, state: OperatorState) {
+  for (let i = 0; i < state.withdrawalBatches.length; i++) {
+    const batch = state.withdrawalBatches[i];
+    if (batch.status === 'SUBMITTED_FOR_EXPANSION') {
+      if (batch.withdrawalExpanderTx.status === 'MINED') {
+        const expansionTxs = [
+          await env.expandWithdrawals(
+            batch.withdrawals, batch.hash, [batch.withdrawalExpanderTx]
+          )
+        ];
+        state.withdrawalBatches[i] = {
+          ...batch,
+          status: 'BEING_EXPANDED',
+          expansionTxs,
+        };
+      }
+    }
+    if (batch.status === 'BEING_EXPANDED') {
+      const expansionTxs = batch.expansionTxs.at(-1);
+      if (expansionTxs && expansionTxs.every((tx) => tx.status === 'MINED')) {
+        if (expansionTxs.length === batch.withdrawals.length) {
+          state.withdrawalBatches[i] = {
+            ...batch,
+            status: 'EXPANDED',
+          };
+        } else {
+          const newExpansionLevel = await env.expandWithdrawals(batch.withdrawals, batch.hash, expansionTxs);
+          batch.expansionTxs.push(newExpansionLevel);
+        }
+      }
+    }
+  }
 }

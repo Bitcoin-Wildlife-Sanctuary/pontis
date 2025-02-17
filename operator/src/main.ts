@@ -22,6 +22,7 @@ import {
   L2TxId,
   L2TxStatus,
   OperatorState,
+  Withdrawal,
 } from './state';
 import { setupOperator } from './operator';
 import { mocked, MockEvent } from './mock';
@@ -130,12 +131,14 @@ async function mockedOperator() {
       type: 'l1tx',
       hash: '0xabcabd',
       status: 'MINED',
+      blockNumber: 1
     },
     // aggregation tx status
     {
       type: 'l1tx',
       hash: '0xabeabf',
       status: 'MINED',
+      blockNumber: 1
     },
     // aggregation tx status
     {
@@ -148,6 +151,7 @@ async function mockedOperator() {
       type: 'l1tx',
       hash: '0xabcabdabeabf',
       status: 'MINED',
+      blockNumber: 1
     },
     // finalize tx status
     {
@@ -160,6 +164,7 @@ async function mockedOperator() {
       type: 'l1tx',
       hash: '0xfffabe',
       status: 'MINED',
+      blockNumber: 1
     },
     // advance clock
     {
@@ -177,6 +182,7 @@ async function mockedOperator() {
       type: 'l1tx',
       hash: '0xfffabcabdabeabf',
       status: 'MINED',
+      blockNumber: 50
     },
     // finalize tx status
     {
@@ -189,6 +195,7 @@ async function mockedOperator() {
       type: 'l1tx',
       hash: '0xfffabe',
       status: 'MINED',
+      blockNumber: 50
     },
     {
       type: 'function_call',
@@ -269,10 +276,14 @@ async function mockedOperator() {
     submitDepositsToL2: async (
       hash: L1TxHash,
       deposits: Deposit[]
-    ): Promise<L2Tx> =>
-      submitDepositsToL2(admin, bridge, BigInt(hash), deposits),
-    closePendingWithdrawalBatch: async (): Promise<L2Tx> =>
-      closePendingWithdrawalBatch(admin, bridge),
+    ): Promise<L2Tx> => submitDepositsToL2(admin, bridge, BigInt(hash), deposits),
+    closePendingWithdrawalBatch: async (): Promise<L2Tx> => closePendingWithdrawalBatch(admin, bridge),
+    createWithdrawalExpander: function (withdrawals: Withdrawal[], hash: string): Promise<L1Tx> {
+      throw new Error('Function not implemented.');
+    },
+    expandWithdrawals: function (withdrawals: Withdrawal[], hash: string, expansionTxs: L1Tx[]): Promise<L1Tx[]> {
+      throw new Error('Function not implemented.');
+    }
   };
 
   const operatorL2Events = l2Events(provider, initialState.l2BlockNumber, [

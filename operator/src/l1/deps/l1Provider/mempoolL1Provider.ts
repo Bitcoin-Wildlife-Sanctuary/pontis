@@ -1,4 +1,4 @@
-import { L1Provider, Utxo, DEFAULT_FROM_BLOCK, DEFAULT_TO_BLOCK, UNCONFIRMED_BLOCK_NUMBER } from "./type";
+import { L1Provider, Utxo, DEFAULT_FROM_BLOCK, DEFAULT_TO_BLOCK } from "./type";
 import { MempoolChainProvider } from "l1";
 import * as bitcoinjs from '@scrypt-inc/bitcoinjs-lib'
 import { utils } from "l1";
@@ -58,7 +58,7 @@ export class MempoolL1Provider extends MempoolChainProvider implements L1Provide
             outputIndex: utxo.vout,
             satoshis: Number(utxo.value),
             script: utxo.script || script,
-            blockNumber: utxo.status.block_height || UNCONFIRMED_BLOCK_NUMBER,
+            blockNumber: utxo.status.block_height,
         }))
         // todo: confirm should use equal or greater than fromBlock
         return utxos.filter((utxo: Utxo) => utxo.blockNumber >= fromBlock && utxo.blockNumber <= toBlock)

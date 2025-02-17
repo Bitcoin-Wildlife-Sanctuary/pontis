@@ -1,7 +1,7 @@
 import { DepositBatch, L1Tx, L1TxId, L1TxStatus, WithdrawalBatch } from '../state';
 import { distinctUntilKeyChanged, from, interval, Observable, switchMap, takeWhile, tap } from 'rxjs';
 import * as l1Api from './api';
-import { createL1Provider, UNCONFIRMED_BLOCK_NUMBER } from './deps/l1Provider';
+import { createL1Provider } from './deps/l1Provider';
 import * as env from './env';
 import { getFileOffChainDataProvider } from './deps/offchainDataProvider';
 
@@ -23,10 +23,8 @@ async function getL1TransactionStatus(
   const l1ChainProvider = createL1Provider(env.useRpc, env.rpcConfig, env.l1Network);
   const status = await l1Api.getL1TransactionStatus(l1ChainProvider, tx.hash);
   console.log(`getL1TransactionStatus(${tx.hash}) status: ${status}`)
-  return {
-    ...tx,
-    status: status,
-  };
+  // TODO: where to get blockNumber from?
+  return status === 'MINED' ? {...tx, status, blockNumber: -1} : {...tx, status};
 }
 
 export async function aggregateDeposits(batch: DepositBatch): Promise<L1Tx[]> {
@@ -43,8 +41,7 @@ export async function aggregateDeposits(batch: DepositBatch): Promise<L1Tx[]> {
   return txids.map(txid => ({
     type: 'l1tx',
     hash: txid,
-    status: 'UNCONFIRMED',
-    blockNumber: UNCONFIRMED_BLOCK_NUMBER,
+    status: 'UNCONFIRMED'
   }));
 }
 
@@ -64,8 +61,7 @@ export async function finalizeBatch(batch: DepositBatch): Promise<L1Tx> {
   return {
     type: 'l1tx',
     hash: txid,
-    status: 'UNCONFIRMED',
-    blockNumber: UNCONFIRMED_BLOCK_NUMBER,
+    status: 'UNCONFIRMED'
   };
 }
 
@@ -85,7 +81,6 @@ export async function createWithdrwalExpander(batch: WithdrawalBatch): Promise<L
     type: 'l1tx',
     hash: txid,
     status: 'UNCONFIRMED',
-    blockNumber: UNCONFIRMED_BLOCK_NUMBER,
   };
 }
 
@@ -113,8 +108,7 @@ export async function expandWithdrawal(batch: WithdrawalBatch): Promise<L1Tx[]> 
     return txids.map(txid => ({
       type: 'l1tx',
       hash: txid,
-      status: 'UNCONFIRMED',
-      blockNumber: UNCONFIRMED_BLOCK_NUMBER,
+      status: 'UNCONFIRMED'
     }));
   }
   if (l1Api.shouldDistribute(batch)) {
@@ -131,8 +125,7 @@ export async function expandWithdrawal(batch: WithdrawalBatch): Promise<L1Tx[]> 
     return txids.map(txid => ({
       type: 'l1tx',
       hash: txid,
-      status: 'UNCONFIRMED',
-      blockNumber: UNCONFIRMED_BLOCK_NUMBER,
+      status: 'UNCONFIRMED'
     }));
   }
   throw new Error('no reach here')

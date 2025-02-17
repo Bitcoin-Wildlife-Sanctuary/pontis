@@ -24,6 +24,7 @@ import {
   L2TxId,
   L2TxStatus,
   OperatorState,
+  Withdrawal,
 } from './state';
 import { setupOperator } from './operator';
 // import { aggregateDeposits, finalizeBatch } from './l1/l1mocks';
@@ -60,6 +61,12 @@ async function sandboxOperator() {
     closePendingWithdrawalBatch: async (): Promise<L2Tx> => {
       throw new Error('Not implemented');
     },
+    createWithdrawalExpander: async (withdrawals: Withdrawal[], hash: string): Promise<L1Tx>  => {
+      throw new Error('Function not implemented.');
+    },
+    expandWithdrawals: async (withdrawals: Withdrawal[], hash: string, expansionTxs: L1Tx[]): Promise<L1Tx[]> => {
+      throw new Error('Function not implemented.');
+    }
   };
 
   const operator = setupOperator(

@@ -3,7 +3,7 @@ import { Deposit, DepositBatch, L1Tx, L1TxHash, L1TxStatus, L2Address, Withdrawa
 import { PubKey, Sha256, UTXO } from 'scrypt-ts'
 import { bridgeFeatures, depositFeatures } from "l1";
 import { calculateDepositState, checkDepositBatch, getDepositBatchHeight, getDepositBatchID, l2AddressToHex, getContractAddresses } from "./utils/contractUtil";
-import { UNCONFIRMED_BLOCK_NUMBER, L1Provider, DEFAULT_FROM_BLOCK, DEFAULT_TO_BLOCK, Utxo } from "./deps/l1Provider";
+import { L1Provider, DEFAULT_FROM_BLOCK, DEFAULT_TO_BLOCK, Utxo } from "./deps/l1Provider";
 import { OffchainDataProvider } from "./deps/offchainDataProvider";
 import { CONTRACT_INDEXES, WithdrawalExpanderCovenant, WithdrawalExpanderState } from "l1";
 import { Transaction } from "@scrypt-inc/bitcoinjs-lib";
@@ -104,7 +104,9 @@ export async function listDeposits(
                 recipient: depositInfo.recipient,
                 origin: {
                     blockNumber: utxo.blockNumber,
-                    status: utxo.blockNumber > UNCONFIRMED_BLOCK_NUMBER ? 'MINED' as const : 'UNCONFIRMED' as const,
+                    // TODO: not sure if this is correct
+//                    status: utxo.blockNumber > UNCONFIRMED_BLOCK_NUMBER ? 'MINED' as const : 'UNCONFIRMED' as const,
+                    status: 'MINED',
                     type: 'l1tx' as const,
                     hash: utxo.txId as L1TxHash,
                 },
@@ -145,7 +147,6 @@ export async function createDeposit(
         amount: depositAmt,
         recipient: l2Address,
         origin: {
-            blockNumber: UNCONFIRMED_BLOCK_NUMBER,
             status: 'UNCONFIRMED' as const,
             type: 'l1tx' as const,
             hash: depositTx.txid as L1TxHash,
@@ -209,6 +210,7 @@ export async function aggregateLevelDeposits(
             traceableUtxos[i + 1],
             feeRate,
         );
+        console.log("aggregation tx", tx);
         txs.push(tx.txid as L1TxHash);
     }
     // console.log(`aggregateDeposits(batch) done, txids: ${txs.join(', ')}`)
@@ -387,7 +389,7 @@ export async function createWithdrawal(
 ): Promise<L1TxHash> {
 
     // 1. verify the batch is valid
-    if ((batch as WithdrawalBatch & { status: 'EXPANDED' }).withdrawBatchTx) {
+    if ((batch as WithdrawalBatch & { status: 'EXPANDED' }).withdrawalExpanderTx) {
         throw new Error('expander is already created, should not create again');
     }
     if (batch.withdrawals.length === 0) {
@@ -482,7 +484,7 @@ async function parseDataFromWithdrawalBatch(
 
     const expanderL1Txs: L1Tx[] = (batch as WithdrawalBatch & {status: 'EXPANDED'}).expansionTxs?.length > 0 ?
      (batch as WithdrawalBatch & {status: 'EXPANDED'}).expansionTxs.at(-1)! : 
-     [(batch as WithdrawalBatch & {status: 'EXPANDED'}).withdrawBatchTx]
+     [(batch as WithdrawalBatch & {status: 'EXPANDED'}).withdrawalExpanderTx]
     const expanderTxs = await Promise.all(expanderL1Txs.map(ltx => chainProvider.getRawTransaction(ltx.hash).then(Transaction.fromHex)));
     const expanderUtxos: UTXO[] = [];
     const stateHashes: Sha256[] = [];
