@@ -16,7 +16,8 @@
     "main": "ts-node src/main.ts",
     "sandbox": "tsx src/sandbox.ts",
     "deploy": "ts-node src/deploy.ts",
-    "play": "ts-node src/play.ts"
+    "play": "ts-node src/play.ts",
+    "deposit": "tsx src/l1/makeADeposit.ts"
   },
   "dependencies": {
     "@bitcoinerlab/secp256k1": "^1.1.1",

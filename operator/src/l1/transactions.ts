@@ -1,5 +1,5 @@
 import { DepositBatch, L1Tx, L1TxId, L1TxStatus } from '../state';
-import { from, interval, Observable, switchMap, takeWhile, tap } from 'rxjs';
+import { distinctUntilKeyChanged, from, interval, Observable, switchMap, takeWhile, tap } from 'rxjs';
 import * as l1Api from './api';
 import { createL1Provider, UNCONFIRMED_BLOCK_NUMBER } from './deps/l1Provider';
 import * as env from './env';
@@ -11,7 +11,8 @@ export function l1TransactionStatus(
 ): Observable<L1TxStatus> {
   return interval(5000).pipe(
     switchMap(() => from(getL1TransactionStatus(tx))),
-    takeWhile((tx) => tx.status === 'MINED'),
+    distinctUntilKeyChanged('status'),
+    takeWhile((tx) => tx.status !== 'MINED', true),
   )
 }
 

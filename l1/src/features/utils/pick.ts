@@ -22,7 +22,7 @@ export function pickLargeFeeUtxo(utxos: Array<UTXO>): UTXO {
 
 export function loadContractArtifacts() {
   const artifactDir = path.join(__dirname, '../../../../artifacts/contracts')
-  Bridge.loadArtifact(path.join(artifactDir, 'Bridge.json'))
-  DepositAggregator.loadArtifact(path.join(artifactDir, 'DepositAggregator.json'))
-  WithdrawalExpander.loadArtifact(path.join(artifactDir, 'WithdrawalExpander.json'))
+  Bridge.loadArtifact(path.join(artifactDir, 'bridge.json'))
+  DepositAggregator.loadArtifact(path.join(artifactDir, 'depositAggregator.json'))
+  WithdrawalExpander.loadArtifact(path.join(artifactDir, 'withdrawalExpander.json'))
 }

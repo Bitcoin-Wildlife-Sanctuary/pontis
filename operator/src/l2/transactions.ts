@@ -1,6 +1,6 @@
-import { Provider, ReceiptTx, RpcProvider } from 'starknet';
-import { L1TxStatus, L2TxStatus, OperatorState } from '../state';
-import { filter, from, interval, map, Observable, switchMap } from 'rxjs';
+import { RpcProvider } from 'starknet';
+import { L2TxStatus } from '../state';
+import { filter, from, interval, map, Observable, switchMap, takeWhile } from 'rxjs';
 
 export function l2TransactionStatus<T extends L2TxStatus>(
   provider: RpcProvider,
@@ -9,8 +9,7 @@ export function l2TransactionStatus<T extends L2TxStatus>(
   return interval(5000).pipe(
     switchMap(() => from(provider.waitForTransaction(tx.hash))),
     map((status) => ({ ...tx, status })),
-    filter((recentTx) => recentTx !== tx)
-    // finish when tx is accepted
-    // takeWhile(tx) => tx.status.statusReceipt
+    filter((recentTx) => recentTx.status !== tx.status),
+    takeWhile(tx => tx.status === 'PENDING', true),
   );
 }
