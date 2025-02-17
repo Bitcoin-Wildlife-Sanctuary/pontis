@@ -8,12 +8,17 @@ import {
   scan,
   timer,
   filter,
+  retryWhen,
+  tap,
+  delay,
+  retry,
 } from 'rxjs';
 import { BlockNumberEvent, Deposit, Deposits } from '../state';
 import * as l1Api from './api';
 import * as env from './env';
 import { createL1Provider } from './deps/l1Provider';
 import { getFileOffChainDataProvider } from './deps/offchainDataProvider';
+import { pointCompress } from '@bitcoinerlab/secp256k1';
 
 const POLL_INTERVAL = 5000;
 
@@ -26,6 +31,12 @@ export function l1BlockNumber(): Observable<BlockNumberEvent> {
 function currentBlock(): Observable<number> {
   return timer(0, POLL_INTERVAL).pipe(
     switchMap(() => from(getCurrentL1BlockNumber())),
+    retry({
+      delay: (error, retryCount) => {
+        console.warn(`CurrentBlock retry attempt #${retryCount}, due to: ${error.message}`);
+        return timer(POLL_INTERVAL);
+      },
+    }),
     distinctUntilChanged()
   );
 }

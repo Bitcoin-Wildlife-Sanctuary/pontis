@@ -62,17 +62,11 @@ async function sandboxOperator() {
     },
   };
 
-  const manualDesposits = new Subject<Deposits>();
-
   const operator = setupOperator(
     initialState,
     env,
-    of(), // no block events for now
-    merge(
-      l1BlockNumber(),
-      deposits(initialState.l1BlockNumber),
-      manualDesposits
-    ),
+    l1BlockNumber(),
+    deposits(initialState.l1BlockNumber),
     of(), // no l2 events for now
     l1TransactionStatus,
     (tx: L2TxId) => {
@@ -83,13 +77,6 @@ async function sandboxOperator() {
   );
 
   operator.subscribe((_) => {});
-
-  // const depositTx = send deposit tx here
-
-  // this is how you would manually trigger a deposit:
-  // send a transaction, then call next on the subject
-  // operator will pick it up and process it
-  // manualDesposits.next({ type: "l2Tx", depositTx})
 }
 
 sandboxOperator().catch(console.error);
