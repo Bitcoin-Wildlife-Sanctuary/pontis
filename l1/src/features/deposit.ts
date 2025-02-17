@@ -10,7 +10,7 @@ import {
 import { Postage, SupportedNetwork } from '../lib/constants'
 import { getDummyUtxo, supportedNetworkToBtcNetwork } from '../lib/utils'
 import { DUST_LIMIT, ExtPsbt } from '../lib/extPsbt'
-import { getScriptPubKeys } from '../covenants/util'
+import { CONTRACT_INDEXES, getScriptPubKeys } from '../covenants/util'
 import { pickLargeFeeUtxo } from './utils/pick'
 import { markSpent } from '../lib/provider'
 import { inputToPrevout, outputToUtxo } from '../lib/txTools'
@@ -83,7 +83,7 @@ export async function createDeposit(
     psbt: txPsbt,
     txid: tx.getId(),
     state,
-    aggregatorUtxo: outputToUtxo(tx, 1) as UTXO,
+    aggregatorUtxo: outputToUtxo(tx, CONTRACT_INDEXES.outputIndex.depositAggregator) as UTXO,
   }
 }
 
@@ -221,7 +221,7 @@ export async function aggregateDeposit(
     psbt: txPsbt,
     txid: tx.getId(),
     state: outputAggregator.state!,
-    aggregatorUtxo: outputToUtxo(tx, 1) as UTXO,
+    aggregatorUtxo: outputToUtxo(tx, CONTRACT_INDEXES.outputIndex.depositAggregator) as UTXO,
   }
 }
 

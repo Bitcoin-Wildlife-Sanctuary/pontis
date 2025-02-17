@@ -2,7 +2,9 @@ import { PubKey } from 'scrypt-ts'
 import { BridgeCovenant } from './bridgeCovenant'
 import { DepositAggregatorCovenant } from './depositAggregatorCovenant'
 import { WithdrawalExpanderCovenant } from './withdrawalExpanderCovenant'
-import { checkDisableOpCodeHex } from '../lib/txTools'
+import { checkDisableOpCodeHex, outputToByteString } from '../lib/txTools'
+import { Transaction } from '@scrypt-inc/bitcoinjs-lib'
+import * as tools from 'uint8array-tools'
 
 export function getScriptPubKeys(operatorPubKey: PubKey) {
   const withdrawExpander = new WithdrawalExpanderCovenant(
@@ -35,6 +37,15 @@ export function getScriptPubKeys(operatorPubKey: PubKey) {
     bridge: bridge.lockingScriptHex,
     depositAggregator: depositAggregator.lockingScriptHex,
   }
+}
+
+export function getChangeOutput(tx: Transaction, excludeContractScripts: string[]) {
+  // in our transaction, the output is the last one
+  const lastOutput = tx.outs[tx.outs.length - 1];
+  if (excludeContractScripts.includes(tools.toHex(lastOutput.script))) {
+    return ''
+  }
+  return outputToByteString(tx, tx.outs.length - 1)
 }
 
 export const CONTRACT_INDEXES = {
