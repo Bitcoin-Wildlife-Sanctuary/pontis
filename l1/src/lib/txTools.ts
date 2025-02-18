@@ -445,3 +445,13 @@ export function getUtxoByScript(tx: Transaction, scriptHex: string): UTXO[] {
   }
   return utxos
 }
+
+export function filterRemoveDuplicateUtxo(
+  utxo: UTXO,
+  index: number,
+  utxos: UTXO[]
+): boolean {
+  const keys = utxos.map((utxo) => `${utxo.txId}:${utxo.outputIndex}`)
+  const key = `${utxo.txId}:${utxo.outputIndex}`
+  return keys.indexOf(key) === index
+}

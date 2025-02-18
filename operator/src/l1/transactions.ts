@@ -1,9 +1,10 @@
-import { DepositBatch, L1Tx, L1TxId, L1TxStatus, WithdrawalBatch } from '../state';
+import { DepositBatch, L1Tx, L1TxHash, L1TxId, L1TxStatus, WithdrawalBatch } from '../state';
 import { distinctUntilKeyChanged, from, interval, Observable, switchMap, takeWhile, tap } from 'rxjs';
 import * as l1Api from './api';
 import { createL1Provider, UNCONFIRMED_BLOCK_NUMBER } from './deps/l1Provider';
 import * as env from './env';
 import { getFileOffChainDataProvider } from './deps/offchainDataProvider';
+import { EnhancedProvider } from 'l1';
 
 export function l1TransactionStatus(
   // add whatever parameters you need
@@ -22,30 +23,39 @@ async function getL1TransactionStatus(
 ): Promise<L1TxStatus> {
   const l1ChainProvider = createL1Provider(env.useRpc, env.rpcConfig, env.l1Network);
   const status = await l1Api.getL1TransactionStatus(l1ChainProvider, tx.hash);
-  console.log(`getL1TransactionStatus(${tx.hash}) status: ${status}`)
   return {
     ...tx,
     status: status,
   };
 }
 
-export async function aggregateDeposits(batch: DepositBatch): Promise<L1Tx[]> {
+export async function isAggregateCompleted(batch: DepositBatch): Promise<boolean> {
+  return !l1Api.shouldAggregate(batch);
+}
+
+export async function aggregateDeposits(batch: DepositBatch): Promise<{
+  txs: L1Tx[],
+  replace: boolean
+}> {
   const txids = await l1Api.aggregateLevelDeposits(
     env.operatorSigner,
     env.l1Network,
-    env.createUtxoProvider(),
-    env.createChainProvider(),
-
+    new EnhancedProvider(env.createUtxoProvider(), env.createChainProvider(), true),
     
     env.l1FeeRate,
     batch
   );
-  return txids.map(txid => ({
+  const txs: L1Tx[] = txids.map(txid => ({
     type: 'l1tx',
     hash: txid,
     status: 'UNCONFIRMED',
     blockNumber: UNCONFIRMED_BLOCK_NUMBER,
   }));
+  // todo: add replace logic
+  return {
+    txs,
+    replace: false
+  }
 }
 
 export async function finalizeBatch(batch: DepositBatch): Promise<L1Tx> {
@@ -95,7 +105,10 @@ export function isExpandedCompleted(batch: WithdrawalBatch): boolean {
 }
 
 /// expand the withdrawal batch, return the txids. In the inner implementation, it will call expand or distribute
-export async function expandWithdrawal(batch: WithdrawalBatch): Promise<L1Tx[]> {
+export async function expandWithdrawal(batch: WithdrawalBatch): Promise<{
+  txs: L1Tx[],
+  replace: boolean
+}> {
   if (isExpandedCompleted(batch)) {
     throw new Error('withdrawal batch is completed');
   }
@@ -103,37 +116,45 @@ export async function expandWithdrawal(batch: WithdrawalBatch): Promise<L1Tx[]> 
     const txids = await l1Api.expandLevelWithdrawals(
       env.operatorSigner,
       env.l1Network,
-      env.createUtxoProvider(),
-      env.createChainProvider(),
+      new EnhancedProvider(env.createUtxoProvider(), env.createChainProvider(), true),
       createL1Provider(env.useRpc, env.rpcConfig, env.l1Network),
       getFileOffChainDataProvider(),
       env.l1FeeRate,
       batch
     );
-    return txids.map(txid => ({
+    const txs: L1Tx[] = txids.map(txid => ({
       type: 'l1tx',
       hash: txid,
       status: 'UNCONFIRMED',
       blockNumber: UNCONFIRMED_BLOCK_NUMBER,
     }));
+    // todo: add replace logic
+    return {
+      txs,
+      replace: false
+    }
   }
   if (l1Api.shouldDistribute(batch)) {
     const txids = await l1Api.distributeLevelWithdrawals(
       env.operatorSigner,
       env.l1Network,
-      env.createUtxoProvider(),
-      env.createChainProvider(),
+      new EnhancedProvider(env.createUtxoProvider(), env.createChainProvider(), true),
       createL1Provider(env.useRpc, env.rpcConfig, env.l1Network),
       getFileOffChainDataProvider(),
       env.l1FeeRate,
       batch
     );
-    return txids.map(txid => ({
+    const txs: L1Tx[] = txids.map(txid => ({
       type: 'l1tx',
       hash: txid,
       status: 'UNCONFIRMED',
       blockNumber: UNCONFIRMED_BLOCK_NUMBER,
     }));
+    // todo: add replace logic
+    return {
+      txs,
+      replace: false
+    }
   }
   throw new Error('no reach here')
 } 

@@ -6,6 +6,7 @@ import { SupportedNetwork } from '../lib/constants'
 import fetch from 'cross-fetch'
 import * as bitcoinjs from '@scrypt-inc/bitcoinjs-lib'
 import { supportedNetworkToBtcNetwork } from '../lib/utils'
+import { filterRemoveDuplicateUtxo } from '../lib/txTools'
 
 function getUtxoKey(utxo: UTXO) {
   return `${utxo.txId}:${utxo.outputIndex}`
@@ -72,6 +73,8 @@ export class MempoolUtxoProvider implements UtxoProvider {
     return utxos
       .concat(Array.from(this.newUTXOs.values()))
       .filter((utxo) => this.isUnSpent(utxo.txId, utxo.outputIndex))
+      .filter((utxo) => utxo.script === script)
+      .filter(filterRemoveDuplicateUtxo)
       .sort((a, b) => a.satoshi - b.satoshi)
   }
 

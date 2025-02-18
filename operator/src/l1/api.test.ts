@@ -2,7 +2,7 @@
 
 import { expect, use } from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import { ChainProvider, DefaultSigner, getContractScriptPubKeys, loadContractArtifacts, Signer, SupportedNetwork, TestChainProvider, TestUtxoProvider, utils } from 'l1'
+import { ChainProvider, DefaultSigner, EnhancedProvider, getContractScriptPubKeys, loadContractArtifacts, Signer, SupportedNetwork, TestChainProvider, TestUtxoProvider, utils } from 'l1'
 import { createMemoryOffChainDB, OffchainDataProvider } from './deps/offchainDataProvider'
 import { L1Provider, MockL1Provider } from './deps/l1Provider'
 import * as api from './api'
@@ -12,6 +12,7 @@ import { ECPairFactory } from 'ecpair'
 import { PubKey } from 'scrypt-ts'
 import { getContractAddresses } from './utils/contractUtil'
 import { DepositBatch, L1Address, L1TxHash, L2Address, Withdrawal, WithdrawalBatch } from '../state'
+import { Decipher } from 'crypto'
 
 const ECPair = ECPairFactory(ecc)
 bitcoinjs.initEccLib(ecc)
@@ -42,6 +43,10 @@ describe('test l1 api', () => {
 
     let offchainDataProvider: OffchainDataProvider
     let l1Provider: MockL1Provider
+    const createEnhancedUtxoProvider = () => {
+        const provider = new EnhancedProvider(defaultUtxoProvider, defaultChainProvider, false)
+        return provider
+    }
 
 
     before(async () => {
@@ -214,8 +219,7 @@ describe('test l1 api', () => {
             expect(api.aggregateLevelDeposits(
                 operatorSigner,
                 l1Network,
-                defaultUtxoProvider,
-                defaultChainProvider,
+                createEnhancedUtxoProvider(),
 
                 defaultFeeRate,
                 batch
@@ -230,8 +234,7 @@ describe('test l1 api', () => {
             const txids: L1TxHash[] = await api.aggregateLevelDeposits(
                 operatorSigner,
                 l1Network,
-                defaultUtxoProvider,
-                defaultChainProvider,
+                createEnhancedUtxoProvider(),
                 defaultFeeRate,
                 batch
             )
@@ -239,8 +242,7 @@ describe('test l1 api', () => {
             expect(api.aggregateLevelDeposits(
                 operatorSigner,
                 l1Network,
-                defaultUtxoProvider,
-                defaultChainProvider,
+                createEnhancedUtxoProvider(),
                 defaultFeeRate,
                 batch
             )).to.be.rejectedWith('batch is already aggregated, should finalize to l1 bridge')
@@ -254,8 +256,7 @@ describe('test l1 api', () => {
             const txids: L1TxHash[] = await api.aggregateLevelDeposits(
                 operatorSigner,
                 l1Network,
-                defaultUtxoProvider,
-                defaultChainProvider,
+                createEnhancedUtxoProvider(),
                 defaultFeeRate,
                 batch
             )
@@ -264,8 +265,7 @@ describe('test l1 api', () => {
             const txids2: L1TxHash[] = await api.aggregateLevelDeposits(
                 operatorSigner,
                 l1Network,
-                defaultUtxoProvider,
-                defaultChainProvider,
+                createEnhancedUtxoProvider(),
                 defaultFeeRate,
                 batch
             )
@@ -274,8 +274,7 @@ describe('test l1 api', () => {
             const txids3: L1TxHash[] = await api.aggregateLevelDeposits(
                 operatorSigner,
                 l1Network,
-                defaultUtxoProvider,
-                defaultChainProvider,
+                createEnhancedUtxoProvider(),
                 defaultFeeRate,
                 batch
             )
@@ -284,8 +283,7 @@ describe('test l1 api', () => {
             const txids4: L1TxHash[] = await api.aggregateLevelDeposits(
                 operatorSigner,
                 l1Network,
-                defaultUtxoProvider,
-                defaultChainProvider,
+                createEnhancedUtxoProvider(),
                 defaultFeeRate,
                 batch
             )
@@ -294,8 +292,7 @@ describe('test l1 api', () => {
             const txids5: L1TxHash[] = await api.aggregateLevelDeposits(
                 operatorSigner,
                 l1Network,
-                defaultUtxoProvider,
-                defaultChainProvider,
+                createEnhancedUtxoProvider(),
                 defaultFeeRate,
                 batch
             )
@@ -304,8 +301,7 @@ describe('test l1 api', () => {
             const txids6: L1TxHash[] = await api.aggregateLevelDeposits(
                 operatorSigner,
                 l1Network,
-                defaultUtxoProvider,
-                defaultChainProvider,
+                createEnhancedUtxoProvider(),
                 defaultFeeRate,
                 batch
             )
@@ -342,8 +338,7 @@ describe('test l1 api', () => {
             const txids: L1TxHash[] = await api.aggregateLevelDeposits(
                 operatorSigner,
                 l1Network,
-                defaultUtxoProvider,
-                defaultChainProvider,
+                createEnhancedUtxoProvider(),
                 defaultFeeRate,
                 batch
             )
@@ -369,8 +364,7 @@ describe('test l1 api', () => {
             const txids: L1TxHash[] = await api.aggregateLevelDeposits(
                 operatorSigner,
                 l1Network,
-                defaultUtxoProvider,
-                defaultChainProvider,
+                createEnhancedUtxoProvider(),
                 defaultFeeRate,
                 batch
             )
@@ -458,8 +452,7 @@ describe('test l1 api', () => {
             const txids: L1TxHash[] = await api.aggregateLevelDeposits(
                 operatorSigner,
                 l1Network,
-                defaultUtxoProvider,
-                defaultChainProvider,
+                createEnhancedUtxoProvider(),
                 defaultFeeRate,
                 batch
             )
@@ -554,7 +547,7 @@ describe('test l1 api', () => {
         it('api.createWithdrawal with 1~256(run 10 random) withdrawals should work when the batch should be created on L1', async () => {
             for (let i = 0; i < 10; i++) {
                 const withdrawalCount = Math.floor(Math.random() * 256) + 1
-                console.log(`testWithdraw ${withdrawalCount}`)
+                console.log(`testWithdraw with ${withdrawalCount} withdrawals`)
                 await testWithdraw(withdrawalCount)
             }
         })
@@ -600,8 +593,7 @@ describe('test l1 api', () => {
                     const expanderTxids = await api.expandLevelWithdrawals(
                         operatorSigner,
                         l1Network,
-                        defaultUtxoProvider,
-                        defaultChainProvider,
+                        createEnhancedUtxoProvider(),
                         l1Provider,
                         offchainDataProvider,
                         defaultFeeRate,
@@ -615,8 +607,7 @@ describe('test l1 api', () => {
                     const distributeTxids = await api.distributeLevelWithdrawals(
                         operatorSigner,
                         l1Network,
-                        defaultUtxoProvider,
-                        defaultChainProvider,
+                        createEnhancedUtxoProvider(),
                         l1Provider,
                         offchainDataProvider,
                         defaultFeeRate,

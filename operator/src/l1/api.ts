@@ -1,4 +1,4 @@
-import { BridgeCovenant, getContractScriptPubKeys, Signer, TraceableDepositAggregatorUtxo, utils, BATCH_MERKLE_TREE_LENGTH, BridgeState, TraceableBridgeUtxo, SupportedNetwork, UtxoProvider, ChainProvider, TraceableWithdrawalExpanderUtxo, WithdrawalMerkle, Withdrawal as L1Withdrawal, withdrawFeatures } from "l1";
+import { BridgeCovenant, getContractScriptPubKeys, Signer, TraceableDepositAggregatorUtxo, utils, BATCH_MERKLE_TREE_LENGTH, BridgeState, TraceableBridgeUtxo, SupportedNetwork, UtxoProvider, ChainProvider, TraceableWithdrawalExpanderUtxo, WithdrawalMerkle, Withdrawal as L1Withdrawal, withdrawFeatures, EnhancedProvider } from "l1";
 import { Deposit, DepositBatch, L1Tx, L1TxHash, L1TxStatus, L2Address, WithdrawalBatch } from "../state";
 import { PubKey, Sha256, UTXO } from 'scrypt-ts'
 import { bridgeFeatures, depositFeatures } from "l1";
@@ -156,12 +156,20 @@ export async function createDeposit(
     return deposit;
 }
 
+export async function shouldAggregate(batch: DepositBatch) {
+    const depositCount = batch.deposits.length;
+    const height = Math.log2(depositCount);
+    if (batch.aggregationTxs.length === height) {
+        return false;
+    }
+    return true;
+}
+
 /// aggregate 1 level deposit batch
 export async function aggregateLevelDeposits(
     operatorSigner: Signer,
     l1Network: SupportedNetwork,
-    utxoProvider: UtxoProvider,
-    chainProvider: ChainProvider,
+    enhancedUtxoProvider: EnhancedProvider,
 
     feeRate: number,
 
@@ -186,7 +194,7 @@ export async function aggregateLevelDeposits(
     const level = batch.aggregationTxs.length;
     const levelStates = calculateDepositState(batch.deposits, level);
     const levelAggTxids = batch.aggregationTxs.length > 0 ? batch.aggregationTxs.at(-1)!.map(tx => tx.hash) : batch.deposits.map(deposit => deposit.origin.hash);
-    const levelAggRawtxs = await Promise.all(levelAggTxids.map(id => chainProvider.getRawTransaction(id)));
+    const levelAggRawtxs = await Promise.all(levelAggTxids.map(id => enhancedUtxoProvider.getRawTransaction(id)));
     const levelAggUtxos = levelAggRawtxs.map(tx => utils.txToUtxo(tx, 1));
 
     const traceableUtxos: TraceableDepositAggregatorUtxo[] = levelStates.map((state, index) => ({
@@ -202,8 +210,8 @@ export async function aggregateLevelDeposits(
         const tx = await depositFeatures.aggregateDeposit(
             operatorSigner,
             l1Network,
-            utxoProvider,
-            chainProvider,
+            enhancedUtxoProvider,
+            enhancedUtxoProvider,
 
             traceableUtxos[i],
             traceableUtxos[i + 1],
@@ -211,8 +219,12 @@ export async function aggregateLevelDeposits(
         );
         txs.push(tx.txid as L1TxHash);
     }
-    // console.log(`aggregateDeposits(batch) done, txids: ${txs.join(', ')}`)
-    return txs;
+    const broadcastRes = await enhancedUtxoProvider.finalBroadcast();
+    if (broadcastRes.failedBroadcastTxError) {
+        console.log(`aggregateDeposits(batch), error`) 
+        console.error(broadcastRes.failedBroadcastTxError)
+    }
+    return broadcastRes.broadcastedTxids;
 }
 
 /// finalize a deposit batch on l1
@@ -385,7 +397,6 @@ export async function createWithdrawal(
     feeRate: number,
     batch: WithdrawalBatch,
 ): Promise<L1TxHash> {
-
     // 1. verify the batch is valid
     if ((batch as WithdrawalBatch & { status: 'EXPANDED' }).withdrawBatchTx) {
         throw new Error('expander is already created, should not create again');
@@ -532,8 +543,7 @@ async function parseDataFromWithdrawalBatch(
 export async function expandLevelWithdrawals(
     operatorSigner: Signer,
     l1Network: SupportedNetwork,
-    utxoProvider: UtxoProvider,
-    chainProvider: ChainProvider,
+    enhancedUtxoProvider: EnhancedProvider,
     l1Provider: L1Provider,
     offchainDataProvider: OffchainDataProvider,
 
@@ -553,9 +563,8 @@ export async function expandLevelWithdrawals(
 
     const operatorPubKey = await operatorSigner.getPublicKey();
 
-    const { withdrawals, expanderUtxos, expanderStates } = await parseDataFromWithdrawalBatch(operatorSigner, batch, offchainDataProvider, l1Provider, chainProvider, l1Network);
+    const { withdrawals, expanderUtxos, expanderStates } = await parseDataFromWithdrawalBatch(operatorSigner, batch, offchainDataProvider, l1Provider, enhancedUtxoProvider, l1Network);
     
-    let txs: L1TxHash[] = [];
 
     for (let i = 0; i < expanderUtxos.length; i++) {
         const utxo = expanderUtxos[i];
@@ -568,24 +577,26 @@ export async function expandLevelWithdrawals(
         const res = await withdrawFeatures.expandWithdrawal(
             operatorSigner,
             l1Network,
-            utxoProvider,
-            chainProvider,
+            enhancedUtxoProvider,
+            enhancedUtxoProvider,
 
             traceableUtxo,
             withdrawals,
 
             feeRate,
         );
-        txs.push(res.txid as L1TxHash);
     }
-    return txs
+    const broadcastRes = await enhancedUtxoProvider.finalBroadcast();
+    if (broadcastRes.failedBroadcastTxError && broadcastRes.broadcastedTxids.length === 0) {
+        throw broadcastRes.failedBroadcastTxError;
+    }
+    return broadcastRes.broadcastedTxids as L1TxHash[]
 }
 
 export async function distributeLevelWithdrawals(
     operatorSigner: Signer,
     l1Network: SupportedNetwork,
-    utxoProvider: UtxoProvider,
-    chainProvider: ChainProvider,
+    enhancedUtxoProvider: EnhancedProvider,
     l1Provider: L1Provider,
     offchainDataProvider: OffchainDataProvider,
 
@@ -600,8 +611,8 @@ export async function distributeLevelWithdrawals(
     const operatorPubKey = await operatorSigner.getPublicKey();
     
     // build the txs
-    const { withdrawals, expanderUtxos, expanderStates } = await parseDataFromWithdrawalBatch(operatorSigner, batch, offchainDataProvider, l1Provider, chainProvider, l1Network);
-    let txs: L1TxHash[] = [];
+    const { withdrawals, expanderUtxos, expanderStates } = await parseDataFromWithdrawalBatch(operatorSigner, batch, offchainDataProvider, l1Provider, enhancedUtxoProvider, l1Network);
+
     for (let i = 0; i < expanderUtxos.length; i++) {
         const utxo = expanderUtxos[i];
         const state = expanderStates[i];
@@ -610,18 +621,21 @@ export async function distributeLevelWithdrawals(
             state: state,
             utxo: utxo,
         };
-        const res = await withdrawFeatures.distributeWithdrawals(
+        await withdrawFeatures.distributeWithdrawals(
             operatorSigner,
             l1Network,
-            utxoProvider,
-            chainProvider,
+            enhancedUtxoProvider,
+            enhancedUtxoProvider,
 
             traceableUtxo,
             withdrawals,
 
             feeRate,
         );
-        txs.push(res.txid as L1TxHash);
     }
-    return txs
+    const broadcastRes = await enhancedUtxoProvider.finalBroadcast();
+    if (broadcastRes.failedBroadcastTxError && broadcastRes.broadcastedTxids.length === 0) {
+        throw broadcastRes.failedBroadcastTxError;
+    }
+    return broadcastRes.broadcastedTxids as L1TxHash[]
 }

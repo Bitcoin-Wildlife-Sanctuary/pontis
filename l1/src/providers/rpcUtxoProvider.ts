@@ -5,6 +5,8 @@ import { UtxoProvider } from '../lib/provider'
 import fetch from 'cross-fetch'
 import { RPCChainProvider } from './rpcChainProvider'
 import Decimal from 'decimal.js'
+import * as bitcoinjs from '@scrypt-inc/bitcoinjs-lib'
+import { filterRemoveDuplicateUtxo } from '../lib/txTools'
 
 function getUtxoKey(utxo: UTXO) {
   return `${utxo.txId}:${utxo.outputIndex}`
@@ -28,6 +30,11 @@ export class RPCUtxoProvider extends RPCChainProvider implements UtxoProvider {
     address: string,
     options?: { total?: number; maxCnt?: number }
   ): Promise<UTXO[]> {
+    const script = Buffer.from(
+      bitcoinjs.address.toOutputScript(
+        address
+      )
+    ).toString('hex')
     const Authorization = `Basic ${Buffer.from(
       `${this.getRpcUser()}:${this.getRpcPassword()}`
     ).toString('base64')}`
@@ -77,6 +84,8 @@ export class RPCUtxoProvider extends RPCChainProvider implements UtxoProvider {
     return utxos
       .concat(Array.from(this.newUTXOs.values()))
       .filter((utxo) => this.isUnSpent(utxo.txId, utxo.outputIndex))
+      .filter((utxo) => utxo.script === script)
+      .filter(filterRemoveDuplicateUtxo)
       .sort((a, b) => a.satoshi - b.satoshi)
   }
 

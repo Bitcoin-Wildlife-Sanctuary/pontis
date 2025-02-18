@@ -45,6 +45,7 @@ export const utils = {
     ...libUtils
 }
 
+export {EnhancedProvider} from './providers/enhancedProvider'
 export {MempoolChainProvider} from './providers/mempoolChainProvider'
 export {MempoolUtxoProvider} from './providers/mempoolUtxoProvider'
 export {RPCChainProvider} from './providers/rpcChainProvider'

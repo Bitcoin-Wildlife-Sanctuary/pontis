@@ -178,7 +178,7 @@ export type BridgeEnvironment = {
   DEPOSIT_BATCH_SIZE: number;
   MAX_WITHDRAWAL_BLOCK_AGE: number;
   MAX_WITHDRAWAL_BATCH_SIZE: number;
-  aggregateDeposits: (batch: DepositBatch) => Promise<L1Tx[]>;
+  aggregateDeposits: (batch: DepositBatch) => Promise<{txs: L1Tx[], replace: boolean}>;
   finalizeBatch: (batch: DepositBatch) => Promise<L1Tx>;
   submitDepositsToL2: (hash: L1TxHash, deposits: Deposit[]) => Promise<L2Tx>;
   closePendingWithdrawalBatch: () => Promise<L2Tx>;
@@ -489,14 +489,14 @@ async function initiateAggregation(
     } else {
       // if there is more than one deposit, we need to aggregate them first
       const aggregationTxs: L1Tx[][] = [
-        await env.aggregateDeposits(
+        (await env.aggregateDeposits(
           // construct an dummy batch, with the deposits and an empty aggregation txs array 
           {
             status: 'BEING_AGGREGATED',
             deposits,
             aggregationTxs: [],
           }
-        ),
+        )).txs,
       ];
       state.depositBatches.push({
         status: 'BEING_AGGREGATED',
@@ -544,7 +544,7 @@ async function manageAggregation(
         } else {
           const newAggregationLevel =
             await env.aggregateDeposits(batch);
-          batch.aggregationTxs.push(newAggregationLevel);
+          batch.aggregationTxs.push(newAggregationLevel.txs);
         }
       }
     }
