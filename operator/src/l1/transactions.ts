@@ -29,7 +29,7 @@ async function getL1TransactionStatus(
   };
 }
 
-export async function isAggregateCompleted(batch: DepositBatch): Promise<boolean> {
+export async function isAggregationCompleted(batch: DepositBatch): Promise<boolean> {
   return !l1Api.shouldAggregate(batch);
 }
 
@@ -100,7 +100,7 @@ export async function createWithdrwalExpander(batch: WithdrawalBatch): Promise<L
 }
 
 /// check if the withdrawal batch is completed, do not need to call expandWithdrawal if it is completed
-export function isExpandedCompleted(batch: WithdrawalBatch): boolean {
+export function isExpansionCompleted(batch: WithdrawalBatch): boolean {
   return !l1Api.shouldDistribute(batch) && !l1Api.shouldExpand(batch);
 }
 
@@ -109,7 +109,7 @@ export async function expandWithdrawal(batch: WithdrawalBatch): Promise<{
   txs: L1Tx[],
   replace: boolean
 }> {
-  if (isExpandedCompleted(batch)) {
+  if (isExpansionCompleted(batch)) {
     throw new Error('withdrawal batch is completed');
   }
   if (l1Api.shouldExpand(batch)) {
