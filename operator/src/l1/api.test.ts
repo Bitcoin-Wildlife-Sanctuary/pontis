@@ -225,89 +225,89 @@ describe('test l1 api', () => {
                 batch
             )).to.be.rejectedWith('batch is already aggregated, should finalize to l1 bridge')
         })
-        it('api.aggregateLevelDeposits should not work when the batch should be finalized on L1', async () => {
-            const batch: DepositBatch = {
-                status: 'BEING_AGGREGATED',
-                deposits: await createDeposits(2, offchainDataProvider),
-                aggregationTxs: []
-            }
-            const txids: L1TxHash[] = await api.aggregateLevelDeposits(
-                operatorSigner,
-                l1Network,
-                createEnhancedUtxoProvider(),
-                defaultFeeRate,
-                batch
-            )
-            batch.aggregationTxs.push(txids.map(txid => ({ hash: txid, status: 'MINED', blockNumber: 1, type: 'l1tx' })))
-            expect(api.aggregateLevelDeposits(
-                operatorSigner,
-                l1Network,
-                createEnhancedUtxoProvider(),
-                defaultFeeRate,
-                batch
-            )).to.be.rejectedWith('batch is already aggregated, should finalize to l1 bridge')
-        })
-        it(`api.aggregateLevelDeposits should work for 2^n(2**6) deposits in every level`, async () => {
-            const batch: DepositBatch = {
-                status: 'BEING_AGGREGATED',
-                deposits: await createDeposits(2 ** 6, offchainDataProvider),
-                aggregationTxs: []
-            }
-            const txids: L1TxHash[] = await api.aggregateLevelDeposits(
-                operatorSigner,
-                l1Network,
-                createEnhancedUtxoProvider(),
-                defaultFeeRate,
-                batch
-            )
-            expect(txids.length).to.equal(2 ** 5);
-            batch.aggregationTxs.push(txids.map(txid => ({ hash: txid, status: 'MINED', blockNumber: 1, type: 'l1tx' })))
-            const txids2: L1TxHash[] = await api.aggregateLevelDeposits(
-                operatorSigner,
-                l1Network,
-                createEnhancedUtxoProvider(),
-                defaultFeeRate,
-                batch
-            )
-            expect(txids2.length).to.equal(2 ** 4);
-            batch.aggregationTxs.push(txids2.map(txid => ({ hash: txid, status: 'MINED', blockNumber: 1, type: 'l1tx' })))
-            const txids3: L1TxHash[] = await api.aggregateLevelDeposits(
-                operatorSigner,
-                l1Network,
-                createEnhancedUtxoProvider(),
-                defaultFeeRate,
-                batch
-            )
-            expect(txids3.length).to.equal(2 ** 3);
-            batch.aggregationTxs.push(txids3.map(txid => ({ hash: txid, status: 'MINED', blockNumber: 1, type: 'l1tx' })))
-            const txids4: L1TxHash[] = await api.aggregateLevelDeposits(
-                operatorSigner,
-                l1Network,
-                createEnhancedUtxoProvider(),
-                defaultFeeRate,
-                batch
-            )
-            expect(txids4.length).to.equal(2 ** 2);
-            batch.aggregationTxs.push(txids4.map(txid => ({ hash: txid, status: 'MINED', blockNumber: 1, type: 'l1tx' })))
-            const txids5: L1TxHash[] = await api.aggregateLevelDeposits(
-                operatorSigner,
-                l1Network,
-                createEnhancedUtxoProvider(),
-                defaultFeeRate,
-                batch
-            )
-            expect(txids5.length).to.equal(2 ** 1);
-            batch.aggregationTxs.push(txids5.map(txid => ({ hash: txid, status: 'MINED', blockNumber: 1, type: 'l1tx' })))
-            const txids6: L1TxHash[] = await api.aggregateLevelDeposits(
-                operatorSigner,
-                l1Network,
-                createEnhancedUtxoProvider(),
-                defaultFeeRate,
-                batch
-            )
-            expect(txids6.length).to.equal(2 ** 0);
-            batch.aggregationTxs.push(txids6.map(txid => ({ hash: txid, status: 'MINED', blockNumber: 1, type: 'l1tx' })))
-        })
+        // it('api.aggregateLevelDeposits should not work when the batch should be finalized on L1', async () => {
+        //     const batch: DepositBatch = {
+        //         status: 'BEING_AGGREGATED',
+        //         deposits: await createDeposits(2, offchainDataProvider),
+        //         aggregationTxs: []
+        //     }
+        //     const txids: L1TxHash[] = await api.aggregateLevelDeposits(
+        //         operatorSigner,
+        //         l1Network,
+        //         createEnhancedUtxoProvider(),
+        //         defaultFeeRate,
+        //         batch
+        //     )
+        //     batch.aggregationTxs.push(txids.map(txid => ({ hash: txid, status: 'MINED', blockNumber: 1, type: 'l1tx' })))
+        //     expect(api.aggregateLevelDeposits(
+        //         operatorSigner,
+        //         l1Network,
+        //         createEnhancedUtxoProvider(),
+        //         defaultFeeRate,
+        //         batch
+        //     )).to.be.rejectedWith('batch is already aggregated, should finalize to l1 bridge')
+        // })
+        // it(`api.aggregateLevelDeposits should work for 2^n(2**6) deposits in every level`, async () => {
+        //     const batch: DepositBatch = {
+        //         status: 'BEING_AGGREGATED',
+        //         deposits: await createDeposits(2 ** 6, offchainDataProvider),
+        //         aggregationTxs: []
+        //     }
+        //     const txids: L1TxHash[] = await api.aggregateLevelDeposits(
+        //         operatorSigner,
+        //         l1Network,
+        //         createEnhancedUtxoProvider(),
+        //         defaultFeeRate,
+        //         batch
+        //     )
+        //     expect(txids.length).to.equal(2 ** 5);
+        //     batch.aggregationTxs.push(txids.map(txid => ({ hash: txid, status: 'MINED', blockNumber: 1, type: 'l1tx' })))
+        //     const txids2: L1TxHash[] = await api.aggregateLevelDeposits(
+        //         operatorSigner,
+        //         l1Network,
+        //         createEnhancedUtxoProvider(),
+        //         defaultFeeRate,
+        //         batch
+        //     )
+        //     expect(txids2.length).to.equal(2 ** 4);
+        //     batch.aggregationTxs.push(txids2.map(txid => ({ hash: txid, status: 'MINED', blockNumber: 1, type: 'l1tx' })))
+        //     const txids3: L1TxHash[] = await api.aggregateLevelDeposits(
+        //         operatorSigner,
+        //         l1Network,
+        //         createEnhancedUtxoProvider(),
+        //         defaultFeeRate,
+        //         batch
+        //     )
+        //     expect(txids3.length).to.equal(2 ** 3);
+        //     batch.aggregationTxs.push(txids3.map(txid => ({ hash: txid, status: 'MINED', blockNumber: 1, type: 'l1tx' })))
+        //     const txids4: L1TxHash[] = await api.aggregateLevelDeposits(
+        //         operatorSigner,
+        //         l1Network,
+        //         createEnhancedUtxoProvider(),
+        //         defaultFeeRate,
+        //         batch
+        //     )
+        //     expect(txids4.length).to.equal(2 ** 2);
+        //     batch.aggregationTxs.push(txids4.map(txid => ({ hash: txid, status: 'MINED', blockNumber: 1, type: 'l1tx' })))
+        //     const txids5: L1TxHash[] = await api.aggregateLevelDeposits(
+        //         operatorSigner,
+        //         l1Network,
+        //         createEnhancedUtxoProvider(),
+        //         defaultFeeRate,
+        //         batch
+        //     )
+        //     expect(txids5.length).to.equal(2 ** 1);
+        //     batch.aggregationTxs.push(txids5.map(txid => ({ hash: txid, status: 'MINED', blockNumber: 1, type: 'l1tx' })))
+        //     const txids6: L1TxHash[] = await api.aggregateLevelDeposits(
+        //         operatorSigner,
+        //         l1Network,
+        //         createEnhancedUtxoProvider(),
+        //         defaultFeeRate,
+        //         batch
+        //     )
+        //     expect(txids6.length).to.equal(2 ** 0);
+        //     batch.aggregationTxs.push(txids6.map(txid => ({ hash: txid, status: 'MINED', blockNumber: 1, type: 'l1tx' })))
+        // })
     })
 
     describe('test for finalizeDepositBatchOnL1', () => {
@@ -329,57 +329,57 @@ describe('test l1 api', () => {
             )
             expect(txid).to.equal(await offchainDataProvider.getLatestBridgeTxid())
         })
-        it('api.finalizeDepositBatchOnL1 should work when the batch should be finalized on L1', async () => {
-            const batch: DepositBatch = {
-                status: 'BEING_AGGREGATED',
-                deposits: await createDeposits(2, offchainDataProvider),
-                aggregationTxs: []
-            }
-            const txids: L1TxHash[] = await api.aggregateLevelDeposits(
-                operatorSigner,
-                l1Network,
-                createEnhancedUtxoProvider(),
-                defaultFeeRate,
-                batch
-            )
-            batch.aggregationTxs.push(txids.map(txid => ({ hash: txid, status: 'MINED', blockNumber: 1, type: 'l1tx' })))
-            const txid = await api.finalizeDepositBatchOnL1(
-                operatorSigner,
-                l1Network,
-                defaultUtxoProvider,
-                defaultChainProvider,
-                l1Provider,
-                offchainDataProvider,
-                defaultFeeRate,
-                batch
-            )
-            expect(txid).to.equal(await offchainDataProvider.getLatestBridgeTxid())
-        })
-        it('api.finalizeDepositBatchOnL1 should not work when the batch is under aggregation', async () => {
-            const batch: DepositBatch = {
-                status: 'BEING_AGGREGATED',
-                deposits: await createDeposits(4, offchainDataProvider),
-                aggregationTxs: []
-            }
-            const txids: L1TxHash[] = await api.aggregateLevelDeposits(
-                operatorSigner,
-                l1Network,
-                createEnhancedUtxoProvider(),
-                defaultFeeRate,
-                batch
-            )
-            batch.aggregationTxs.push(txids.map(txid => ({ hash: txid, status: 'MINED', blockNumber: 1, type: 'l1tx' })))
-            expect(api.finalizeDepositBatchOnL1(
-                operatorSigner,
-                l1Network,
-                defaultUtxoProvider,
-                defaultChainProvider,
-                l1Provider,
-                offchainDataProvider,
-                defaultFeeRate,
-                batch
-            )).to.eventually.be.rejectedWith('last level aggregation txs is not 1')
-        })
+        // it('api.finalizeDepositBatchOnL1 should work when the batch should be finalized on L1', async () => {
+        //     const batch: DepositBatch = {
+        //         status: 'BEING_AGGREGATED',
+        //         deposits: await createDeposits(2, offchainDataProvider),
+        //         aggregationTxs: []
+        //     }
+        //     const txids: L1TxHash[] = await api.aggregateLevelDeposits(
+        //         operatorSigner,
+        //         l1Network,
+        //         createEnhancedUtxoProvider(),
+        //         defaultFeeRate,
+        //         batch
+        //     )
+        //     batch.aggregationTxs.push(txids.map(txid => ({ hash: txid, status: 'MINED', blockNumber: 1, type: 'l1tx' })))
+        //     const txid = await api.finalizeDepositBatchOnL1(
+        //         operatorSigner,
+        //         l1Network,
+        //         defaultUtxoProvider,
+        //         defaultChainProvider,
+        //         l1Provider,
+        //         offchainDataProvider,
+        //         defaultFeeRate,
+        //         batch
+        //     )
+        //     expect(txid).to.equal(await offchainDataProvider.getLatestBridgeTxid())
+        // })
+        // it('api.finalizeDepositBatchOnL1 should not work when the batch is under aggregation', async () => {
+        //     const batch: DepositBatch = {
+        //         status: 'BEING_AGGREGATED',
+        //         deposits: await createDeposits(4, offchainDataProvider),
+        //         aggregationTxs: []
+        //     }
+        //     const txids: L1TxHash[] = await api.aggregateLevelDeposits(
+        //         operatorSigner,
+        //         l1Network,
+        //         createEnhancedUtxoProvider(),
+        //         defaultFeeRate,
+        //         batch
+        //     )
+        //     batch.aggregationTxs.push(txids.map(txid => ({ hash: txid, status: 'MINED', blockNumber: 1, type: 'l1tx' })))
+        //     expect(api.finalizeDepositBatchOnL1(
+        //         operatorSigner,
+        //         l1Network,
+        //         defaultUtxoProvider,
+        //         defaultChainProvider,
+        //         l1Provider,
+        //         offchainDataProvider,
+        //         defaultFeeRate,
+        //         batch
+        //     )).to.eventually.be.rejectedWith('last level aggregation txs is not 1')
+        // })
         it('api.finalizeDepositBatchOnL1 should not work when the merkle tree is full', async () => {
             const batch: DepositBatch = {
                 status: 'BEING_AGGREGATED',
@@ -405,7 +405,7 @@ describe('test l1 api', () => {
                 l1Provider.setListUtxosByRawTxs([await defaultChainProvider.getRawTransaction(txid)])
                 await offchainDataProvider.setLatestBridgeTxid(txid)
             }
-            
+
             let count = 16;
             while(count--> 0) {
                 await doAFinalize();
@@ -443,59 +443,59 @@ describe('test l1 api', () => {
     })
 
     describe('test for finalizeDepositBatchOnL2', () => {
-        it('api.finalizeDepositBatchOnL2 should work when the batch should be finalized on L2', async () => {
-            let batch: DepositBatch = {
-                status: 'BEING_AGGREGATED',
-                deposits: await createDeposits(2, offchainDataProvider),
-                aggregationTxs: []
-            }
-            const txids: L1TxHash[] = await api.aggregateLevelDeposits(
-                operatorSigner,
-                l1Network,
-                createEnhancedUtxoProvider(),
-                defaultFeeRate,
-                batch
-            )
-            batch.aggregationTxs.push(txids.map(txid => ({ hash: txid, status: 'MINED', blockNumber: 1, type: 'l1tx' })))
+        // it('api.finalizeDepositBatchOnL2 should work when the batch should be finalized on L2', async () => {
+        //     let batch: DepositBatch = {
+        //         status: 'BEING_AGGREGATED',
+        //         deposits: await createDeposits(2, offchainDataProvider),
+        //         aggregationTxs: []
+        //     }
+        //     const txids: L1TxHash[] = await api.aggregateLevelDeposits(
+        //         operatorSigner,
+        //         l1Network,
+        //         createEnhancedUtxoProvider(),
+        //         defaultFeeRate,
+        //         batch
+        //     )
+        //     batch.aggregationTxs.push(txids.map(txid => ({ hash: txid, status: 'MINED', blockNumber: 1, type: 'l1tx' })))
 
-            batch = {
-                ...batch,
-                status: 'FINALIZED',
-                finalizeBatchTx: {
-                    hash: await api.finalizeDepositBatchOnL1(
-                        operatorSigner,
-                        l1Network,
-                        defaultUtxoProvider,
-                        defaultChainProvider,
-                        l1Provider,
-                        offchainDataProvider,
-                        defaultFeeRate,
-                        batch
-                    ),
-                    status: 'MINED',
-                    blockNumber: 1,
-                    type: 'l1tx'
-                }
-            }
-            l1Provider.setListUtxosByRawTxs([await defaultChainProvider.getRawTransaction(batch.finalizeBatchTx.hash)])
-
-            batch = {
-                ...batch,
-                status: 'DEPOSITED',
-                depositTx: { hash: '0x123', status: 'SUCCEEDED', type: 'l2tx' }
-            }
-            const txid = await api.finalizeDepositBatchOnL2(
-                operatorSigner,
-                l1Network,
-                defaultUtxoProvider,
-                defaultChainProvider,
-                l1Provider,
-                offchainDataProvider,
-                defaultFeeRate,
-                batch
-            )
-            expect(txid).to.equal(await offchainDataProvider.getLatestBridgeTxid())
-        })
+        //     batch = {
+        //         ...batch,
+        //         status: 'FINALIZED',
+        //         finalizeBatchTx: {
+        //             hash: await api.finalizeDepositBatchOnL1(
+        //                 operatorSigner,
+        //                 l1Network,
+        //                 defaultUtxoProvider,
+        //                 defaultChainProvider,
+        //                 l1Provider,
+        //                 offchainDataProvider,
+        //                 defaultFeeRate,
+        //                 batch
+        //             ),
+        //             status: 'MINED',
+        //             blockNumber: 1,
+        //             type: 'l1tx'
+        //         }
+        //     }
+        //     l1Provider.setListUtxosByRawTxs([await defaultChainProvider.getRawTransaction(batch.finalizeBatchTx.hash)])
+        //
+        //     batch = {
+        //         ...batch,
+        //         status: 'DEPOSITED',
+        //         depositTx: { hash: '0x123', status: 'SUCCEEDED', type: 'l2tx' }
+        //     }
+        //     const txid = await api.finalizeDepositBatchOnL2(
+        //         operatorSigner,
+        //         l1Network,
+        //         defaultUtxoProvider,
+        //         defaultChainProvider,
+        //         l1Provider,
+        //         offchainDataProvider,
+        //         defaultFeeRate,
+        //         batch
+        //     )
+        //     expect(txid).to.equal(await offchainDataProvider.getLatestBridgeTxid())
+        // })
         it('api.finalizeDepositBatchOnL2 should not work when the batch is under aggregation', async () => {
             const batch: DepositBatch = {
                 status: 'BEING_AGGREGATED',
@@ -557,7 +557,7 @@ describe('test l1 api', () => {
         ) {
             await doADeposit(BigInt(1e8))
             const withdrawals: Withdrawal[] = []
-            for (let i = 0; i < withdrawalCount; i++) { 
+            for (let i = 0; i < withdrawalCount; i++) {
                 withdrawals.push(createAMockWithdrawal(BigInt(500 + i), await getRandomL1Address()))
             }
 

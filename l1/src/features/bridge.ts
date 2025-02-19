@@ -584,7 +584,7 @@ function buildFinalizeL1DepositTx(
 
       tracedBridge.trace.prevTx,
       tracedDepositAggregator.trace.prevTx,
-      depositAggregatorUtxo.state.level === 0n,
+      depositAggregatorUtxo.state.type === 'LEAF',
       inputToPrevout(finalizeL1Tx.unsignedTx, 2)
     )
   )

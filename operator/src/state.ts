@@ -2,6 +2,9 @@ import { ReceiptTx } from 'starknet';
 import { L2Event } from './l2/events';
 import { assert } from 'console';
 import { cloneDeep, max } from 'lodash';
+import { Sha256 } from 'scrypt-ts';
+import { DepositAggregatorState } from 'l1';
+import { l2AddressToHex } from './l1/utils/contractUtil';
 
 export type L1Address = `0x${string}`;
 export type L2Address = `0x${string}`;
@@ -50,43 +53,47 @@ type DepositBatchCommon = {
   deposits: Deposit[];
 };
 
+export type DepositAggregationState = DepositAggregatorState & {
+  tx: L1Tx
+};
+
 export type DepositBatch =
   | ({
       status: 'BEING_AGGREGATED';
-      aggregationTxs: L1Tx[][];
+      aggregationTxs: DepositAggregationState[][];
     } & DepositBatchCommon)
   | ({
       status: 'AGGREGATED';
-      aggregationTxs: L1Tx[][];
+      aggregationTxs: DepositAggregationState[][];
       finalizeBatchTx: L1Tx;
     } & DepositBatchCommon)
   | ({
       status: 'FINALIZED';
-      aggregationTxs: L1Tx[][];
+      aggregationTxs: DepositAggregationState[][];
       finalizeBatchTx: L1Tx;
     } & DepositBatchCommon)
   | ({
       status: 'SUBMITTED_TO_L2';
-      aggregationTxs: L1Tx[][];
+      aggregationTxs: DepositAggregationState[][];
       finalizeBatchTx: L1Tx;
       depositTx: L2TxStatus;
     } & DepositBatchCommon)
   | ({
       status: 'DEPOSITED';
-      aggregationTxs: L1Tx[][];
+      aggregationTxs: DepositAggregationState[][];
       finalizeBatchTx: L1Tx;
       depositTx: L2TxStatus;
     } & DepositBatchCommon)
   | ({
       status: 'SUBMITTED_FOR_COMPLETION';
-      aggregationTxs: L1Tx[][];
+      aggregationTxs: DepositAggregationState[][];
       finalizeBatchTx: L1Tx;
       depositTx: L2Tx;
       verifyTx: L1Tx;
     } & DepositBatchCommon)
   | ({
       status: 'COMPLETED';
-      aggregationTxs: L1Tx[][];
+      aggregationTxs: DepositAggregationState[][];
       finalizeBatchTx: L1Tx;
       depositTx: L2Tx;
       verifyTx: L1Tx;
@@ -179,7 +186,9 @@ export type BridgeEnvironment = {
   MAX_WITHDRAWAL_BLOCK_AGE: number;
   MAX_WITHDRAWAL_BATCH_SIZE: number;
   aggregateDeposits: (batch: DepositBatch) => Promise<{txs: L1Tx[], replace: boolean}>;
+  aggregateDeposits2: (level: DepositAggregationState[]) => Promise<DepositAggregationState[]>;
   finalizeBatch: (batch: DepositBatch) => Promise<L1Tx>;
+  finalizeBatch2: (level2: DepositAggregationState) => Promise<L1Tx>;
   submitDepositsToL2: (hash: L1TxHash, deposits: Deposit[]) => Promise<L2Tx>;
   closePendingWithdrawalBatch: () => Promise<L2Tx>;
 };
@@ -272,8 +281,8 @@ function updateL1TxStatus(state: OperatorState, tx: L1TxStatus) {
   for (const batch of state.depositBatches) {
     for (const aggArray of batch.aggregationTxs) {
       for (let i = 0; i < aggArray.length; i++) {
-        if (aggArray[i].hash === tx.hash) {
-          aggArray[i].status = tx.status;
+        if (aggArray[i].tx.hash === tx.hash) {
+          aggArray[i].tx.status = tx.status;
         }
       }
     }
@@ -339,7 +348,7 @@ export function getAllL1Txs(state: OperatorState): Set<L1TxId> {
     }
 
     for (const txArray of batch.aggregationTxs) {
-      l1Txs.push(...txArray);
+      l1Txs.push(...txArray.map(({ tx }) => tx));
     }
 
     if (
@@ -471,32 +480,27 @@ async function initiateAggregation(
     const deposits = state.pendingDeposits.splice(0, batchSize);
     state.pendingDeposits = state.pendingDeposits.slice(batchSize);
 
+    const level0: DepositAggregationState[] = deposits.map(({origin, amount, recipient}) => ({
+      type: 'LEAF',
+      level: 0n,
+      tx: origin,
+      depositAmt: amount,
+      depositAddress: l2AddressToHex(recipient)
+    }));
+
     if (batchSize === 1) {
       // if there is only one deposit, we can finalize the batch directly
-      const finalizeBatchTx = await env.finalizeBatch(
-        {
-          status: 'BEING_AGGREGATED',
-          deposits,
-          aggregationTxs: [],
-        }
-      );
+      const finalizeBatchTx = await env.finalizeBatch2(level0[0]);
       state.depositBatches.push({
         status: 'AGGREGATED',
         deposits,
-        aggregationTxs: [],
+        aggregationTxs: [level0],
         finalizeBatchTx,
       });
     } else {
-      // if there is more than one deposit, we need to aggregate them first
-      const aggregationTxs: L1Tx[][] = [
-        (await env.aggregateDeposits(
-          // construct an dummy batch, with the deposits and an empty aggregation txs array 
-          {
-            status: 'BEING_AGGREGATED',
-            deposits,
-            aggregationTxs: [],
-          }
-        )).txs,
+      const aggregationTxs: DepositAggregationState[][] = [
+        level0,
+        await env.aggregateDeposits2(level0)
       ];
       state.depositBatches.push({
         status: 'BEING_AGGREGATED',
@@ -529,13 +533,12 @@ async function manageAggregation(
   for (let i = 0; i < newState.depositBatches.length; i++) {
     const batch = newState.depositBatches[i];
     if (batch.status === 'BEING_AGGREGATED') {
-      const aggregationTxs = batch.aggregationTxs.at(-1);
+      const aggregationTxs = batch.aggregationTxs.at(-1)!;
       if (
-        aggregationTxs &&
-        aggregationTxs.every((tx) => tx.status === 'MINED')
+        aggregationTxs.every((tx) => tx.tx.status === 'MINED')
       ) {
         if (aggregationTxs.length === 1) {
-          const finalizeBatchTx = await env.finalizeBatch(batch);
+          const finalizeBatchTx = await env.finalizeBatch2(aggregationTxs.at(0)!);
           newState.depositBatches[i] = {
             ...batch,
             status: 'AGGREGATED',
@@ -543,8 +546,8 @@ async function manageAggregation(
           };
         } else {
           const newAggregationLevel =
-            await env.aggregateDeposits(batch);
-          batch.aggregationTxs.push(newAggregationLevel.txs);
+            await env.aggregateDeposits2(batch.aggregationTxs.at(-1)!);
+          batch.aggregationTxs.push(newAggregationLevel);
         }
       }
     }

@@ -14,6 +14,7 @@ import {
   applyChange,
   BridgeEnvironment,
   Deposit,
+  DepositAggregationState,
   DepositBatch,
   L1Tx,
   L1TxHash,
@@ -269,10 +270,14 @@ async function mockedOperator() {
     submitDepositsToL2: async (
       hash: L1TxHash,
       deposits: Deposit[]
-    ): Promise<L2Tx> =>
-      submitDepositsToL2(admin, bridge, BigInt(hash), deposits),
-    closePendingWithdrawalBatch: async (): Promise<L2Tx> =>
-      closePendingWithdrawalBatch(admin, bridge),
+    ): Promise<L2Tx> => submitDepositsToL2(admin, bridge, BigInt(hash), deposits),
+    closePendingWithdrawalBatch: async (): Promise<L2Tx> => closePendingWithdrawalBatch(admin, bridge),
+    aggregateDeposits2: function (level: DepositAggregationState[]): Promise<DepositAggregationState[]> {
+      throw new Error('Function not implemented.');
+    },
+    finalizeBatch2: function (level2: DepositAggregationState): Promise<L1Tx> {
+      throw new Error('Function not implemented.');
+    }
   };
 
   const operatorL2Events = l2Events(provider, initialState.l2BlockNumber, [

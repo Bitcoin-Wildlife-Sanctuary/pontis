@@ -67,7 +67,7 @@ export function getDepositBatchID(depositBatch: DepositBatch): ByteString {
 
     let depoositAggregatorTxid = 
         depositBatch.aggregationTxs.length > 0 ? 
-        depositBatch.aggregationTxs.at(-1)![0].hash : // the last aggregation tx
+        depositBatch.aggregationTxs.at(-1)![0].tx.hash : // the last aggregation tx
         depositBatch.deposits[0].origin.hash; // the only deposit
     
     const height = getDepositBatchHeight(depositBatch.deposits);

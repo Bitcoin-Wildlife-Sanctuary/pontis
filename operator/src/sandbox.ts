@@ -14,6 +14,7 @@ import {
   applyChange,
   BridgeEnvironment,
   Deposit,
+  DepositAggregationState,
   DepositBatch,
   Deposits,
   L1Tx,
@@ -27,9 +28,10 @@ import {
 } from './state';
 import { setupOperator } from './operator';
 // import { aggregateDeposits, finalizeBatch } from './l1/l1mocks';
-import { l1TransactionStatus, aggregateDeposits, finalizeBatch } from './l1/transactions';
+import { l1TransactionStatus, aggregateDeposits, finalizeBatch, aggregateDeposits2, finalizeBatch2 } from './l1/transactions';
 import { deposits, l1BlockNumber } from './l1/events';
-import { merge, of, Subject } from 'rxjs';
+import { EMPTY, from, merge, of, Subject } from 'rxjs';
+import { aggregateLevelDeposits2 } from './l1/api';
 
 async function sandboxOperator() {
   await prepareL1()
@@ -55,11 +57,18 @@ async function sandboxOperator() {
       hash: L1TxHash,
       deposits: Deposit[]
     ): Promise<L2Tx> => {
-      throw new Error('Not implemented');
+      console.warn('submitDepositsToL2 Not implemented');
+      return {
+        type: 'l2tx',
+        hash: "0x123456789",
+        status: 'PENDING'
+      };
     },
     closePendingWithdrawalBatch: async (): Promise<L2Tx> => {
       throw new Error('Not implemented');
     },
+    aggregateDeposits2: (level: DepositAggregationState[]) => aggregateDeposits2(level),
+    finalizeBatch2: (root: DepositAggregationState) => finalizeBatch2(root)
   };
 
   const operator = setupOperator(
@@ -69,9 +78,7 @@ async function sandboxOperator() {
     deposits(initialState.l1BlockNumber),
     of(), // no l2 events for now
     l1TransactionStatus,
-    (tx: L2TxId) => {
-      throw new Error('Not implemented');
-    },
+    (tx: L2TxId) => EMPTY,
     applyChange,
     saveState
   );

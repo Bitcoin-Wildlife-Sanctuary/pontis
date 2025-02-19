@@ -1,4 +1,4 @@
-import { DepositBatch, L1Tx, L1TxHash, L1TxId, L1TxStatus, WithdrawalBatch } from '../state';
+import { L1Tx, L1TxHash, L1TxId, L1TxStatus, WithdrawalBatch, DepositAggregationState, DepositBatch } from '../state';
 import { distinctUntilKeyChanged, from, interval, Observable, switchMap, takeWhile, tap } from 'rxjs';
 import * as l1Api from './api';
 import { createL1Provider, UNCONFIRMED_BLOCK_NUMBER } from './deps/l1Provider';
@@ -41,7 +41,7 @@ export async function aggregateDeposits(batch: DepositBatch): Promise<{
     env.operatorSigner,
     env.l1Network,
     new EnhancedProvider(env.createUtxoProvider(), env.createChainProvider(), true),
-    
+
     env.l1FeeRate,
     batch
   );
@@ -70,6 +70,35 @@ export async function finalizeBatch(batch: DepositBatch): Promise<L1Tx> {
     env.l1FeeRate,
 
     batch
+  );
+  return {
+    type: 'l1tx',
+    hash: txid,
+    status: 'UNCONFIRMED',
+    blockNumber: UNCONFIRMED_BLOCK_NUMBER,
+  };
+}
+
+export async function aggregateDeposits2(level: DepositAggregationState[]): Promise<DepositAggregationState[]> {
+  return await l1Api.aggregateLevelDeposits2(
+    env.operatorSigner,
+    env.l1Network,
+    new EnhancedProvider(env.createUtxoProvider(), env.createChainProvider(), true),
+    env.l1FeeRate,
+    level
+  );
+}
+
+export async function finalizeBatch2(root: DepositAggregationState): Promise<L1Tx> {
+  const txid = await l1Api.finalizeDepositBatchOnL12(
+    env.operatorSigner,
+    env.l1Network,
+    env.createUtxoProvider(),
+    env.createChainProvider(),
+    createL1Provider(env.useRpc, env.rpcConfig, env.l1Network),
+    getFileOffChainDataProvider(),
+    env.l1FeeRate,
+    root
   );
   return {
     type: 'l1tx',
@@ -157,4 +186,4 @@ export async function expandWithdrawal(batch: WithdrawalBatch): Promise<{
     }
   }
   throw new Error('no reach here')
-} 
+}
