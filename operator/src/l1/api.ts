@@ -146,7 +146,6 @@ export async function createDeposit(
         amount: depositAmt,
         recipient: l2Address,
         origin: {
-            blockNumber: UNCONFIRMED_BLOCK_NUMBER,
             status: 'UNCONFIRMED' as const,
             type: 'l1tx' as const,
             hash: depositTx.txid as L1TxHash,
@@ -274,7 +273,6 @@ export async function aggregateLevelDeposits2(
                 type: 'l1tx',
                 status: 'UNCONFIRMED',
                 hash: tx.txid as L1TxHash,
-                blockNumber: -1
             },
 
         });
@@ -481,7 +479,7 @@ export async function finalizeDepositBatchOnL2(
 export function getL1TransactionStatus(
     l1Provider: L1Provider,
     txid: L1TxHash,
-): Promise<L1TxStatus['status']> {
+): Promise<L1TxStatus> {
     // console.log(`getL1TransactionStatus(${txid})`)
     return l1Provider.getTransactionStatus(txid);
 }

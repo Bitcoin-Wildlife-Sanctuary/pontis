@@ -19,13 +19,16 @@ export type L1TxId = {
   hash: L1TxHash;
 };
 
-export type L1TxStatus = L1TxId & {
-  status: 'UNCONFIRMED' | 'MINED' | 'DROPPED'; // Orphaned, Droped?;
-};
+export type L1TxStatus = L1TxId & (
+  | {
+    status: 'UNCONFIRMED' | 'DROPPED';
+  }
+  | {
+    status: 'MINED',
+    blockNumber: number
+  });
 
-export type L1Tx = L1TxStatus & {
-  blockNumber: number;
-}; // TODO: What else should go into a l1 tx?
+export type L1Tx = L1TxStatus; // TODO: What else should go into a l1 tx?
 
 export type L2TxId = {
   type: 'l2tx';
@@ -212,7 +215,7 @@ export async function applyChange(
       newState.pendingDeposits.push(...change.deposits);
       newState.l1BlockNumber = Math.max(
         newState.l1BlockNumber,
-        max(change.deposits.map((d) => d.origin.blockNumber)) || 0
+        max(change.deposits.map((d) => d.origin.status === 'MINED' && d.origin.blockNumber || 0)) || 0
       );
       await initiateAggregation(env, newState);
       break;
@@ -517,6 +520,7 @@ function depositsOldEnough(
 ): boolean {
   for (const deposit of state.pendingDeposits) {
     if (
+      deposit.origin.status === 'MINED' &&
       deposit.origin.blockNumber + env.MAX_DEPOSIT_BLOCK_AGE <
       state.l1BlockNumber
     ) {

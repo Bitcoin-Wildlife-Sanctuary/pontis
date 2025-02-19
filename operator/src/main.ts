@@ -131,12 +131,14 @@ async function mockedOperator() {
       type: 'l1tx',
       hash: '0xabcabd',
       status: 'MINED',
+      blockNumber: 5
     },
     // aggregation tx status
     {
       type: 'l1tx',
       hash: '0xabeabf',
       status: 'MINED',
+      blockNumber: 6
     },
     // aggregation tx status
     {
@@ -149,6 +151,7 @@ async function mockedOperator() {
       type: 'l1tx',
       hash: '0xabcabdabeabf',
       status: 'MINED',
+      blockNumber: 7
     },
     // finalize tx status
     {
@@ -161,6 +164,7 @@ async function mockedOperator() {
       type: 'l1tx',
       hash: '0xfffabe',
       status: 'MINED',
+      blockNumber: 8
     },
     // advance clock
     {
@@ -178,6 +182,7 @@ async function mockedOperator() {
       type: 'l1tx',
       hash: '0xfffabcabdabeabf',
       status: 'MINED',
+      blockNumber: 9
     },
     // finalize tx status
     {
@@ -190,6 +195,7 @@ async function mockedOperator() {
       type: 'l1tx',
       hash: '0xfffabe',
       status: 'MINED',
+      blockNumber: 10
     },
     {
       type: 'function_call',

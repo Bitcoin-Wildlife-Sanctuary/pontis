@@ -154,7 +154,7 @@ describe('test l1 api', () => {
 
             l1Provider.setListUtxosByRawTxs(await getRawTxs(deposits.map(d => d.origin.hash), defaultChainProvider), 1);
             deposits.forEach(d => d.origin.status = 'MINED')
-            deposits.forEach(d => d.origin.blockNumber = 1)
+            deposits.forEach(d => { if (d.origin.status === 'MINED') { d.origin.blockNumber = 1 } })
 
             const deposits2 = await api.listDeposits(
                 0,
@@ -171,7 +171,7 @@ describe('test l1 api', () => {
             const deposits = await createDeposits(2, offchainDataProvider)
             l1Provider.setListUtxosByRawTxs(await getRawTxs(deposits.map(d => d.origin.hash), defaultChainProvider), 1);
             deposits.forEach(d => d.origin.status = 'MINED')
-            deposits.forEach(d => d.origin.blockNumber = 1)
+            deposits.forEach(d => { if (d.origin.status === 'MINED') { d.origin.blockNumber = 1 }})
             const deposits2 = await api.listDeposits(
                 90,
                 100,
@@ -189,7 +189,7 @@ describe('test l1 api', () => {
 
             l1Provider.setListUtxosByRawTxs(await getRawTxs(deposits.map(d => d.origin.hash), defaultChainProvider), 1);
             deposits.forEach(d => d.origin.status = 'MINED')
-            deposits.forEach(d => d.origin.blockNumber = 1)
+            deposits.forEach(d => { if (d.origin.status === 'MINED') { d.origin.blockNumber = 1 }})
 
             const deposits2 = await api.listDeposits(
                 0,

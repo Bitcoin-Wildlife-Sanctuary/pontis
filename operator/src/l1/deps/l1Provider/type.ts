@@ -4,7 +4,7 @@ import { L1TxStatus } from "../../../state";
 export type L1Provider = {
     getCurrentBlockNumber: () => Promise<number>;
     listUtxos: (address: string, fromBlock?: number, toBlock?: number) => Promise<Utxo[]>;
-    getTransactionStatus: (txid: string) => Promise<L1TxStatus['status']>;
+    getTransactionStatus: (txid: string) => Promise<L1TxStatus>;
 }
 
 export type Utxo = UTXO & {
