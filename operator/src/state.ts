@@ -481,7 +481,6 @@ async function initiateAggregation(
     console.log('aggregating', batchSize, 'deposits');
 
     const deposits = state.pendingDeposits.splice(0, batchSize);
-    state.pendingDeposits = state.pendingDeposits.slice(batchSize);
 
     const level0: DepositAggregationState[] = deposits.map(({origin, amount, recipient}) => ({
       type: 'LEAF',
