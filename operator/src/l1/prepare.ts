@@ -1,9 +1,10 @@
-import {loadContractArtifacts, btcRpc} from 'l1'
+import {loadContractArtifacts, btcRpc, BridgeState} from 'l1'
 import * as env from './env'
 import { getFileOffChainDataProvider } from './deps/offchainDataProvider'
 import { createL1Provider } from './deps/l1Provider'
 import { getContractAddresses } from './utils/contractUtil';
 import * as api from './api';
+import { BridgeCovenantState } from '../state';
 export async function importAddressesIntoNode() {
     const addresses = await getContractAddresses(env.operatorSigner, env.l1Network);
 
@@ -55,12 +56,14 @@ export async function importAddressesIntoNode() {
     )
 }
 
-export async function prepareL1() {
+export async function prepareL1(): Promise<BridgeCovenantState> {
     // 1. load l1 contract artifacts
     loadContractArtifacts()
     
     // 2. add contract spks and operator signer to node if using rpc providers
     await importAddressesIntoNode()
+
+    const offchainDataProvider = getFileOffChainDataProvider()
 
     // 4. create bridge contract instance if not exists
     await api.createBridgeContractIfNotExists(
@@ -68,8 +71,20 @@ export async function prepareL1() {
         env.l1Network,
         env.createUtxoProvider(),
         env.createChainProvider(),
-        getFileOffChainDataProvider(),
+        offchainDataProvider,
         createL1Provider(env.useRpc, env.rpcConfig, env.l1Network),
         env.l1FeeRate
     )
+
+    const latestBridgeTxid = await offchainDataProvider.getLatestBridgeTxid();
+    const bridgeState = await offchainDataProvider.getBridgeState(latestBridgeTxid!) as BridgeState;
+    
+    return {
+        ...bridgeState,
+        latestTx: {
+            type: 'l1tx',
+            hash: latestBridgeTxid!,
+            status: 'UNCONFIRMED' // tx status will be fetched by the operator
+        }
+    }
 }

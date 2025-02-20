@@ -27,7 +27,7 @@ import {
   versionToByteString,
 } from '../lib/txTools'
 import * as tools from 'uint8array-tools'
-import { BatchID } from '../util/merkleUtils'
+import { BatchId } from '../util/merkleUtils'
 import { CONTRACT_INDEXES, getChangeOutput } from './util'
 
 
@@ -59,7 +59,7 @@ export type DepositAggregatorState = {
 export function stateToBatchID(
   state: DepositAggregatorState,
   prevTxid: string
-): BatchID {
+): BatchId {
   const hash =
     state.type === 'LEAF'
       ? DepositAggregator.hashDepositData(
@@ -79,7 +79,7 @@ export function stateToBatchID(
 export function stateHashToBatchID(
   stateHash: Sha256,
   prevTxid: string
-): BatchID {
+): BatchId {
   return sha256(prevTxid + stateHash)
 }
 

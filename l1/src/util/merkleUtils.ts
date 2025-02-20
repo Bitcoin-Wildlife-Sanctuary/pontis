@@ -80,13 +80,13 @@ function calcMerkleProof(
   return proof
 }
 export const BATCH_MERKLE_TREE_LENGTH = 16;
-export type BatchID = string
-export type BatchMerkleTree = Array<BatchID> & { length: typeof BATCH_MERKLE_TREE_LENGTH }
+export type BatchId = string
+export type BatchMerkleTree = Array<BatchId> & { length: typeof BATCH_MERKLE_TREE_LENGTH }
 export class BridgeMerkle {
-  static readonly EMPTY_BATCH_ID: BatchID = Sha256(MerklePath.NULL_NODE)
+  static readonly EMPTY_BATCH_ID: BatchId = Sha256(MerklePath.NULL_NODE)
 
   static getEmptyTree(): BatchMerkleTree {
-    const arr: BatchID[] = []
+    const arr: BatchId[] = []
     for (let i = 0; i < BATCH_MERKLE_TREE_LENGTH; i++) {
       arr.push(BridgeMerkle.EMPTY_BATCH_ID)
     }
