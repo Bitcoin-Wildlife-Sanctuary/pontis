@@ -24,10 +24,10 @@ const defaultChainProvider = new TestChainProvider()
 const defaultUtxoProvider = new TestUtxoProvider()
 const defaultFeeRate = 10
 const l2Addresses: L2Address[] = [
-    '0x176a1bd84444c89232ec27754698e5d2e7e1a7f1539f12027f28b23ec9f3d8',
+    '0x00176a1bd84444c89232ec27754698e5d2e7e1a7f1539f12027f28b23ec9f3d8',
     '0x00c55d3b840a60c09989377c9b4cfa6c428ef37ee7bbd47e93b0c0fa440a5be8',
-    '0x49d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7',
-    '0x2d889448e2ce40fa6874e0bc0bd6156d535a1c9866fd9163be5756e5695493b'
+    '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7',
+    '0x02d889448e2ce40fa6874e0bc0bd6156d535a1c9866fd9163be5756e5695493b'
 ]
 
 const operatorSigner = new DefaultSigner(ECPair.fromWIF('L2Lnz6FoeWLdEdG7Kk8JnBr1Vb2hdcvPNR1BkkfvVA9Piax83L5U'));
@@ -80,7 +80,7 @@ describe('test l1 api', () => {
 
     it('api.getTransactionStatus should return status', async () => {
         l1Provider.setGetTransactionStatus('MINED')
-        const status = await api.getL1TransactionStatus(l1Provider, '8095bd333ba059defa5f28a4477f7799322a3792806b66be32f2423fe82763a7')
+        const status = await api.getL1TransactionStatus(l1Provider, '8095bd333ba059defa5f28a4477f7799322a3792806b66bze32f2423fe82763a7')
         expect(status).to.equal('MINED')
     })
 
@@ -150,7 +150,7 @@ describe('test l1 api', () => {
 
     describe('test for listDeposits', () => {
         it('api.listDeposits should return deposits when utxo and offchain data are both have same deposit', async () => {
-            const deposits = await createDeposits(2, offchainDataProvider)
+            const deposits = await createDeposits(2)
 
             l1Provider.setListUtxosByRawTxs(await getRawTxs(deposits.map(d => d.origin.hash), defaultChainProvider), 1);
             deposits.forEach(d => d.origin.status = 'MINED')
@@ -162,13 +162,13 @@ describe('test l1 api', () => {
                 operatorSigner,
                 l1Network,
                 l1Provider,
-                offchainDataProvider
+                defaultChainProvider
             )
             expect(deposits2).to.deep.equal(deposits)
         })
 
         it('api.listDeposits should return empty array when no deposit utxo in the range', async () => {
-            const deposits = await createDeposits(2, offchainDataProvider)
+            const deposits = await createDeposits(2)
             l1Provider.setListUtxosByRawTxs(await getRawTxs(deposits.map(d => d.origin.hash), defaultChainProvider), 1);
             deposits.forEach(d => d.origin.status = 'MINED')
             deposits.forEach(d => { if (d.origin.status === 'MINED') { d.origin.blockNumber = 1 }})
@@ -178,37 +178,15 @@ describe('test l1 api', () => {
                 operatorSigner,
                 l1Network,
                 l1Provider,
-                offchainDataProvider
+                defaultChainProvider
             )
             expect(deposits.length).to.equal(2)
             expect(deposits2).to.deep.equal([])
         })
 
-        it('api.listDeposits should return empty array when no deposits not in offchain data', async () => {
-            const deposits = await createDeposits(2, offchainDataProvider)
-
-            l1Provider.setListUtxosByRawTxs(await getRawTxs(deposits.map(d => d.origin.hash), defaultChainProvider), 1);
-            deposits.forEach(d => d.origin.status = 'MINED')
-            deposits.forEach(d => { if (d.origin.status === 'MINED') { d.origin.blockNumber = 1 }})
-
-            const deposits2 = await api.listDeposits(
-                0,
-                100,
-                operatorSigner,
-                l1Network,
-                l1Provider,
-                createMemoryOffChainDB()
-            )
-            expect(deposits.length).to.equal(2)
-            expect(deposits2).to.deep.equal([])
-        })
     })
 
     describe('test for aggregateLevelDeposits', () => {
-        it('api.createDeposit should work', async () => {
-            const deposit = (await createDeposits(1, offchainDataProvider))[0]
-            expect({ recipient: deposit.recipient, amount: deposit.amount }).to.deep.equal(await offchainDataProvider.getDepositInfo(deposit.origin.hash))
-        })
 
         // it('api.aggregateLevelDeposits should not work when only 1 deposit in the batch', async () => {
         //     const batch: DepositBatch = {
@@ -714,7 +692,6 @@ describe('test l1 api', () => {
     }
     async function createDeposits(
         depositCount: number,
-        offchainDataProvider: OffchainDataProvider,
         amountList?: bigint[]
     ) {
         const deposits = []
@@ -723,7 +700,7 @@ describe('test l1 api', () => {
             amountList[i] = amountList[i] ?? (500n + BigInt(i))
         }
         for (let i = 0; i < depositCount; i++) {
-            deposits.push(await api.createDeposit(operatorSigner, l1Network, defaultUtxoProvider, defaultChainProvider, offchainDataProvider, defaultFeeRate, operatorSigner, l2Addresses[i % l2Addresses.length], amountList[i]))
+            deposits.push(await api.createDeposit(operatorSigner, l1Network, defaultUtxoProvider, defaultChainProvider, defaultFeeRate, operatorSigner, l2Addresses[i % l2Addresses.length], amountList[i]))
         }
         return deposits
     }

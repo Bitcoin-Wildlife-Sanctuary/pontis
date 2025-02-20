@@ -76,7 +76,7 @@ async function depositsInRange(
    env.operatorSigner,
    env.l1Network,
    createL1Provider(env.useRpc, env.rpcConfig, env.l1Network),
-   getFileOffChainDataProvider()
+   env.createChainProvider()
   );
   // console.log('deposits', blockFrom, blockTo, deposits)
   return deposits

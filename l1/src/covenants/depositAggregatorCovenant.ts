@@ -5,6 +5,7 @@ import {
   sha256,
   Sha256,
   toByteString,
+  byteString2Int
 } from 'scrypt-ts'
 import { Covenant } from '../lib/covenant'
 import { SupportedNetwork } from '../lib/constants'
@@ -19,6 +20,7 @@ import { Transaction } from '@scrypt-inc/bitcoinjs-lib'
 import { getTxId, toXOnly } from '../lib/utils'
 import {
   createEmptySha256,
+  INITIAL_DEPOSIT_AGGREGATOR_STATE_OUTPUT_SCRIPT_LENGTH,
   inputToByteString,
   isTxHashEqual,
   locktimeToByteString,
@@ -50,7 +52,6 @@ export function stateToBatchID(
   const hash =
     state.type === 'LEAF'
       ? DepositAggregator.hashDepositData(
-          0n,
           state.depositAddress,
           state.depositAmt
         )
@@ -117,7 +118,7 @@ export interface TraceableDepositAggregatorUtxo extends DepositAggregatorUtxo {
 }
 
 export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> {
-  static readonly LOCKED_ASM_VERSION = 'e96aa2300add2d4c09fd96735460917d'
+  static readonly LOCKED_ASM_VERSION = 'f5ffe171a5ceef4165cf33edb0c177ba'
 
   constructor(
     readonly operator: PubKey,
@@ -154,7 +155,6 @@ export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> 
   static serializeState(state: DepositAggregatorState) {
     if (state.type === 'LEAF') {
       return DepositAggregator.hashDepositData(
-        0n,
         state.depositAddress,
         state.depositAmt
       )
@@ -164,6 +164,23 @@ export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> 
         state.prevHashData0,
         state.prevHashData1
       )
+    }
+  }
+
+  static parseDepositInfoFromTx(tx: Transaction): [isInitialDeposit: boolean, depositData: DepositData] {
+    const [state] = splitHashFromStateOutput(tx)
+    // 32[address] + 8[amount] = 40
+    const isInitialDeposit = len(state) === 40n
+    if (isInitialDeposit) {
+      return [true, {
+        address: state.slice(0, 64),
+        amount: byteString2Int(state.slice(64)),
+      }]
+    } else {
+      return [false, {
+        address: '',
+        amount: 0n,
+      }]
     }
   }
 

@@ -121,12 +121,10 @@ export class DepositAggregator extends SmartContract {
       assert(len(depositData0.address) == 32n)
       assert(len(depositData1.address) == 32n)
       const hashData0 = DepositAggregator.hashDepositData(
-        level,
         depositData0.address,
         depositData0.amount
       )
       const hashData1 = DepositAggregator.hashDepositData(
-        level,
         depositData1.address,
         depositData1.amount
       )
@@ -286,22 +284,20 @@ export class DepositAggregator extends SmartContract {
 
   @method()
   static hashDepositData(
-    level: bigint,
     depositAddress: ByteString,
     depositAmt: bigint
-  ): Sha256 {
-    return hash256(
-      MerklePath.levelToByteString(level) +
-        sha256(depositAddress + GeneralUtils.padAmt(depositAmt))
-    )
+  ): ByteString {
+    // for depositData, we store the plain data, not hashed.
+    assert(len(depositAddress) == 32n)
+    return depositAddress + GeneralUtils.padAmt(depositAmt)
   }
 
   @method()
   static hashAggregatedDepositData(
     level: bigint,
-    left: Sha256,
-    right: Sha256
-  ): Sha256 {
+    left: ByteString,
+    right: ByteString
+  ): ByteString {
     return hash256(MerklePath.levelToByteString(level) + left + right)
   }
 }
