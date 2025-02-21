@@ -1,7 +1,7 @@
-import { L1Tx, L1TxHash, L1TxId, L1TxStatus, WithdrawalBatch, DepositAggregationState, DepositBatch } from '../state';
+import { L1Tx, L1TxHash, L1TxId, L1TxStatus, WithdrawalBatch, DepositAggregationState, DepositBatch, BridgeCovenantState, BatchId } from '../state';
 import { distinctUntilKeyChanged, from, interval, Observable, switchMap, takeWhile, tap } from 'rxjs';
 import * as l1Api from './api';
-import { createL1Provider, UNCONFIRMED_BLOCK_NUMBER } from './deps/l1Provider';
+import { createL1Provider } from './deps/l1Provider';
 import * as env from './env';
 import { getFileOffChainDataProvider } from './deps/offchainDataProvider';
 import { EnhancedProvider } from 'l1';
@@ -22,65 +22,59 @@ async function getL1TransactionStatus(
   // add whatever parameters you need
 ): Promise<L1TxStatus> {
   const l1ChainProvider = createL1Provider(env.useRpc, env.rpcConfig, env.l1Network);
-  const status = await l1Api.getL1TransactionStatus(l1ChainProvider, tx.hash);
-  return {
-    ...tx,
-    status: status,
-  };
+  return await l1Api.getL1TransactionStatus(l1ChainProvider, tx.hash);
 }
 
 export async function isAggregationCompleted(batch: DepositBatch): Promise<boolean> {
   return !l1Api.shouldAggregate(batch);
 }
 
-export async function aggregateDeposits(batch: DepositBatch): Promise<{
-  txs: L1Tx[],
-  replace: boolean
-}> {
-  const txids = await l1Api.aggregateLevelDeposits(
-    env.operatorSigner,
-    env.l1Network,
-    new EnhancedProvider(env.createUtxoProvider(), env.createChainProvider(), true),
+// export async function aggregateDeposits(batch: DepositBatch): Promise<{
+//   txs: L1Tx[],
+//   replace: boolean
+// }> {
+//   const txids = await l1Api.aggregateLevelDeposits(
+//     env.operatorSigner,
+//     env.l1Network,
+//     new EnhancedProvider(env.createUtxoProvider(), env.createChainProvider(), true),
 
-    env.l1FeeRate,
-    batch
-  );
-  const txs: L1Tx[] = txids.map(txid => ({
-    type: 'l1tx',
-    hash: txid,
-    status: 'UNCONFIRMED',
-    blockNumber: UNCONFIRMED_BLOCK_NUMBER,
-  }));
-  // todo: add replace logic
-  return {
-    txs,
-    replace: false
-  }
-}
+//     env.l1FeeRate,
+//     batch
+//   );
+//   const txs: L1Tx[] = txids.map(txid => ({
+//     type: 'l1tx',
+//     hash: txid,
+//     status: 'UNCONFIRMED',
+//   }));
+//   // todo: add replace logic
+//   return {
+//     txs,
+//     replace: false
+//   }
+// }
 
-export async function finalizeBatch(batch: DepositBatch): Promise<L1Tx> {
-  const txid = await l1Api.finalizeDepositBatchOnL1(
-    env.operatorSigner,
-    env.l1Network,
-    env.createUtxoProvider(),
-    env.createChainProvider(),
-    createL1Provider(env.useRpc, env.rpcConfig, env.l1Network),
-    getFileOffChainDataProvider(),
+// export async function finalizeBatch(batch: DepositBatch): Promise<L1Tx> {
+//   const txid = await l1Api.finalizeDepositBatchOnL1(
+//     env.operatorSigner,
+//     env.l1Network,
+//     env.createUtxoProvider(),
+//     env.createChainProvider(),
+//     createL1Provider(env.useRpc, env.rpcConfig, env.l1Network),
+//     getFileOffChainDataProvider(),
 
-    env.l1FeeRate,
+//     env.l1FeeRate,
 
-    batch
-  );
-  return {
-    type: 'l1tx',
-    hash: txid,
-    status: 'UNCONFIRMED',
-    blockNumber: UNCONFIRMED_BLOCK_NUMBER,
-  };
-}
+//     batch
+//   );
+//   return {
+//     type: 'l1tx',
+//     hash: txid,
+//     status: 'UNCONFIRMED',
+//   };
+// }
 
-export async function aggregateDeposits2(level: DepositAggregationState[]): Promise<DepositAggregationState[]> {
-  return await l1Api.aggregateLevelDeposits2(
+export async function aggregateDeposits(level: DepositAggregationState[]): Promise<DepositAggregationState[]> {
+  return await l1Api.aggregateLevelDeposits(
     env.operatorSigner,
     env.l1Network,
     new EnhancedProvider(env.createUtxoProvider(), env.createChainProvider(), true),
@@ -89,23 +83,30 @@ export async function aggregateDeposits2(level: DepositAggregationState[]): Prom
   );
 }
 
-export async function finalizeBatch2(root: DepositAggregationState): Promise<L1Tx> {
-  const txid = await l1Api.finalizeDepositBatchOnL12(
+export async function finalizeDepositBatch(bridgeState: BridgeCovenantState, root: DepositAggregationState): Promise<[BridgeCovenantState, BatchId]> {
+  return await l1Api.finalizeDepositBatchOnL1(
     env.operatorSigner,
     env.l1Network,
     env.createUtxoProvider(),
     env.createChainProvider(),
     createL1Provider(env.useRpc, env.rpcConfig, env.l1Network),
-    getFileOffChainDataProvider(),
     env.l1FeeRate,
-    root
+    root,
+    bridgeState
   );
-  return {
-    type: 'l1tx',
-    hash: txid,
-    status: 'UNCONFIRMED',
-    blockNumber: UNCONFIRMED_BLOCK_NUMBER,
-  };
+}
+
+export async function verifyDepositBatch(bridgeState: BridgeCovenantState, batchId: BatchId): Promise<BridgeCovenantState> {
+  return await l1Api.verifyDepositBatch(
+    env.operatorSigner,
+    env.l1Network,
+    env.createUtxoProvider(),
+    env.createChainProvider(),
+    createL1Provider(env.useRpc, env.rpcConfig, env.l1Network),
+    env.l1FeeRate,
+    bridgeState,
+    batchId
+  );
 }
 
 /// create the withdrawal expander, return the L1Tx
@@ -124,7 +125,6 @@ export async function createWithdrwalExpander(batch: WithdrawalBatch): Promise<L
     type: 'l1tx',
     hash: txid,
     status: 'UNCONFIRMED',
-    blockNumber: UNCONFIRMED_BLOCK_NUMBER,
   };
 }
 
@@ -155,7 +155,6 @@ export async function expandWithdrawal(batch: WithdrawalBatch): Promise<{
       type: 'l1tx',
       hash: txid,
       status: 'UNCONFIRMED',
-      blockNumber: UNCONFIRMED_BLOCK_NUMBER,
     }));
     // todo: add replace logic
     return {
@@ -177,7 +176,6 @@ export async function expandWithdrawal(batch: WithdrawalBatch): Promise<{
       type: 'l1tx',
       hash: txid,
       status: 'UNCONFIRMED',
-      blockNumber: UNCONFIRMED_BLOCK_NUMBER,
     }));
     // todo: add replace logic
     return {

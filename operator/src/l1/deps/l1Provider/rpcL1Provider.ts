@@ -26,8 +26,14 @@ export class RPCL1Provider extends RPCChainProvider implements L1Provider {
         }))
         return utxos.filter((utxo: Utxo) => utxo.blockNumber >= fromBlock && utxo.blockNumber <= toBlock)
     }
-    async getTransactionStatus(txid: string): Promise<L1TxStatus['status']> {
+    async getTransactionStatus(txid: string): Promise<L1TxStatus> {
         const data = await btcRpc.rpc_gettransaction(this.url, this.username, this.password, this.walletName, txid)
-        return data.confirmations > 0 ? 'MINED' as const : 'UNCONFIRMED' as const
+        return {
+            type: 'l1tx',
+            hash: txid,
+            ...data.confirmations > 0 
+              ? { status: 'MINED', blockNumber: data.blockheight } 
+              : { status: 'UNCONFIRMED'} 
+        }
     }
 }

@@ -193,6 +193,7 @@ export async function finalizeL1Deposit(
     txid: tx.getId(),
     state: newState,
     bridgeUtxo: outputToUtxo(tx, CONTRACT_INDEXES.outputIndex.bridge) as UTXO,
+    finalizedBatchId
   }
 }
 
