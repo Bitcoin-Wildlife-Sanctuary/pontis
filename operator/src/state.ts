@@ -597,12 +597,12 @@ async function manageAggregation(
 
 function updateDeposits(newState: OperatorState) {
   for (let i = 0; i < newState.depositBatches.length; i++) {
-    const depositBatch = newState.depositBatches[i];
-    if (depositBatch.status === 'SUBMITTED_TO_L2' &&
-        depositBatch.depositTx.status === 'SUCCEEDED'
+    const batch = newState.depositBatches[i];
+    if (batch.status === 'SUBMITTED_TO_L2' &&
+        batch.depositTx.status === 'SUCCEEDED'
     ) {
       newState.depositBatches[i] = {
-        ...depositBatch,
+        ...batch,
         status: 'DEPOSITED',
       };
     }
@@ -621,10 +621,6 @@ async function manageVerification(env: BridgeEnvironment, newState: OperatorStat
       newState.depositBatches[i] = {
         ...batch,
         status: 'SUBMITTED_FOR_VERIFICATION',
-        depositTx: await env.submitDepositsToL2(
-          batch.finalizeBatchTx.hash,
-          batch.deposits
-        ),
         verifyTx: newState.bridgeState.latestTx
       };
     }
@@ -719,9 +715,8 @@ function withdrawalsOldEnough(
   return false;
 }
 
-
-export function save(path: string, state: OperatorState) {
-  const jsonString = JSON.stringify(
+export function asString(state: OperatorState): string {
+  return JSON.stringify(
     state,
     (key, value) => {
       if (typeof value === 'bigint') {
@@ -731,19 +726,22 @@ export function save(path: string, state: OperatorState) {
     },
     2
   );
-
-  writeFileSync(path, jsonString, 'utf8');
 }
 
-export function load(path: string): OperatorState {
-  const rawData = readFileSync(path, 'utf8');
-
-  const state = JSON.parse(rawData, (key, value) => {
+export function fromString(operator: string) {
+  return JSON.parse(operator, (key, value) => {
     if (typeof value === 'string' && /^\d+n$/.test(value)) {
       return BigInt(value.slice(0, -1));
     }
     return value;
   });
+}
 
-  return state as OperatorState;
+export function save(path: string, state: OperatorState) {
+  writeFileSync(path, asString(state), 'utf8');
+}
+
+export function load(path: string): OperatorState {
+  const rawData = readFileSync(path, 'utf8');
+  return fromString(rawData) as OperatorState;
 }

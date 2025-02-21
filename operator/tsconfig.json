@@ -4,7 +4,8 @@
     "rootDir": ".",
     "outDir": "build",
     "esModuleInterop": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "jsx": "react-jsx"
   },
-  "include": ["src/**/*.ts", "test/**/*.ts"]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "test/**/*.ts"]
 }

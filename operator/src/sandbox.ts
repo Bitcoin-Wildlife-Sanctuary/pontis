@@ -52,7 +52,7 @@ async function initialState(path: string): Promise<OperatorState> {
   }
 }
 
-async function sandboxOperator() {
+export async function operator() {
 
   const path = './operator_state.json';
 
@@ -103,13 +103,6 @@ async function sandboxOperator() {
     state => save(path, state)
   );
 
-  operator.subscribe((_) => {});
-
-  // console.log("stating");
-  // l2TransactionStatus(provider, {
-  //   type: 'l2tx',
-  //   hash: '0x2d1ebc1d7e6a58010e6c7a8e2dad1885d3ea32a093a32e1316fe0c8d5ceac45',
-  // }).subscribe(console.log)
+  return operator;
 }
 
-sandboxOperator().catch(console.error);
