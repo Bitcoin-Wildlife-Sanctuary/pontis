@@ -1,12 +1,9 @@
-import { ReceiptTx } from 'starknet';
 import { L2Event } from './l2/events';
 import { assert } from 'console';
 import { cloneDeep, max } from 'lodash';
-import { Sha256 } from 'scrypt-ts';
 import { BridgeState, DepositAggregatorState } from 'l1';
 import { l2AddressToHex } from './l1/utils/contractUtil';
 import { readFileSync, writeFileSync } from 'fs';
-import { verify } from 'crypto';
 
 export type L1Address = `0x${string}`;
 export type L2Address = `0x${string}`;
@@ -204,7 +201,7 @@ export type BridgeEnvironment = {
   MAX_WITHDRAWAL_BATCH_SIZE: number;
   aggregateDeposits: (level: DepositAggregationState[]) => Promise<DepositAggregationState[]>;
   finalizeDepositBatch: (bridge: BridgeCovenantState, level2: DepositAggregationState) => Promise<[BridgeCovenantState, BatchId]>;
-  submitDepositBatchToL2: (hash: L1TxHash, deposits: Deposit[]) => Promise<L2Tx>;
+  submitDepositsToL2: (hash: L1TxHash, deposits: Deposit[]) => Promise<L2Tx>;
   verifyDepositBatch: (bridgeState: BridgeCovenantState, batchId: string) => Promise<BridgeCovenantState>;
   closePendingWithdrawalBatch: () => Promise<L2Tx>;
 };
@@ -236,7 +233,7 @@ export async function applyChange(
     case 'l1tx': {
       updateL1TxStatus(newState, change);
       await manageAggregation(env, newState);
-      manageVerification(newState);
+      await manageVerification(env, newState);
       break;
     }
     case 'l1BlockNumber': {
@@ -246,6 +243,7 @@ export async function applyChange(
       );
       await initiateAggregation(env, newState);
       await manageAggregation(env, newState);
+      await manageVerification(env, newState);
       break;
     }
     case 'l2BlockNumber': {
@@ -273,6 +271,7 @@ export async function applyChange(
     case 'l2tx': {
       updateL2TxStatus(newState, change);
       updateDeposits(newState);
+      await manageVerification(env, newState);
       break;
     }
     default: {
@@ -404,17 +403,25 @@ export function getAllL1Txs(state: OperatorState): Set<L1TxId> {
     }
   }
 
-  return new Set(
+  return new Set([...new Set(
     l1Txs
       .filter((tx) => tx.status !== 'MINED')
-      .map(({ type, hash }) => ({
-        type,
-        hash,
-      }))
-  );
+      .map(({ hash }) => hash)
+  )].map(hash => ({
+    type: 'l1tx',
+    hash,
+  })));
 }
 
-function updateL2TxStatus(state: OperatorState, tx: L2TxStatus) {
+function updateL2TxStatus(state: OperatorState, status: L2TxStatus) {
+
+  function update(tx: L2Tx) {
+    if(tx.hash === status.hash) {
+      Object.assign(tx, status);
+    }
+  }
+
+
   for (const batch of state.depositBatches) {
     if (
       batch.status === 'SUBMITTED_TO_L2' ||
@@ -422,9 +429,7 @@ function updateL2TxStatus(state: OperatorState, tx: L2TxStatus) {
       batch.status === 'SUBMITTED_FOR_VERIFICATION' ||
       batch.status === 'COMPLETED'
     ) {
-      if (batch.depositTx.hash === tx.hash) {
-        batch.depositTx = { ...batch.depositTx, ...tx };
-      }
+      update(batch.depositTx);
     }
   }
 
@@ -436,9 +441,7 @@ function updateL2TxStatus(state: OperatorState, tx: L2TxStatus) {
       wb.status === 'BEING_EXPANDED' ||
       wb.status === 'EXPANDED'
     ) {
-      if (wb.closeWithdrawalBatchTx.hash === tx.hash) {
-        wb.closeWithdrawalBatchTx = { ...wb.closeWithdrawalBatchTx, ...tx };
-      }
+      update(wb.closeWithdrawalBatchTx);
     }
   }
 
@@ -578,27 +581,16 @@ async function manageAggregation(
       batch.status === 'AGGREGATED' &&
       batch.finalizeBatchTx.status === 'MINED'
     ) {
-      // console.log('Submitting to l2:', batch.finalizeBatchTx.hash);
-      // newState.depositBatches[i] = {
-      //   ...batch,
-      //   status: 'SUBMITTED_TO_L2',
-      //   depositTx: await env.submitDepositsToL2(
-      //     batch.finalizeBatchTx.hash,
-      //     batch.deposits
-      //   ),
-      // };
-      
-      // instead of submitting to L2, we just verify it in the bridge
-      newState.bridgeState = await env.verifyDepositBatch(newState.bridgeState, batch.batchId);;
+      console.log('Submitting to l2 batch:', batch.batchId);
       newState.depositBatches[i] = {
         ...batch,
-        status: 'SUBMITTED_FOR_VERIFICATION',
-        depositTx: await env.submitDepositBatchToL2(
+        status: 'SUBMITTED_TO_L2',
+        depositTx: await env.submitDepositsToL2(
           batch.finalizeBatchTx.hash,
           batch.deposits
         ),
-        verifyTx: newState.bridgeState.latestTx
       };
+      
     }
   }
 }
@@ -617,14 +609,31 @@ function updateDeposits(newState: OperatorState) {
   }
 }
 
-function manageVerification(newState: OperatorState) {
+async function manageVerification(env: BridgeEnvironment, newState: OperatorState) {
   for (let i = 0; i < newState.depositBatches.length; i++) {
-    const depositBatch = newState.depositBatches[i];
-    if (depositBatch.status === 'SUBMITTED_FOR_VERIFICATION' && 
-        depositBatch.verifyTx.status === 'MINED'
+    const batch = newState.depositBatches[i];
+    
+    if (
+      batch.status === 'DEPOSITED' &&
+      batch.depositTx.status === 'SUCCEEDED'
+    ) {
+      newState.bridgeState = await env.verifyDepositBatch(newState.bridgeState, batch.batchId);;
+      newState.depositBatches[i] = {
+        ...batch,
+        status: 'SUBMITTED_FOR_VERIFICATION',
+        depositTx: await env.submitDepositsToL2(
+          batch.finalizeBatchTx.hash,
+          batch.deposits
+        ),
+        verifyTx: newState.bridgeState.latestTx
+      };
+    }
+    
+    if (batch.status === 'SUBMITTED_FOR_VERIFICATION' && 
+        batch.verifyTx.status === 'MINED'
     ) {
       newState.depositBatches[i] = {
-        ...depositBatch,
+        ...batch,
         status: 'COMPLETED',
       };
     }

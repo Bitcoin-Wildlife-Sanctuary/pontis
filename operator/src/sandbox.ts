@@ -1,30 +1,17 @@
-import { Account, cairo, constants, RpcProvider } from 'starknet';
-import {importAddressesIntoNode, prepareL1} from './l1/prepare'
-import { contractEvents, l2BlockNumber, l2Events } from './l2/events';
+import { Account, RpcProvider } from 'starknet';
+import {importAddressesIntoNode} from './l1/prepare'
 import {
   closePendingWithdrawalBatch,
   contractFromAddress,
-  init,
-  l2TxStatus,
   submitDepositsToL2,
-  toDigest,
 } from './l2/contracts';
 import * as devnet from './l2/devnet';
 import {
   applyChange,
-  BridgeCovenantState,
   BridgeEnvironment,
   Deposit,
-  DepositAggregationState,
-  DepositBatch,
-  Deposits,
-  L1Tx,
   L1TxHash,
-  L1TxId,
-  L1TxStatus,
-  L2Tx,
   L2TxId,
-  L2TxStatus,
   load,
   OperatorState,
   save,
@@ -33,12 +20,13 @@ import { setupOperator } from './operator';
 // import { aggregateDeposits, finalizeBatch } from './l1/l1mocks';
 import { l1TransactionStatus, aggregateDeposits, finalizeDepositBatch, verifyDepositBatch } from './l1/transactions';
 import { deposits, l1BlockNumber } from './l1/events';
-import { EMPTY, from, merge, of, Subject } from 'rxjs';
-import { aggregateLevelDeposits, createBridgeContract } from './l1/api';
+import { EMPTY, merge, of } from 'rxjs';
+import { createBridgeContract } from './l1/api';
 import { existsSync } from 'fs';
-import path from 'path';
 import { loadContractArtifacts } from 'l1';
 import * as env from './l1/env'
+import { l2TransactionStatus } from './l2/transactions';
+import { l2BlockNumber, l2Events } from './l2/events';
 
 async function initialState(path: string): Promise<OperatorState> {
   loadContractArtifacts()
@@ -68,29 +56,37 @@ async function sandboxOperator() {
 
   const path = './operator_state.json';
 
+  const provider = new RpcProvider({ nodeUrl: 'http://127.0.0.1:5050/rpc' });
+
+  const admin = new Account(
+    provider,
+    devnet.admin.address,
+    devnet.admin.privateKey
+    // undefined,
+    // constants.TRANSACTION_VERSION.V3
+  );
+
+  const btcAddress = `0x7071546bd5561c25948f3307c160409a23493608d0afdda4dbfbe597a7d45fc`;
+  const bridgeAddress =
+    '0x60321d40770d02cb85583a78a5267f3e7b37f82006e11b9916fd37d91dd956c';
+
+  const bridge = await contractFromAddress(provider, bridgeAddress);
+  const btc = await contractFromAddress(provider, btcAddress);
+  bridge.connect(admin);
+  
   const startState = await initialState(path);
 
   const env: BridgeEnvironment = {
     DEPOSIT_BATCH_SIZE: 4,
-    MAX_DEPOSIT_BLOCK_AGE: 4,
+    MAX_DEPOSIT_BLOCK_AGE: 2,
     MAX_WITHDRAWAL_BLOCK_AGE: 2,
     MAX_WITHDRAWAL_BATCH_SIZE: 2,
-    submitDepositBatchToL2: async (
-      hash: L1TxHash,
-      deposits: Deposit[]
-    ): Promise<L2Tx> => {
-      console.warn('submitDepositsToL2 Not implemented');
-      return {
-        type: 'l2tx',
-        hash: "0x123456789",
-        status: 'PENDING'
-      };
+    submitDepositsToL2: (hash: L1TxHash, deposits: Deposit[]) => {
+      return submitDepositsToL2(admin, bridge, BigInt('0x' + hash), deposits)
     },
-    closePendingWithdrawalBatch: async (): Promise<L2Tx> => {
-      throw new Error('Not implemented');
-    },
-    aggregateDeposits: aggregateDeposits,
-    finalizeDepositBatch: finalizeDepositBatch,
+    closePendingWithdrawalBatch: () => closePendingWithdrawalBatch(admin, bridge),
+    aggregateDeposits,
+    finalizeDepositBatch,
     verifyDepositBatch
   };
 
@@ -99,14 +95,21 @@ async function sandboxOperator() {
     env,
     l1BlockNumber(),
     deposits(startState.l1BlockNumber),
-    of(), // no l2 events for now
+//    merge(l2Events(provider, startState.l2BlockNumber, [bridgeAddress]), l2BlockNumber(provider)),
+    l2Events(provider, startState.l2BlockNumber, [bridgeAddress]),
     l1TransactionStatus,
-    (tx: L2TxId) => EMPTY,
+    tx => l2TransactionStatus(provider, tx),
     applyChange,
-    (state) => save(path, state)
+    state => save(path, state)
   );
 
   operator.subscribe((_) => {});
+
+  // console.log("stating");
+  // l2TransactionStatus(provider, {
+  //   type: 'l2tx',
+  //   hash: '0x2d1ebc1d7e6a58010e6c7a8e2dad1885d3ea32a093a32e1316fe0c8d5ceac45',
+  // }).subscribe(console.log)
 }
 
 sandboxOperator().catch(console.error);

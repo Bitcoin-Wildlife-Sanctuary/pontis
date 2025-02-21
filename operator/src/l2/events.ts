@@ -1,5 +1,5 @@
 import { Provider, events, CallData, ParsedEvent } from 'starknet';
-import { Observable, from, timer } from 'rxjs';
+import { EMPTY, Observable, from, timer } from 'rxjs';
 import {
   switchMap,
   scan,
@@ -155,7 +155,9 @@ export function contractEvents(
 ): Observable<L2Event> {
   return currentBlockRange(provider, initialBlockNumber).pipe(
     switchMap(([previous, current]) =>
-      from(contractEventsInRange(provider, contractAddress, previous, current))
+      previous < current ?
+        from(contractEventsInRange(provider, contractAddress, previous, current)) :
+        EMPTY
     )
   );
 }

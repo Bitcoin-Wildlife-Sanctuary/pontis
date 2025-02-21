@@ -270,10 +270,10 @@ export async function finalizeDepositBatchOnL1(
 
     const addresses = await getContractAddresses(operatorSigner, l1Network);
     const bridgeUtxos = await l1Provider.listUtxos(addresses.bridge, DEFAULT_FROM_BLOCK, DEFAULT_TO_BLOCK);
-    console.log('bridgeUtxos', bridgeUtxos);
     const bridgeUtxo = bridgeUtxos.find((utxo: Utxo) => utxo.txId === bridgeState.latestTx.hash);
 
     if (!bridgeUtxo) {
+        console.log('bridgeUtxos', bridgeUtxos);
         throw new Error('bridge utxo not found');
     }
 
@@ -308,8 +308,6 @@ export async function finalizeDepositBatchOnL1(
         traceableDepositAggregatorUtxo,
         feeRate,
     );
-
-
 
     return [{
         ...res.state,

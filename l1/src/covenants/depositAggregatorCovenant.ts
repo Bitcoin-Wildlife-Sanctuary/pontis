@@ -43,19 +43,6 @@ export type DepositAggregatorState = {
   prevHashData1: Sha256;
 }
 
-// export type DepositAggregatorState = {
-//   level: bigint
-
-//   // todo: confirm address length? 32 bytes?
-//   // level = 0, state = sha256(levelByteString + sha256(depositAddress + depositAmt))
-//   depositAddress: ByteString
-//   depositAmt: bigint
-
-//   // level > 0, state = sha256(levelByteString + prevHashData0 + prevHashData1)
-//   prevHashData0: Sha256
-//   prevHashData1: Sha256
-// }
-
 export function stateToBatchID(
   state: DepositAggregatorState,
   prevTxid: string

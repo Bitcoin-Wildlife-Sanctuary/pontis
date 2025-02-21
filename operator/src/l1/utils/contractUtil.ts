@@ -1,7 +1,6 @@
-import { DepositBatch, L1TxHash, L2Address, Deposit, Withdrawal } from "../../state";
-import { DepositAggregatorCovenant, DepositAggregatorState, getContractScriptPubKeys, Signer, SupportedNetwork, utils } from "l1";
-import { ByteString, PubKey, Sha256 } from "scrypt-ts"; 
-import { stateHashToBatchID } from "l1";
+import { L2Address } from "../../state";
+import { getContractScriptPubKeys, Signer, SupportedNetwork, utils } from "l1";
+import { PubKey } from "scrypt-ts"; 
 
 export async function getContractAddresses(
     operatorSigner: Signer,

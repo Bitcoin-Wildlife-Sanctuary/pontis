@@ -1,4 +1,4 @@
-import { DEFAULT_FROM_BLOCK, DEFAULT_TO_BLOCK, L1Provider, Utxo } from "./type";
+import { DEFAULT_TO_BLOCK, L1Provider, Utxo } from "./type";
 import { L1TxStatus } from "../../../state";
 import { Transaction } from "@scrypt-inc/bitcoinjs-lib";
 import { utils } from "l1";

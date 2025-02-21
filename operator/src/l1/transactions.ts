@@ -1,5 +1,5 @@
-import { L1Tx, L1TxHash, L1TxId, L1TxStatus, WithdrawalBatch, DepositAggregationState, DepositBatch, BridgeCovenantState, BatchId } from '../state';
-import { distinctUntilKeyChanged, from, interval, Observable, switchMap, takeWhile, tap } from 'rxjs';
+import { L1Tx, L1TxId, L1TxStatus, WithdrawalBatch, DepositAggregationState, DepositBatch, BridgeCovenantState, BatchId } from '../state';
+import { distinctUntilKeyChanged, from, Observable, switchMap, takeWhile, tap, timer } from 'rxjs';
 import * as l1Api from './api';
 import { createL1Provider } from './deps/l1Provider';
 import * as env from './env';
@@ -10,7 +10,7 @@ export function l1TransactionStatus(
   // add whatever parameters you need
   tx: L1TxId
 ): Observable<L1TxStatus> {
-  return interval(5000).pipe(
+  return timer(0, 5000).pipe(
     switchMap(() => from(getL1TransactionStatus(tx))),
     distinctUntilKeyChanged('status'),
     takeWhile((tx) => tx.status !== 'MINED', true),
@@ -28,50 +28,6 @@ async function getL1TransactionStatus(
 export async function isAggregationCompleted(batch: DepositBatch): Promise<boolean> {
   return !l1Api.shouldAggregate(batch);
 }
-
-// export async function aggregateDeposits(batch: DepositBatch): Promise<{
-//   txs: L1Tx[],
-//   replace: boolean
-// }> {
-//   const txids = await l1Api.aggregateLevelDeposits(
-//     env.operatorSigner,
-//     env.l1Network,
-//     new EnhancedProvider(env.createUtxoProvider(), env.createChainProvider(), true),
-
-//     env.l1FeeRate,
-//     batch
-//   );
-//   const txs: L1Tx[] = txids.map(txid => ({
-//     type: 'l1tx',
-//     hash: txid,
-//     status: 'UNCONFIRMED',
-//   }));
-//   // todo: add replace logic
-//   return {
-//     txs,
-//     replace: false
-//   }
-// }
-
-// export async function finalizeBatch(batch: DepositBatch): Promise<L1Tx> {
-//   const txid = await l1Api.finalizeDepositBatchOnL1(
-//     env.operatorSigner,
-//     env.l1Network,
-//     env.createUtxoProvider(),
-//     env.createChainProvider(),
-//     createL1Provider(env.useRpc, env.rpcConfig, env.l1Network),
-//     getFileOffChainDataProvider(),
-
-//     env.l1FeeRate,
-
-//     batch
-//   );
-//   return {
-//     type: 'l1tx',
-//     hash: txid,
-//     status: 'UNCONFIRMED',
-//   };
-// }
 
 export async function aggregateDeposits(level: DepositAggregationState[]): Promise<DepositAggregationState[]> {
   return await l1Api.aggregateLevelDeposits(
