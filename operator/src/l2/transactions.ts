@@ -2,7 +2,7 @@ import { RpcProvider } from 'starknet';
 import { L2TxStatus } from '../state';
 import { filter, from, interval, map, Observable, switchMap, takeWhile } from 'rxjs';
 
-export function l2TransactionStatus<T extends L2TxStatus>(
+function l2TransactionStatus<T extends L2TxStatus>(
   provider: RpcProvider,
   tx: T
 ): Observable<T> {

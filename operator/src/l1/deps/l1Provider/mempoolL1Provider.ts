@@ -63,19 +63,32 @@ export class MempoolL1Provider extends MempoolChainProvider implements L1Provide
         // todo: confirm should use equal or greater than fromBlock
         return utxos.filter((utxo: Utxo) => utxo.blockNumber >= fromBlock && utxo.blockNumber <= toBlock)
     }
-    async getTransactionStatus(txid: string): Promise<L1TxStatus['status']> {
+    async getTransactionStatus(txid: string): Promise<L1TxStatus> {
         const res = await fetch(`${this.getMempoolApiHost()}/api/tx/${txid}`)
         if (res.status === 404) {
-            return 'DROPPED' as const
+            return {
+                type: 'l1tx',
+                hash: txid,
+                status: 'DROPPED',
+            }
         }
         if (res.status !== 200) {
             throw new Error(`Failed to get transaction status: status: ${res.status}, body: ${await res.text()}`)
         }
         const data = await res.json()
         if (data.status.confirmed) {
-            return 'MINED' as const
+            return {
+                type: 'l1tx',
+                hash: txid,
+                status: 'MINED',
+                blockNumber: data.status.block_height,
+            }
         }
-        return 'UNCONFIRMED' as const
+        return {
+            type: 'l1tx',
+            hash: txid,
+            status: 'UNCONFIRMED',
+        }
     }
     
 }

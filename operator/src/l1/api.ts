@@ -1,12 +1,13 @@
-import { BridgeCovenant, getContractScriptPubKeys, Signer, TraceableDepositAggregatorUtxo, utils, BATCH_MERKLE_TREE_LENGTH, BridgeState, TraceableBridgeUtxo, SupportedNetwork, UtxoProvider, ChainProvider, TraceableWithdrawalExpanderUtxo, WithdrawalMerkle, Withdrawal as L1Withdrawal, withdrawFeatures, EnhancedProvider } from "l1";
-import { Deposit, DepositBatch, L1Tx, L1TxHash, L1TxStatus, L2Address, WithdrawalBatch } from "../state";
+import { BridgeCovenant, getContractScriptPubKeys, Signer, TraceableDepositAggregatorUtxo, utils, BATCH_MERKLE_TREE_LENGTH, BridgeState, TraceableBridgeUtxo, SupportedNetwork, UtxoProvider, ChainProvider, TraceableWithdrawalExpanderUtxo, WithdrawalMerkle, Withdrawal as L1Withdrawal, withdrawFeatures, EnhancedProvider, DepositAggregatorCovenant, BatchID } from "l1";
+import { BridgeCovenantState, Deposit, DepositAggregationState, DepositBatch, L1Tx, L1TxHash, L1TxStatus, L2Address, WithdrawalBatch } from "../state";
 import { PubKey, Sha256, UTXO } from 'scrypt-ts'
 import { bridgeFeatures, depositFeatures } from "l1";
-import { calculateDepositState, checkDepositBatch, getDepositBatchHeight, getDepositBatchID, l2AddressToHex, getContractAddresses } from "./utils/contractUtil";
+import { l2AddressToHex, getContractAddresses } from "./utils/contractUtil";
 import { UNCONFIRMED_BLOCK_NUMBER, L1Provider, DEFAULT_FROM_BLOCK, DEFAULT_TO_BLOCK, Utxo } from "./deps/l1Provider";
 import { OffchainDataProvider } from "./deps/offchainDataProvider";
 import { CONTRACT_INDEXES, WithdrawalExpanderCovenant, WithdrawalExpanderState } from "l1";
 import { Transaction } from "@scrypt-inc/bitcoinjs-lib";
+import { assert } from "console";
 
 async function checkBridgeUtxo(
     offchainDataProvider: OffchainDataProvider,
@@ -41,7 +42,7 @@ export async function createBridgeContractIfNotExists(
     l1Network: SupportedNetwork,
     utxoProvider: UtxoProvider,
     chainProvider: ChainProvider,
-    offchainDataProvider: OffchainDataProvider, 
+    offchainDataProvider: OffchainDataProvider,
     l1Provider: L1Provider,
     feeRate: number,
     logTxids: boolean = true
@@ -80,6 +81,35 @@ export async function createBridgeContractIfNotExists(
 
     return txid as L1TxHash;
 }
+
+export async function createBridgeContract(
+    operatorSigner: Signer,
+    l1Network: SupportedNetwork,
+    utxoProvider: UtxoProvider,
+    chainProvider: ChainProvider,
+    feeRate: number,
+): Promise<BridgeCovenantState> {
+    const operatorPubKey = await operatorSigner.getPublicKey();
+
+    const { txid, state } = await bridgeFeatures.deployBridge(
+        PubKey(operatorPubKey),
+        operatorSigner,
+        l1Network,
+        utxoProvider,
+        chainProvider,
+        feeRate
+    )
+
+    return {
+        ...state,
+        latestTx: {
+            type: 'l1tx',
+            status: 'UNCONFIRMED',
+            hash: txid,
+        },
+    }
+}
+
 
 /// list all deposits from l1
 export async function listDeposits(
@@ -145,7 +175,6 @@ export async function createDeposit(
         amount: depositAmt,
         recipient: l2Address,
         origin: {
-            blockNumber: UNCONFIRMED_BLOCK_NUMBER,
             status: 'UNCONFIRMED' as const,
             type: 'l1tx' as const,
             hash: depositTx.txid as L1TxHash,
@@ -170,61 +199,58 @@ export async function aggregateLevelDeposits(
     operatorSigner: Signer,
     l1Network: SupportedNetwork,
     enhancedUtxoProvider: EnhancedProvider,
-
     feeRate: number,
+    currentLevel: DepositAggregationState[],
+): Promise<DepositAggregationState[]> {
 
-    batch: DepositBatch,
-): Promise<L1TxHash[]> {
-    // console.log(`aggregateDeposits(batch)`)
+    console.log('aggregating level:', currentLevel);
+
     const operatorPubKey = await operatorSigner.getPublicKey();
     const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
 
-    const depositCount = batch.deposits.length;
-    const height = Math.log2(depositCount);
-    if (2 ** height !== depositCount) {
-        throw new Error('deposit count is not a power of 2');
-    }
-
-    // todo: add level aggregate in l1/features/deposit.ts, to avoid potential fee not enough error 
-
-    if (batch.aggregationTxs.length === height) {
-        throw new Error('batch is already aggregated, should finalize to l1 bridge');
-    }
-
-    const level = batch.aggregationTxs.length;
-    const levelStates = calculateDepositState(batch.deposits, level);
-    const levelAggTxids = batch.aggregationTxs.length > 0 ? batch.aggregationTxs.at(-1)!.map(tx => tx.hash) : batch.deposits.map(deposit => deposit.origin.hash);
-    const levelAggRawtxs = await Promise.all(levelAggTxids.map(id => enhancedUtxoProvider.getRawTransaction(id)));
+    const levelAggRawtxs = await Promise.all(
+        currentLevel.map(s => enhancedUtxoProvider.getRawTransaction(s.tx.hash))
+    );
     const levelAggUtxos = levelAggRawtxs.map(tx => utils.txToUtxo(tx, 1));
 
-    const traceableUtxos: TraceableDepositAggregatorUtxo[] = levelStates.map((state, index) => ({
+    const traceableUtxos: TraceableDepositAggregatorUtxo[] = currentLevel.map((state, index) => {
+        return {
         operator: PubKey(operatorPubKey),
         bridgeSPK: spks.bridge,
-        state: state,
+        state,
         utxo: levelAggUtxos[index],
-    }));
+        }
+    });
 
-    // merge each two covenants into one tx, by calling aggregateDeposit
-    const txs: L1TxHash[] = [];
+    const result: DepositAggregationState[] = [];
     for (let i = 0; i < traceableUtxos.length; i += 2) {
+        assert(traceableUtxos[i].state.level === traceableUtxos[i + 1].state.level, 'levels do not match');
         const tx = await depositFeatures.aggregateDeposit(
             operatorSigner,
             l1Network,
             enhancedUtxoProvider,
             enhancedUtxoProvider,
-
             traceableUtxos[i],
             traceableUtxos[i + 1],
             feeRate,
         );
-        txs.push(tx.txid as L1TxHash);
+        result.push({
+            ...tx.state,
+            tx: {
+                type: 'l1tx',
+                status: 'UNCONFIRMED',
+                hash: tx.txid as L1TxHash,
+            },
+        });
     }
+
     const broadcastRes = await enhancedUtxoProvider.finalBroadcast();
     if (broadcastRes.failedBroadcastTxError) {
-        console.log(`aggregateDeposits(batch), error`) 
+        console.error(`aggregateDeposits(batch), error`)
         console.error(broadcastRes.failedBroadcastTxError)
     }
-    return broadcastRes.broadcastedTxids;
+
+    return result.filter(r => broadcastRes.broadcastedTxids.includes(r.tx.hash));
 }
 
 /// finalize a deposit batch on l1
@@ -234,105 +260,97 @@ export async function finalizeDepositBatchOnL1(
     utxoProvider: UtxoProvider,
     chainProvider: ChainProvider,
     l1Provider: L1Provider,
-    offchainDataProvider: OffchainDataProvider,
-
     feeRate: number,
-
-    batch: DepositBatch,
-): Promise<L1TxHash> {
-    // console.log(`finalizeDepositBatchOnL1(batch)`)
-    checkDepositBatch(batch.deposits);
-
-    if ((batch as DepositBatch & { status: 'FINALIZED' }).finalizeBatchTx) {
-        throw new Error('batch is already finalized, should not finalize again');
-    }
+    rootState: DepositAggregationState,
+    bridgeState: BridgeCovenantState
+): Promise<[BridgeCovenantState, string]> {
 
     const operatorPubKey = await operatorSigner.getPublicKey();
     const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
-    const [bridgeUtxo, bridgeState] = await checkBridgeUtxo(offchainDataProvider, l1Provider, operatorSigner, l1Network);
+
+    const addresses = await getContractAddresses(operatorSigner, l1Network);
+    const bridgeUtxos = await l1Provider.listUtxos(addresses.bridge, DEFAULT_FROM_BLOCK, DEFAULT_TO_BLOCK);
+    console.log('bridgeUtxos', bridgeUtxos);
+    const bridgeUtxo = bridgeUtxos.find((utxo: Utxo) => utxo.txId === bridgeState.latestTx.hash);
+
+    if (!bridgeUtxo) {
+        throw new Error('bridge utxo not found');
+    }
+
     const emptyBatchIDIndex = bridgeState.merkleTree.findIndex(batch => batch === BridgeCovenant.EMPTY_BATCH_ID);
     if (emptyBatchIDIndex === -1) {
         throw new Error('the bridge state batchId is full, please finalizeL2 to clear one batchId');
     }
 
-    const height = getDepositBatchHeight(batch.deposits);
-    if (height !== batch.aggregationTxs.length) {
-        throw new Error('deposits are being aggregated');
-    }
-    const lastLevelAggs = height === 0 ? batch.deposits.map(v => v.origin) : batch.aggregationTxs.at(-1)!;
-    if (lastLevelAggs.length !== 1) {
-        throw new Error('last level aggregation txs is not 1');
-    }
-    const lastLevelRawtxs = await Promise.all(lastLevelAggs.map(tx => chainProvider.getRawTransaction(tx.hash)));
-    const lastLevelUtxos = lastLevelRawtxs.map(tx => utils.txToUtxo(tx, 1));
-    const lastLevelStates = calculateDepositState(batch.deposits, height);
+    const lastLevelRawtx = await chainProvider.getRawTransaction(rootState.tx.hash);
+    const lastLevelUtxo = utils.txToUtxo(lastLevelRawtx, 1);
+
     const traceableBridgeUtxo: TraceableBridgeUtxo = {
         operator: PubKey(operatorPubKey),
         expanderSPK: spks.withdrawExpander,
         state: bridgeState,
         utxo: bridgeUtxo,
     };
+
     const traceableDepositAggregatorUtxo: TraceableDepositAggregatorUtxo = {
         operator: PubKey(operatorPubKey),
         bridgeSPK: spks.bridge,
-        state: lastLevelStates[0],
-        utxo: lastLevelUtxos[0],
+        state:  rootState,
+        utxo: lastLevelUtxo,
     };
+
     const res = await bridgeFeatures.finalizeL1Deposit(
         operatorSigner,
         l1Network,
         utxoProvider,
         chainProvider,
-
         traceableBridgeUtxo,
         traceableDepositAggregatorUtxo,
         feeRate,
     );
 
-    await offchainDataProvider.setLatestBridgeTxid(res.txid as L1TxHash);
-    await offchainDataProvider.setBridgeState(res.txid as L1TxHash, res.state.batchesRoot, res.state.merkleTree, res.state.depositAggregatorSPK);
-    // console.log(`finalizeDepositBatchOnL1(batch) done, txid: ${res.txid}`)
-    return res.txid as L1TxHash;
+
+
+    return [{
+        ...res.state,
+        latestTx: {
+            type: 'l1tx',
+            status: 'UNCONFIRMED',
+            hash: res.txid,
+        },
+    },
+    res.finalizedBatchId];
 }
 
 /// verify the deposit batch on l1
-export async function finalizeDepositBatchOnL2(
+export async function verifyDepositBatch(
     operatorSigner: Signer,
     l1Network: SupportedNetwork,
     utxoProvider: UtxoProvider,
     chainProvider: ChainProvider,
     l1Provider: L1Provider,
-    offchainDataProvider: OffchainDataProvider,
-
     feeRate: number,
-
-    batch: DepositBatch,
-): Promise<L1TxHash> {
-    // console.log(`finalizeDepositBatchOnL2(batch)`)
-    checkDepositBatch(batch.deposits);
-
-    if ((batch as DepositBatch & { status: 'COMPLETED' }).verifyTx) {
-        throw new Error('batch is already verified, should not verify again');
-    }
-    if (!(batch as DepositBatch & { status: 'SUBMITTED_TO_L2' }).finalizeBatchTx) {
-        throw new Error('batch is not finalized on L1, should not verify');
-    }
-    if (!(batch as DepositBatch & { status: 'COMPLETED' }).depositTx) {
-        throw new Error('batch is not deposited on L2, should not verify');
-    }
+    bridgeState: BridgeCovenantState,
+    batchId: BatchID
+): Promise<BridgeCovenantState> {
 
     const operatorPubKey = await operatorSigner.getPublicKey();
-    const spks = getContractScriptPubKeys(PubKey(operatorPubKey));    
+    const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
+    const addresses = await getContractAddresses(operatorSigner, l1Network);
 
-    const [bridgeUtxo, bridgeState] = await checkBridgeUtxo(offchainDataProvider, l1Provider, operatorSigner, l1Network);
+    const bridgeUtxos = await l1Provider.listUtxos(addresses.bridge, DEFAULT_FROM_BLOCK, DEFAULT_TO_BLOCK);
+    const bridgeUtxo = bridgeUtxos.find((utxo: Utxo) => utxo.txId === bridgeState.latestTx.hash);
+
+    if (!bridgeUtxo) {
+        throw new Error('bridge utxo not found');
+    }
 
     const emptyBatchIDIndex = bridgeState.merkleTree.findIndex(batch => batch === BridgeCovenant.EMPTY_BATCH_ID);
     if (emptyBatchIDIndex === -1) {
         throw new Error('the bridge state batchId is full, please finalizeL2 to clear one batchId');
     }
 
-    const batchID = getDepositBatchID(batch);
-    const batchIDIndex = bridgeState.merkleTree.findIndex(batch => batch === batchID);
+    const batchIDIndex = bridgeState.merkleTree.findIndex(batch => batch === batchId);
     if (batchIDIndex === -1) {
         throw new Error('batch id not found');
     }
@@ -347,24 +365,28 @@ export async function finalizeDepositBatchOnL2(
         l1Network,
         utxoProvider,
         chainProvider,
-
-        Sha256(batchID),
-
+        Sha256(batchId), // extra hash here seems strange...
         bridgeTraceableUtxo,
         feeRate,
     );
-    await offchainDataProvider.setLatestBridgeTxid(res.txid as L1TxHash);
-    await offchainDataProvider.setBridgeState(res.txid as L1TxHash, res.state.batchesRoot, res.state.merkleTree, res.state.depositAggregatorSPK);
 
-    // console.log(`finalizeDepositBatchOnL2(batch) done, txid: ${res.txid}`)
-    return res.txid as L1TxHash;
+    return {
+        ...res.state,
+        latestTx: {
+            type: 'l1tx',
+            status: 'UNCONFIRMED',
+            hash: res.txid,
+        },
+    }
 }
+
+
 
 /// get the status of a l1 transaction
 export function getL1TransactionStatus(
     l1Provider: L1Provider,
     txid: L1TxHash,
-): Promise<L1TxStatus['status']> {
+): Promise<L1TxStatus> {
     // console.log(`getL1TransactionStatus(${txid})`)
     return l1Provider.getTransactionStatus(txid);
 }
@@ -448,7 +470,7 @@ export function shouldExpand(batch: WithdrawalBatch): boolean {
     if (batch.status === 'SUBMITTED_FOR_EXPANSION') return true;
 
     const currentExpandCount = batch.expansionTxs.length;
-    
+
     // expanding is started, return false
     return height > currentExpandCount + Number(WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE);
 }
@@ -474,7 +496,7 @@ async function parseDataFromWithdrawalBatch(
     expanderUtxos: UTXO[],
     stateHashes: Sha256[],
     expanderStates: WithdrawalExpanderState[],
-}> { 
+}> {
     if (
         batch.status !== 'SUBMITTED_FOR_EXPANSION' &&
         batch.status !== 'BEING_EXPANDED' &&
@@ -492,7 +514,7 @@ async function parseDataFromWithdrawalBatch(
     const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
 
     const expanderL1Txs: L1Tx[] = (batch as WithdrawalBatch & {status: 'EXPANDED'}).expansionTxs?.length > 0 ?
-     (batch as WithdrawalBatch & {status: 'EXPANDED'}).expansionTxs.at(-1)! : 
+     (batch as WithdrawalBatch & {status: 'EXPANDED'}).expansionTxs.at(-1)! :
      [(batch as WithdrawalBatch & {status: 'EXPANDED'}).withdrawBatchTx]
     const expanderTxs = await Promise.all(expanderL1Txs.map(ltx => chainProvider.getRawTransaction(ltx.hash).then(Transaction.fromHex)));
     const expanderUtxos: UTXO[] = [];
@@ -556,7 +578,7 @@ export async function expandLevelWithdrawals(
         batch.status !== 'BEING_EXPANDED'
     ) {
         throw new Error('for expandLevelWithdrawals, batch status must be SUBMITTED_FOR_EXPANSION or BEING_EXPANDED');
-    }   
+    }
     if (!shouldExpand(batch)) {
         throw new Error('should distribute now');
     }
@@ -564,7 +586,7 @@ export async function expandLevelWithdrawals(
     const operatorPubKey = await operatorSigner.getPublicKey();
 
     const { withdrawals, expanderUtxos, expanderStates } = await parseDataFromWithdrawalBatch(operatorSigner, batch, offchainDataProvider, l1Provider, enhancedUtxoProvider, l1Network);
-    
+
 
     for (let i = 0; i < expanderUtxos.length; i++) {
         const utxo = expanderUtxos[i];
@@ -609,7 +631,7 @@ export async function distributeLevelWithdrawals(
     }
 
     const operatorPubKey = await operatorSigner.getPublicKey();
-    
+
     // build the txs
     const { withdrawals, expanderUtxos, expanderStates } = await parseDataFromWithdrawalBatch(operatorSigner, batch, offchainDataProvider, l1Provider, enhancedUtxoProvider, l1Network);
 

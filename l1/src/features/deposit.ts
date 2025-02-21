@@ -120,6 +120,10 @@ function buildCreateDepositTx(
     throw new Error('fee utxo is not enough')
   }
 
+  if(depositAggregatorCovenant.state.type !== 'LEAF') {
+    throw new Error('invalid deposit aggregator state')
+  }
+
   const createDepositTx = new ExtPsbt({
     network: supportedNetworkToBtcNetwork(network),
   })

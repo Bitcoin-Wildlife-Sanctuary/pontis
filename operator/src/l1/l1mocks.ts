@@ -15,7 +15,6 @@ export async function finalizeBatch(batch: DepositBatch): Promise<L1Tx> {
   return {
     type: 'l1tx',
     hash: `0xfff`,
-    status: 'UNCONFIRMED',
-    blockNumber: 0,
+    status: 'UNCONFIRMED'
   };
 }

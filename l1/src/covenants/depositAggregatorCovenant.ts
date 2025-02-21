@@ -27,28 +27,41 @@ import {
   versionToByteString,
 } from '../lib/txTools'
 import * as tools from 'uint8array-tools'
-import { BatchID } from '../util/merkleUtils'
+import { BatchId } from '../util/merkleUtils'
 import { CONTRACT_INDEXES, getChangeOutput } from './util'
 
+
 export type DepositAggregatorState = {
-  level: bigint
-
-  // todo: confirm address length? 32 bytes?
-  // level = 0, state = sha256(levelByteString + sha256(depositAddress + depositAmt))
-  depositAddress: ByteString
-  depositAmt: bigint
-
-  // level > 0, state = sha256(levelByteString + prevHashData0 + prevHashData1)
-  prevHashData0: Sha256
-  prevHashData1: Sha256
+  type: 'LEAF',
+  level: 0n,
+  depositAmt: bigint;
+  depositAddress: ByteString;
+} | {
+  type: 'INTERNAL',
+  level: bigint,
+  prevHashData0: Sha256;
+  prevHashData1: Sha256;
 }
+
+// export type DepositAggregatorState = {
+//   level: bigint
+
+//   // todo: confirm address length? 32 bytes?
+//   // level = 0, state = sha256(levelByteString + sha256(depositAddress + depositAmt))
+//   depositAddress: ByteString
+//   depositAmt: bigint
+
+//   // level > 0, state = sha256(levelByteString + prevHashData0 + prevHashData1)
+//   prevHashData0: Sha256
+//   prevHashData1: Sha256
+// }
 
 export function stateToBatchID(
   state: DepositAggregatorState,
   prevTxid: string
-): BatchID {
+): BatchId {
   const hash =
-    state.level === 0n
+    state.type === 'LEAF'
       ? DepositAggregator.hashDepositData(
           0n,
           state.depositAddress,
@@ -66,7 +79,7 @@ export function stateToBatchID(
 export function stateHashToBatchID(
   stateHash: Sha256,
   prevTxid: string
-): BatchID {
+): BatchId {
   return sha256(prevTxid + stateHash)
 }
 
@@ -152,7 +165,7 @@ export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> 
   }
 
   static serializeState(state: DepositAggregatorState) {
-    if (state.level === 0n) {
+    if (state.type === 'LEAF') {
       return DepositAggregator.hashDepositData(
         0n,
         state.depositAddress,
@@ -309,7 +322,7 @@ export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> 
   }
 
   get depositData(): DepositData {
-    if (this.state.level === 0n) {
+    if (this.state.type === 'LEAF') {
       return {
         address: this.state.depositAddress,
         amount: this.state.depositAmt,
@@ -326,7 +339,7 @@ export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> 
     utxo: TraceableDepositAggregatorUtxo,
     chainProvider: ChainProvider
   ): Promise<TracedDepositAggregator> {
-    const level = utxo.state.level
+    const level = utxo.state.level;
 
     const covenant = new DepositAggregatorCovenant(
       utxo.operator,
@@ -430,11 +443,10 @@ export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> 
 
   static createEmptyState(): DepositAggregatorState {
     return {
+      type: 'LEAF',
       level: 0n,
       depositAddress: toByteString(''),
       depositAmt: 0n,
-      prevHashData0: createEmptySha256(),
-      prevHashData1: createEmptySha256(),
     }
   }
 
@@ -443,11 +455,10 @@ export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> 
     depositAmt: bigint
   ): DepositAggregatorState {
     return {
+      type: 'LEAF',
       level: 0n,
       depositAddress,
       depositAmt,
-      prevHashData0: createEmptySha256(),
-      prevHashData1: createEmptySha256(),
     }
   }
 
@@ -457,9 +468,8 @@ export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> 
     prevHashData1: Sha256
   ): DepositAggregatorState {
     return {
+      type: 'INTERNAL',
       level,
-      depositAddress: toByteString(''),
-      depositAmt: 0n,
       prevHashData0,
       prevHashData1,
     }

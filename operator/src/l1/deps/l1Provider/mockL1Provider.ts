@@ -50,7 +50,20 @@ export class MockL1Provider implements L1Provider {
     setGetTransactionStatus(status: L1TxStatus['status']) {
         this.transactionStatus = status
     }
-    async getTransactionStatus(_txid: string): Promise<L1TxStatus['status']> {
-        return this.transactionStatus
+    async getTransactionStatus(_txid: string): Promise<L1TxStatus> {
+        if (this.transactionStatus === 'MINED') {
+            return {
+                type: 'l1tx',
+                hash: _txid,
+                status: this.transactionStatus,
+                blockNumber: this.blockNumber
+            }
+        } else {
+            return {
+                type: 'l1tx',
+                hash: _txid,
+                status: this.transactionStatus
+            }
+        }
     }
 }
