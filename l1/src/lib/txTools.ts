@@ -372,17 +372,21 @@ export function splitHashFromStateOutput(tx: Transaction) {
   const stateScript = tx.outs[0].script
   if (stateScript.length === ONE_STATE_OUTPUT_SCRIPT_LENGTH) {
     return [tools.toHex(stateScript.slice(2, 34)), ''] as const
-  }
-  if (stateScript.length === TWO_STATE_OUTPUT_SCRIPT_LENGTH) {
+  } else if (stateScript.length === TWO_STATE_OUTPUT_SCRIPT_LENGTH) {
     return [
       tools.toHex(stateScript.slice(2, 34)),
       tools.toHex(stateScript.slice(34, 66)),
+    ] as const
+  } else if (stateScript.length === INITIAL_DEPOSIT_AGGREGATOR_STATE_OUTPUT_SCRIPT_LENGTH) {
+    return [
+      tools.toHex(stateScript.slice(2, INITIAL_DEPOSIT_AGGREGATOR_STATE_OUTPUT_SCRIPT_LENGTH)),
     ] as const
   }
   throw new Error('Invalid state output script length')
 }
 export const TWO_STATE_OUTPUT_SCRIPT_LENGTH = 66
 export const ONE_STATE_OUTPUT_SCRIPT_LENGTH = 34
+export const INITIAL_DEPOSIT_AGGREGATOR_STATE_OUTPUT_SCRIPT_LENGTH = 42
 
 export function inputToPrevout(
   tx: Transaction,

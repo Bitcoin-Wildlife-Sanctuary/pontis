@@ -18,6 +18,7 @@ import { testUtxoProvider, testChainProvider } from '../utils/testProvider'
 import { Postage } from '../../src/lib/constants'
 import { sleep, verifyInputSpent } from '../utils/txHelper'
 import {
+  DepositAggregatorCovenant,
   stateToBatchID,
   TraceableDepositAggregatorUtxo,
 } from '../../src/covenants/depositAggregatorCovenant'
@@ -25,6 +26,7 @@ import { CONTRACT_INDEXES, getScriptPubKeys } from '../../src/covenants/util'
 import { reverseTxId } from '../../src/lib/txTools'
 import { createLogger } from './logUtil'
 import { sleepTxTime } from '../utils/sleep'
+import { Transaction } from '@scrypt-inc/bitcoinjs-lib'
 
 use(chaiAsPromised)
 
@@ -75,6 +77,10 @@ describe('Test the feature of deposit', async () => {
       l2Address1,
       BigInt(MINIMAL_DEPOSIT_AMT)
     )
+    const [isInitialDeposit, depositData] = DepositAggregatorCovenant.parseDepositInfoFromTx(Transaction.fromHex(await testChainProvider.getRawTransaction(depositRes1.txid)))
+    expect(isInitialDeposit).to.be.true
+    expect(depositData.address).to.be.equal(l2Address1)
+    expect(depositData.amount).to.be.equal(BigInt(MINIMAL_DEPOSIT_AMT))
     logger.info('deposit1 txid', depositRes1.txid)
 
     await sleepTxTime()

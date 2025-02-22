@@ -22,7 +22,6 @@ const main = async () => {
         env.l1Network,
         env.createUtxoProvider(),
         env.createChainProvider(),
-        getFileOffChainDataProvider(),
 
         env.l1FeeRate,
 

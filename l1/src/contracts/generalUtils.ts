@@ -55,9 +55,11 @@ export class GeneralUtils extends SmartContractLib {
   static getStateOutput(hash1: ByteString, hash2: ByteString): ByteString {
     // hash2 can be empty;
     // todo here maybe exist vulnerability when simply concatenate hash1 and hash2; but in poc, it's acceptable
-    assert(len(hash1) == 32n)
-    assert(len(hash2) == 32n || len(hash2) == 0n)
     const hash = hash1 + hash2
+
+    // opReturn data is max 80 bytes; 
+    // https://github.com/bitcoin/bitcoin/blob/e606c577cb257d0927ca6ea939aab06cf0639aad/src/policy/policy.h#L79
+    assert(len(hash) <= 80n)
     const scriptLen = len(hash) + 2n
 
     return (

@@ -1,7 +1,6 @@
-import { BridgeCovenant, getContractScriptPubKeys, Signer, TraceableDepositAggregatorUtxo, utils, BATCH_MERKLE_TREE_LENGTH, BridgeState, TraceableBridgeUtxo, SupportedNetwork, UtxoProvider, ChainProvider, TraceableWithdrawalExpanderUtxo, WithdrawalMerkle, Withdrawal as L1Withdrawal, withdrawFeatures, EnhancedProvider, DepositAggregatorCovenant, BatchID } from "l1";
+import { BridgeCovenant, getContractScriptPubKeys, Signer, TraceableDepositAggregatorUtxo, utils, BATCH_MERKLE_TREE_LENGTH, BridgeState, TraceableBridgeUtxo, SupportedNetwork, UtxoProvider, ChainProvider, TraceableWithdrawalExpanderUtxo, WithdrawalMerkle, Withdrawal as L1Withdrawal, withdrawFeatures, EnhancedProvider, DepositAggregatorCovenant, bridgeFeatures, depositFeatures, BatchId } from "l1";
 import { BridgeCovenantState, Deposit, DepositAggregationState, DepositBatch, L1Tx, L1TxHash, L1TxStatus, L2Address, WithdrawalBatch } from "../state";
-import { PubKey, Sha256, UTXO } from 'scrypt-ts'
-import { bridgeFeatures, depositFeatures } from "l1";
+import { ByteString, PubKey, Sha256, UTXO } from 'scrypt-ts'
 import { l2AddressToHex, getContractAddresses } from "./utils/contractUtil";
 import { UNCONFIRMED_BLOCK_NUMBER, L1Provider, DEFAULT_FROM_BLOCK, DEFAULT_TO_BLOCK, Utxo } from "./deps/l1Provider";
 import { OffchainDataProvider } from "./deps/offchainDataProvider";
@@ -118,7 +117,7 @@ export async function listDeposits(
     operatorSigner: Signer,
     l1Network: SupportedNetwork,
     l1Provider: L1Provider,
-    offchainDataProvider: OffchainDataProvider
+    chainProvider: ChainProvider,
 ): Promise<Deposit[]> {
     // console.log(`listDeposits(${fromBlock}, ${toBlock})`)
     // query utxo(address = depositAggregator) from node;
@@ -126,12 +125,12 @@ export async function listDeposits(
     const utxos = await l1Provider.listUtxos(addresses.depositAggregator, fromBlock, toBlock);
     let deposits: Deposit[] = [];
     for (const utxo of utxos) {
-        const depositInfo = await offchainDataProvider.getDepositInfo(utxo.txId as L1TxHash);
-        // utxo is deposit utxo or aggregate utxo, here we only care about deposit utxo
-        if (depositInfo) {
+        const tx = await chainProvider.getRawTransaction(utxo.txId as L1TxHash);
+        const [isInitialDeposit, depositData] = DepositAggregatorCovenant.parseDepositInfoFromTx(Transaction.fromHex(tx));
+        if (isInitialDeposit) {
             deposits.push({
-                amount: BigInt(depositInfo.amount),
-                recipient: depositInfo.recipient,
+                amount: depositData.amount,
+                recipient: `0x${depositData.address}`,
                 origin: {
                     blockNumber: utxo.blockNumber,
                     status: utxo.blockNumber > UNCONFIRMED_BLOCK_NUMBER ? 'MINED' as const : 'UNCONFIRMED' as const,
@@ -150,7 +149,6 @@ export async function createDeposit(
     l1Network: SupportedNetwork,
     utxoProvider: UtxoProvider,
     chainProvider: ChainProvider,
-    offchainDataProvider: OffchainDataProvider,
 
     feeRate: number,
 
@@ -180,7 +178,6 @@ export async function createDeposit(
             hash: depositTx.txid as L1TxHash,
         },
     }
-    await offchainDataProvider.setDepositInfo(deposit.origin.hash, deposit.recipient, deposit.amount);
     // console.log(`createDeposit(signer,${l2Address}, ${depositAmt}) done, txid: ${deposit.origin.hash}`)
     return deposit;
 }
@@ -329,7 +326,7 @@ export async function verifyDepositBatch(
     l1Provider: L1Provider,
     feeRate: number,
     bridgeState: BridgeCovenantState,
-    batchId: BatchID
+    batchId: BatchId
 ): Promise<BridgeCovenantState> {
 
     const operatorPubKey = await operatorSigner.getPublicKey();
@@ -527,7 +524,7 @@ async function parseDataFromWithdrawalBatch(
     for (const tx of expanderTxs) {
         const utxos = utils.getUtxoByScript(tx, spks.withdrawExpander);
         for (const utxo of utxos) {
-            const hash = Sha256(utils.splitHashFromStateOutput(tx)[utxo.outputIndex === CONTRACT_INDEXES.outputIndex.withdrawalExpander.inDepositAggregatorTx.first ?  0 : 1])
+            const hash = Sha256(utils.splitHashFromStateOutput(tx)[utxo.outputIndex === CONTRACT_INDEXES.outputIndex.withdrawalExpander.inDepositAggregatorTx.first ?  0 : 1] as ByteString)
 
             expanderUtxos.push(utxo);
             stateHashes.push(hash);
