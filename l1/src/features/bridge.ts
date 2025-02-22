@@ -64,13 +64,7 @@ export async function deployBridge(
     feeUtxo,
     feeRate
   )
-
-  const [signedPsbt] = await signer.signPsbts([
-    {
-      psbtHex: psbt.toHex(),
-      options: psbt.psbtOptions(),
-    },
-  ])
+  const signedPsbt = await signer.signPsbt(psbt.toHex(), psbt.psbtOptions())
   const txPsbt = psbt.combine(ExtPsbt.fromHex(signedPsbt)).finalizeAllInputs()
 
   const tx = txPsbt.extractTransaction()
@@ -177,12 +171,7 @@ export async function finalizeL1Deposit(
     feeRate,
     estimatedVSize
   )
-  const [signedPsbt] = await signer.signPsbts([
-    {
-      psbtHex: finalizeL1Tx.toHex(),
-      options: finalizeL1Tx.psbtOptions(),
-    },
-  ])
+  const signedPsbt = await signer.signPsbt(finalizeL1Tx.toHex(), finalizeL1Tx.psbtOptions())
   const txPsbt = finalizeL1Tx.combine(ExtPsbt.fromHex(signedPsbt))
   await txPsbt.finalizeAllInputsAsync()
   const tx = txPsbt.extractTransaction()
@@ -270,12 +259,7 @@ export async function finalizeL2Deposit(
     feeRate,
     estimatedVSize
   )
-  const [signedPsbt] = await signer.signPsbts([
-    {
-      psbtHex: finalizeL2Tx.toHex(),
-      options: finalizeL2Tx.psbtOptions(),
-    },
-  ])
+  const signedPsbt = await signer.signPsbt(finalizeL2Tx.toHex(), finalizeL2Tx.psbtOptions())
   const txPsbt = finalizeL2Tx.combine(ExtPsbt.fromHex(signedPsbt))
   await txPsbt.finalizeAllInputsAsync()
   const tx = txPsbt.extractTransaction()
@@ -365,12 +349,8 @@ export async function createWithdrawalExpander(
     changeAddress,
     feeRate
   )
-  const [signedPsbt] = await signer.signPsbts([
-    {
-      psbtHex: createWithdrawalTx.toHex(),
-      options: createWithdrawalTx.psbtOptions(),
-    },
-  ])
+  
+  const signedPsbt = await signer.signPsbt(createWithdrawalTx.toHex(), createWithdrawalTx.psbtOptions())
   const txPsbt = createWithdrawalTx.combine(ExtPsbt.fromHex(signedPsbt))
   await txPsbt.finalizeAllInputsAsync()
   const tx = txPsbt.extractTransaction()

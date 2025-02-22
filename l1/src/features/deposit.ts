@@ -67,12 +67,7 @@ export async function createDeposit(
     feeUtxo,
     feeRate
   )
-  const [signedPsbt] = await signer.signPsbts([
-    {
-      psbtHex: psbt.toHex(),
-      options: psbt.psbtOptions(),
-    },
-  ])
+  const signedPsbt = await signer.signPsbt(psbt.toHex(), psbt.psbtOptions())
   const txPsbt = psbt.combine(ExtPsbt.fromHex(signedPsbt)).finalizeAllInputs()
 
   const tx = txPsbt.extractTransaction()
@@ -209,12 +204,7 @@ export async function aggregateDeposit(
     feeRate,
     estimatedVSize
   )
-  const [signedPsbt] = await signer.signPsbts([
-    {
-      psbtHex: aggregateTx.toHex(),
-      options: aggregateTx.psbtOptions(),
-    },
-  ])
+  const signedPsbt = await signer.signPsbt(aggregateTx.toHex(), aggregateTx.psbtOptions())
   const txPsbt = aggregateTx.combine(ExtPsbt.fromHex(signedPsbt))
   await txPsbt.finalizeAllInputsAsync()
   const tx = txPsbt.extractTransaction()
