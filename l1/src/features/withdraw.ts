@@ -101,12 +101,7 @@ export async function expandWithdrawal(
     changeAddress,
     feeRate
   )
-  const [signedPsbt] = await signer.signPsbts([
-    {
-      psbtHex: psbt.toHex(),
-      options: psbt.psbtOptions(),
-    },
-  ])
+  const signedPsbt = await signer.signPsbt(psbt.toHex(), psbt.psbtOptions())
   const txPsbt = psbt.combine(ExtPsbt.fromHex(signedPsbt))
   await txPsbt.finalizeAllInputsAsync()
   const tx = txPsbt.extractTransaction()
@@ -298,12 +293,8 @@ export async function distributeWithdrawals(
     changeAddress,
     feeRate
   )
-  const [signedPsbt] = await signer.signPsbts([
-    {
-      psbtHex: psbt.toHex(),
-      options: psbt.psbtOptions(),
-    },
-  ])
+  
+  const signedPsbt = await signer.signPsbt(psbt.toHex(), psbt.psbtOptions())
   const txPsbt = psbt.combine(ExtPsbt.fromHex(signedPsbt))
   await txPsbt.finalizeAllInputsAsync()
   const tx = txPsbt.extractTransaction()

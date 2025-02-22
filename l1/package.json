@@ -18,6 +18,10 @@
       "require": "./dist/cjs/*.js",
       "import": "./dist/esm/*.js",
       "types": "./dist/types/*.d.ts"
+    },
+    "./artifacts/*.json": {
+      "require": "./artifacts/*.json",
+      "import": "./artifacts/*.json"
     }
   },
   "scripts": {

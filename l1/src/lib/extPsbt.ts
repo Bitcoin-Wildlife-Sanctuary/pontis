@@ -325,7 +325,7 @@ export class ExtPsbt extends Psbt {
         script: btc.Script.fromAddress(
           validteSupportedAddress(address)
         ).toBuffer(),
-        value: BigInt(changeAmount),
+        value: BigInt(Math.ceil(changeAmount)),
       })
       const index = this.txOutputs.length - 1
       this.changeOutputIndex = index
