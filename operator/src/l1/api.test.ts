@@ -2,7 +2,8 @@
 
 import { expect, use } from 'chai'
 import chaiAsPromised from 'chai-as-promised'
-import { ChainProvider, DefaultSigner, EnhancedProvider, getContractScriptPubKeys, loadContractArtifacts, Signer, SupportedNetwork, TestChainProvider, TestUtxoProvider, utils } from 'l1'
+import { ChainProvider, DefaultSigner, EnhancedProvider, getContractScriptPubKeys, SupportedNetwork, TestChainProvider, TestUtxoProvider, utils } from 'l1'
+
 import { createMemoryOffChainDB, OffchainDataProvider } from './deps/offchainDataProvider'
 import { L1Provider, MockL1Provider } from './deps/l1Provider'
 import * as api from './api'
@@ -10,9 +11,8 @@ import * as bitcoinjs from '@scrypt-inc/bitcoinjs-lib'
 import * as ecc from '@bitcoinerlab/secp256k1'
 import { ECPairFactory } from 'ecpair'
 import { PubKey } from 'scrypt-ts'
-import { getContractAddresses } from './utils/contractUtil'
+import { getContractAddresses , loadContractArtifacts} from './utils/contractUtil'
 import { DepositBatch, L1Address, L1TxHash, L2Address, Withdrawal, WithdrawalBatch } from '../state'
-import { Decipher } from 'crypto'
 
 const ECPair = ECPairFactory(ecc)
 bitcoinjs.initEccLib(ecc)
@@ -699,8 +699,9 @@ describe('test l1 api', () => {
         for (let i = 0; i < depositCount; i++) {
             amountList[i] = amountList[i] ?? (500n + BigInt(i))
         }
+        const operatorPubKey = await operatorSigner.getPublicKey()
         for (let i = 0; i < depositCount; i++) {
-            deposits.push(await api.createDeposit(operatorSigner, l1Network, defaultUtxoProvider, defaultChainProvider, defaultFeeRate, operatorSigner, l2Addresses[i % l2Addresses.length], amountList[i]))
+            deposits.push(await api.createDeposit(PubKey(operatorPubKey), l1Network, defaultUtxoProvider, defaultChainProvider, defaultFeeRate, operatorSigner, l2Addresses[i % l2Addresses.length], amountList[i]))
         }
         return deposits
     }

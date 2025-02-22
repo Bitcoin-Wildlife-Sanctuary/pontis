@@ -1,10 +1,12 @@
-import {loadContractArtifacts, btcRpc, BridgeState} from 'l1'
+import {btcRpc, BridgeState} from 'l1'
 import * as env from './env'
 import { getFileOffChainDataProvider } from './deps/offchainDataProvider'
 import { createL1Provider } from './deps/l1Provider'
 import { getContractAddresses } from './utils/contractUtil';
 import * as api from './api';
 import { BridgeCovenantState } from '../state';
+import { loadContractArtifacts } from './utils/contractUtil';
+
 export async function importAddressesIntoNode() {
     const addresses = await getContractAddresses(env.operatorSigner, env.l1Network);
 

@@ -53,11 +53,9 @@ export {MempoolUtxoProvider} from './providers/mempoolUtxoProvider'
 export {RPCChainProvider} from './providers/rpcChainProvider'
 export {RPCUtxoProvider} from './providers/rpcUtxoProvider'
 export { TestUtxoProvider, TestChainProvider } from './providers/testProvider'
-export { NoBroadcastingChainProvider } from './providers/noBroadcastingChainProvider'
 
 export * from './lib/signer'
-export {DefaultSigner} from './signers/defaultSigner'
+export {DefaultSigner, AddressType} from './signers/defaultSigner'
 export {UnisatSigner} from './signers/unisatSigner'
-export {DummySigner} from './signers/dummySigner'
 export * from './util/merkleUtils';
 export * as btcRpc from './util/rpc'

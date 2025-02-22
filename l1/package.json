@@ -4,7 +4,6 @@
   "version": "0.1.0",
   "description": "",
   "author": "",
-  "type": "module",
   "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
   "types": "./dist/types/index.d.ts",

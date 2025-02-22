@@ -1,6 +1,6 @@
 
 import { L2Address, L1TxHash } from "../../../state";
-import { readFileSync, existsSync, writeFileSync } from "node:fs";
+import { readFileSync, existsSync, writeFileSync } from "fs";
 import * as path from 'path'
 import { OffchainDataProvider } from "./type";
 

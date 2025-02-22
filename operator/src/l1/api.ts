@@ -145,7 +145,7 @@ export async function listDeposits(
 
 /// create a single deposit
 export async function createDeposit(
-    operatorSigner: Signer,
+    operatorPubKey: PubKey,
     l1Network: SupportedNetwork,
     utxoProvider: UtxoProvider,
     chainProvider: ChainProvider,
@@ -157,7 +157,6 @@ export async function createDeposit(
     depositAmt: bigint,
 ): Promise<Deposit> {
     // console.log(`createDeposit(signer,${l2Address}, ${depositAmt})`)
-    const operatorPubKey = await operatorSigner.getPublicKey();
     const depositTx = await depositFeatures.createDeposit(
         PubKey(operatorPubKey),
         userL1Signer,
@@ -179,7 +178,44 @@ export async function createDeposit(
         },
     }
     // console.log(`createDeposit(signer,${l2Address}, ${depositAmt}) done, txid: ${deposit.origin.hash}`)
-    return deposit;
+    return deposit
+}
+
+export async function createDepositWithoutSigning(
+    operatorPubKey: PubKey,
+    l1Network: SupportedNetwork,
+    utxoProvider: UtxoProvider,
+
+    feeRate: number,
+
+    userL1Address: string,
+    l2Address: L2Address,
+    depositAmt: bigint,
+) {
+    const depositTx = await depositFeatures.createDepositWithoutSigning(
+        PubKey(operatorPubKey),
+        userL1Address,
+        l1Network,
+        utxoProvider,
+        l2AddressToHex(l2Address),
+        depositAmt,
+
+        feeRate
+    );
+    const deposit: Deposit = {
+        amount: depositAmt,
+        recipient: l2Address,
+        origin: {
+            status: 'UNCONFIRMED' as const,
+            type: 'l1tx' as const,
+            hash: depositTx.txid as L1TxHash,
+        },
+    }
+    return {
+        deposit,
+        psbt: depositTx.psbt.toHex(),
+        psbtOptions: depositTx.psbtOptions,
+    }
 }
 
 export async function shouldAggregate(batch: DepositBatch) {

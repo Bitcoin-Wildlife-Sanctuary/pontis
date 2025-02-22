@@ -1,10 +1,10 @@
 
 
-import { BridgeMerkle, loadContractArtifacts, utils } from 'l1'
 import { L2Address } from '../state'
 import * as l1Api from './api'
 import * as env from './env'
-import { getFileOffChainDataProvider } from './deps/offchainDataProvider'
+import { PubKey } from 'scrypt-ts'
+import { loadContractArtifacts } from './utils/contractUtil'
 
 
 
@@ -17,8 +17,9 @@ const main = async () => {
     // const l2Address: L2Address = '0x049d36570d4e46f48e99674bd3fcc84644ddd6b96f7c741b1562b82f9e004dc7'
     // const l2Address: L2Address = '0x01176a1bd84444c89232ec27754698e5d2e7e1a7f1539f12027f28b23ec9f3d8' as L2Address
     const depositAmt = 509n
+    const operatorPubKey = await env.operatorSigner.getPublicKey()
     const deposit = await l1Api.createDeposit(
-        env.operatorSigner,
+        PubKey(operatorPubKey),
         env.l1Network,
         env.createUtxoProvider(),
         env.createChainProvider(),

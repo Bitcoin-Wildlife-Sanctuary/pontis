@@ -82,6 +82,65 @@ export async function createDeposit(
   }
 }
 
+export async function createDepositWithoutSigning(
+  operatorPubKey: PubKey,
+  feeAddress: string,
+  network: SupportedNetwork,
+  utxoProvider: UtxoProvider,
+
+  l2Address: string,
+  depositAmt: bigint,
+
+  feeRate: number
+) {
+  const scriptSPKs = getScriptPubKeys(operatorPubKey)
+  const l1address = feeAddress
+
+  const state = DepositAggregatorCovenant.createDepositState(
+    toByteString(l2Address),
+    depositAmt
+  )
+  const depositAggregatorCovenant = new DepositAggregatorCovenant(
+    operatorPubKey,
+    scriptSPKs.bridge,
+    state,
+    network
+  )
+
+  const est = estimateCreateDepositTxVSize(
+    network,
+    depositAggregatorCovenant,
+    l1address
+  )
+  const total = BigInt(Math.ceil(feeRate * est.vSize)) + depositAmt
+
+  const utxos = await utxoProvider.getUtxos(l1address, { total: Number(total) })
+  if (utxos.length === 0) {
+    throw new Error(`Insufficient satoshis input amount: no utxos found`)
+  }
+  // todo pick the exact amount of satoshis
+  const feeUtxo = pickLargeFeeUtxo(utxos)
+  if (feeUtxo.satoshis < total) {
+    throw new Error(
+      `Insufficient satoshis input amount: fee utxo(${feeUtxo.satoshis}) < total(${total})`
+    )
+  }
+  const psbt = buildCreateDepositTx(
+    network,
+    depositAggregatorCovenant,
+    l1address,
+    feeUtxo,
+    feeRate
+  )
+  return {
+    psbt: psbt,
+    txid: psbt.unsignedTx.getId(),
+    state,
+    psbtOptions: psbt.psbtOptions(),
+    aggregatorUtxo: outputToUtxo(psbt.unsignedTx, CONTRACT_INDEXES.outputIndex.depositAggregator) as UTXO,
+  }
+}
+
 function estimateCreateDepositTxVSize(
   network: SupportedNetwork,
   covenant: DepositAggregatorCovenant,

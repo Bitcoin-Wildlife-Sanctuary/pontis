@@ -23,10 +23,10 @@ import { deposits, l1BlockNumber } from './l1/events';
 import { EMPTY, merge, of } from 'rxjs';
 import { createBridgeContract } from './l1/api';
 import { existsSync } from 'fs';
-import { loadContractArtifacts } from 'l1';
 import * as env from './l1/env'
 import { l2TransactionStatus } from './l2/transactions';
 import { l2BlockNumber, l2Events } from './l2/events';
+import { loadContractArtifacts } from './l1/utils/contractUtil'
 
 async function initialState(path: string): Promise<OperatorState> {
   loadContractArtifacts()
