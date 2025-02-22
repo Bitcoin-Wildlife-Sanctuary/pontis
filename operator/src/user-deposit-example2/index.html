@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>user deposit example</title>
+</head>
+
+<body>
+    <h1>user deposit example: construct transaction in backend, sign in browser</h1>
+    <input type="text" id="l2Address" value="0x02d889448e2ce40fa6874e0bc0bd6156d535a1c9866fd9163be5756e5695493b"
+        placeholder="l2 address">
+    <input type="text" id="depositAmount" value="0.000005" placeholder="deposit amount, unit: btc">
+    <button id="depositButton">deposit</button>
+
+    <br />
+    <br />
+    <br />
+    install unisat extension: <a
+        href="https://chromewebstore.google.com/detail/unisat-wallet/ppbibelpcjmhbdihakflkdcoccbgbkpo" target="_blank">https://chromewebstore.google.com/detail/unisat-wallet/ppbibelpcjmhbdihakflkdcoccbgbkpo</a>
+    <br />
+    <br />
+    <br />
+    <div id="result"></div>
+
+    <script src="./bundle.js"></script>
+</body>
+
+</html>
