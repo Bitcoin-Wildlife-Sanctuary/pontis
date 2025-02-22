@@ -9,3 +9,6 @@ operator/out
 .env
 offchain_db.json
 operator_state.json
+
+bundler.js
+bundler.js.LICENSE.txt
