@@ -7,7 +7,10 @@ import {
   mergeMap,
   map,
 } from 'rxjs/operators';
-import { EMITTED_EVENT, EVENT } from 'starknet-types-07/dist/types/api/components';
+import {
+  EMITTED_EVENT,
+  EVENT,
+} from 'starknet-types-07/dist/types/api/components';
 import { BlockNumberEvent, L1Address, L2TxHash } from '../state';
 import { BinaryLike } from 'crypto';
 import { fromDigest } from './contracts';
@@ -155,9 +158,11 @@ export function contractEvents(
 ): Observable<L2Event> {
   return currentBlockRange(provider, initialBlockNumber).pipe(
     switchMap(([previous, current]) =>
-      previous < current ?
-        from(contractEventsInRange(provider, contractAddress, previous, current)) :
-        EMPTY
+      previous < current
+        ? from(
+            contractEventsInRange(provider, contractAddress, previous, current)
+          )
+        : EMPTY
     )
   );
 }

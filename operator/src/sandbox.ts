@@ -1,5 +1,5 @@
 import { Account, RpcProvider } from 'starknet';
-import {importAddressesIntoNode} from './l1/prepare'
+import { importAddressesIntoNode } from './l1/prepare';
 import {
   closePendingWithdrawalBatch,
   contractFromAddress,
@@ -18,21 +18,26 @@ import {
 } from './state';
 import { setupOperator } from './operator';
 // import { aggregateDeposits, finalizeBatch } from './l1/l1mocks';
-import { l1TransactionStatus, aggregateDeposits, finalizeDepositBatch, verifyDepositBatch } from './l1/transactions';
+import {
+  l1TransactionStatus,
+  aggregateDeposits,
+  finalizeDepositBatch,
+  verifyDepositBatch,
+} from './l1/transactions';
 import { deposits, l1BlockNumber } from './l1/events';
 import { EMPTY, merge, of } from 'rxjs';
 import { createBridgeContract } from './l1/api';
 import { existsSync } from 'fs';
-import * as env from './l1/env'
+import * as env from './l1/env';
 import { l2TransactionStatus } from './l2/transactions';
 import { l2BlockNumber, l2Events } from './l2/events';
-import { loadContractArtifacts } from './l1/utils/contractUtil'
+import { loadContractArtifacts } from './l1/utils/contractUtil';
 
 async function initialState(path: string): Promise<OperatorState> {
-  loadContractArtifacts()
-  await importAddressesIntoNode()
+  loadContractArtifacts();
+  await importAddressesIntoNode();
   if (existsSync(path)) {
-    return load(path)
+    return load(path);
   } else {
     const bridgeState = await createBridgeContract(
       env.operatorSigner,
@@ -53,7 +58,6 @@ async function initialState(path: string): Promise<OperatorState> {
 }
 
 async function sandboxOperator() {
-
   const path = './operator_state.json';
 
   const provider = new RpcProvider({ nodeUrl: 'http://127.0.0.1:5050/rpc' });
@@ -73,7 +77,7 @@ async function sandboxOperator() {
   const bridge = await contractFromAddress(provider, bridgeAddress);
   const btc = await contractFromAddress(provider, btcAddress);
   bridge.connect(admin);
-  
+
   const startState = await initialState(path);
 
   const env: BridgeEnvironment = {
@@ -82,12 +86,13 @@ async function sandboxOperator() {
     MAX_WITHDRAWAL_BLOCK_AGE: 2,
     MAX_WITHDRAWAL_BATCH_SIZE: 2,
     submitDepositsToL2: (hash: L1TxHash, deposits: Deposit[]) => {
-      return submitDepositsToL2(admin, bridge, BigInt('0x' + hash), deposits)
+      return submitDepositsToL2(admin, bridge, BigInt('0x' + hash), deposits);
     },
-    closePendingWithdrawalBatch: () => closePendingWithdrawalBatch(admin, bridge),
+    closePendingWithdrawalBatch: () =>
+      closePendingWithdrawalBatch(admin, bridge),
     aggregateDeposits,
     finalizeDepositBatch,
-    verifyDepositBatch
+    verifyDepositBatch,
   };
 
   const operator = setupOperator(
@@ -95,12 +100,12 @@ async function sandboxOperator() {
     env,
     l1BlockNumber(),
     deposits(startState.l1BlockNumber),
-//    merge(l2Events(provider, startState.l2BlockNumber, [bridgeAddress]), l2BlockNumber(provider)),
+    //    merge(l2Events(provider, startState.l2BlockNumber, [bridgeAddress]), l2BlockNumber(provider)),
     l2Events(provider, startState.l2BlockNumber, [bridgeAddress]),
     l1TransactionStatus,
-    tx => l2TransactionStatus(provider, tx),
+    (tx) => l2TransactionStatus(provider, tx),
     applyChange,
-    state => save(path, state)
+    (state) => save(path, state)
   );
 
   operator.subscribe((_) => {});

@@ -18,6 +18,17 @@ jobs:
           mdl -s .github/linter/readme_style.rb README.md
           mdl -s .github/linter/base_style.rb .github
 
+  prettier:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./operator
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v2
+      - run: npm install
+      - run: npm run format:check
+
   l2-test:
     runs-on: ubuntu-latest
     defaults:
@@ -34,3 +45,4 @@ jobs:
       - run: pwd
       - run: scarb --version
       - run: scarb test
+

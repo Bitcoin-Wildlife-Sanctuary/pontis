@@ -1,13 +1,12 @@
 {
-    "diff": true,
-    "node-option": ["import=tsx"],
-    "extensions": ["ts"],
-    "spec": ["./src/**/*.test.ts"],
-    "package": "./package.json",
-    "reporter": "spec",
-    "slow": "75",
-    "timeout": "60000",
-    "ui": "bdd",
-    "watch-files": ["./src/**/*.test.ts"]
-  }
-  
+  "diff": true,
+  "node-option": ["import=tsx"],
+  "extensions": ["ts"],
+  "spec": ["./src/**/*.test.ts"],
+  "package": "./package.json",
+  "reporter": "spec",
+  "slow": "75",
+  "timeout": "60000",
+  "ui": "bdd",
+  "watch-files": ["./src/**/*.test.ts"]
+}

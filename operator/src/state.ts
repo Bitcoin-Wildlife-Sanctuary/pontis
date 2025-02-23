@@ -18,14 +18,16 @@ export type L1TxId = {
   hash: L1TxHash;
 };
 
-export type L1TxStatus = L1TxId & (
-  | {
-    status: 'UNCONFIRMED' | 'DROPPED';
-  }
-  | {
-    status: 'MINED',
-    blockNumber: number
-  });
+export type L1TxStatus = L1TxId &
+  (
+    | {
+        status: 'UNCONFIRMED' | 'DROPPED';
+      }
+    | {
+        status: 'MINED';
+        blockNumber: number;
+      }
+  );
 
 export type L1Tx = L1TxStatus; // TODO: What else should go into a l1 tx?
 
@@ -56,7 +58,7 @@ type DepositBatchCommon = {
 };
 
 export type DepositAggregationState = DepositAggregatorState & {
-  tx: L1Tx
+  tx: L1Tx;
 };
 
 export type DepositBatch =
@@ -161,8 +163,8 @@ export type WithdrawalBatch =
     } & WithdrawalBatchCommon);
 
 export type BridgeCovenantState = BridgeState & {
-  latestTx: L1Tx
-}
+  latestTx: L1Tx;
+};
 
 export type OperatorState = {
   l1BlockNumber: number;
@@ -199,10 +201,18 @@ export type BridgeEnvironment = {
   DEPOSIT_BATCH_SIZE: number;
   MAX_WITHDRAWAL_BLOCK_AGE: number;
   MAX_WITHDRAWAL_BATCH_SIZE: number;
-  aggregateDeposits: (level: DepositAggregationState[]) => Promise<DepositAggregationState[]>;
-  finalizeDepositBatch: (bridge: BridgeCovenantState, level2: DepositAggregationState) => Promise<[BridgeCovenantState, BatchId]>;
+  aggregateDeposits: (
+    level: DepositAggregationState[]
+  ) => Promise<DepositAggregationState[]>;
+  finalizeDepositBatch: (
+    bridge: BridgeCovenantState,
+    level2: DepositAggregationState
+  ) => Promise<[BridgeCovenantState, BatchId]>;
   submitDepositsToL2: (hash: L1TxHash, deposits: Deposit[]) => Promise<L2Tx>;
-  verifyDepositBatch: (bridgeState: BridgeCovenantState, batchId: string) => Promise<BridgeCovenantState>;
+  verifyDepositBatch: (
+    bridgeState: BridgeCovenantState,
+    batchId: string
+  ) => Promise<BridgeCovenantState>;
   closePendingWithdrawalBatch: () => Promise<L2Tx>;
 };
 
@@ -225,7 +235,11 @@ export async function applyChange(
       newState.pendingDeposits.push(...change.deposits);
       newState.l1BlockNumber = Math.max(
         newState.l1BlockNumber,
-        max(change.deposits.map((d) => d.origin.status === 'MINED' && d.origin.blockNumber || 0)) || 0
+        max(
+          change.deposits.map(
+            (d) => (d.origin.status === 'MINED' && d.origin.blockNumber) || 0
+          )
+        ) || 0
       );
       await initiateAggregation(env, newState);
       break;
@@ -286,12 +300,9 @@ export async function applyChange(
   return newState;
 }
 
-
-
 function updateL1TxStatus(state: OperatorState, status: L1TxStatus) {
-
   function update(tx: L1Tx) {
-    if(tx.hash === status.hash) {
+    if (tx.hash === status.hash) {
       Object.assign(tx, status);
     }
   }
@@ -353,7 +364,7 @@ function updateL1TxStatus(state: OperatorState, status: L1TxStatus) {
 export function getAllL1Txs(state: OperatorState): Set<L1TxId> {
   const l1Txs: L1TxStatus[] = [];
 
-  l1Txs.push(state.bridgeState.latestTx)
+  l1Txs.push(state.bridgeState.latestTx);
 
   for (const deposit of state.pendingDeposits) {
     l1Txs.push(deposit.origin);
@@ -403,24 +414,24 @@ export function getAllL1Txs(state: OperatorState): Set<L1TxId> {
     }
   }
 
-  return new Set([...new Set(
-    l1Txs
-      .filter((tx) => tx.status !== 'MINED')
-      .map(({ hash }) => hash)
-  )].map(hash => ({
-    type: 'l1tx',
-    hash,
-  })));
+  return new Set(
+    [
+      ...new Set(
+        l1Txs.filter((tx) => tx.status !== 'MINED').map(({ hash }) => hash)
+      ),
+    ].map((hash) => ({
+      type: 'l1tx',
+      hash,
+    }))
+  );
 }
 
 function updateL2TxStatus(state: OperatorState, status: L2TxStatus) {
-
   function update(tx: L2Tx) {
-    if(tx.hash === status.hash) {
+    if (tx.hash === status.hash) {
       Object.assign(tx, status);
     }
   }
-
 
   for (const batch of state.depositBatches) {
     if (
@@ -500,17 +511,22 @@ async function initiateAggregation(
 
     const deposits = state.pendingDeposits.splice(0, batchSize);
 
-    const level0: DepositAggregationState[] = deposits.map(({origin, amount, recipient}) => ({
-      type: 'LEAF',
-      level: 0n,
-      tx: origin,
-      depositAmt: amount,
-      depositAddress: l2AddressToHex(recipient)
-    }));
+    const level0: DepositAggregationState[] = deposits.map(
+      ({ origin, amount, recipient }) => ({
+        type: 'LEAF',
+        level: 0n,
+        tx: origin,
+        depositAmt: amount,
+        depositAddress: l2AddressToHex(recipient),
+      })
+    );
 
     if (batchSize === 1) {
       // if there is only one deposit, we can finalize the batch directly
-      const [bridgeState, batchId] = await env.finalizeDepositBatch(state.bridgeState, level0[0]);
+      const [bridgeState, batchId] = await env.finalizeDepositBatch(
+        state.bridgeState,
+        level0[0]
+      );
       state.bridgeState = bridgeState;
 
       state.depositBatches.push({
@@ -518,12 +534,12 @@ async function initiateAggregation(
         deposits,
         aggregationTxs: [level0],
         finalizeBatchTx: state.bridgeState.latestTx,
-        batchId
+        batchId,
       });
     } else {
       const aggregationTxs: DepositAggregationState[][] = [
         level0,
-        await env.aggregateDeposits(level0)
+        await env.aggregateDeposits(level0),
       ];
       state.depositBatches.push({
         status: 'BEING_AGGREGATED',
@@ -542,7 +558,7 @@ function depositsOldEnough(
     if (
       deposit.origin.status === 'MINED' &&
       deposit.origin.blockNumber + env.MAX_DEPOSIT_BLOCK_AGE <
-      state.l1BlockNumber
+        state.l1BlockNumber
     ) {
       return true;
     }
@@ -558,21 +574,23 @@ async function manageAggregation(
     const batch = newState.depositBatches[i];
     if (batch.status === 'BEING_AGGREGATED') {
       const aggregationTxs = batch.aggregationTxs.at(-1)!;
-      if (
-        aggregationTxs.every((tx) => tx.tx.status === 'MINED')
-      ) {
+      if (aggregationTxs.every((tx) => tx.tx.status === 'MINED')) {
         if (aggregationTxs.length === 1) {
-          const [bridgeState, batchId] = await env.finalizeDepositBatch(newState.bridgeState, aggregationTxs.at(0)!);
+          const [bridgeState, batchId] = await env.finalizeDepositBatch(
+            newState.bridgeState,
+            aggregationTxs.at(0)!
+          );
           newState.bridgeState = bridgeState;
           newState.depositBatches[i] = {
             ...batch,
             status: 'AGGREGATED',
             finalizeBatchTx: newState.bridgeState.latestTx,
-            batchId
+            batchId,
           };
         } else {
-          const newAggregationLevel =
-            await env.aggregateDeposits(batch.aggregationTxs.at(-1)!);
+          const newAggregationLevel = await env.aggregateDeposits(
+            batch.aggregationTxs.at(-1)!
+          );
           batch.aggregationTxs.push(newAggregationLevel);
         }
       }
@@ -590,7 +608,6 @@ async function manageAggregation(
           batch.deposits
         ),
       };
-      
     }
   }
 }
@@ -598,8 +615,9 @@ async function manageAggregation(
 function updateDeposits(newState: OperatorState) {
   for (let i = 0; i < newState.depositBatches.length; i++) {
     const depositBatch = newState.depositBatches[i];
-    if (depositBatch.status === 'SUBMITTED_TO_L2' &&
-        depositBatch.depositTx.status === 'SUCCEEDED'
+    if (
+      depositBatch.status === 'SUBMITTED_TO_L2' &&
+      depositBatch.depositTx.status === 'SUCCEEDED'
     ) {
       newState.depositBatches[i] = {
         ...depositBatch,
@@ -609,15 +627,21 @@ function updateDeposits(newState: OperatorState) {
   }
 }
 
-async function manageVerification(env: BridgeEnvironment, newState: OperatorState) {
+async function manageVerification(
+  env: BridgeEnvironment,
+  newState: OperatorState
+) {
   for (let i = 0; i < newState.depositBatches.length; i++) {
     const batch = newState.depositBatches[i];
-    
+
     if (
       batch.status === 'DEPOSITED' &&
       batch.depositTx.status === 'SUCCEEDED'
     ) {
-      newState.bridgeState = await env.verifyDepositBatch(newState.bridgeState, batch.batchId);;
+      newState.bridgeState = await env.verifyDepositBatch(
+        newState.bridgeState,
+        batch.batchId
+      );
       newState.depositBatches[i] = {
         ...batch,
         status: 'SUBMITTED_FOR_VERIFICATION',
@@ -625,12 +649,13 @@ async function manageVerification(env: BridgeEnvironment, newState: OperatorStat
           batch.finalizeBatchTx.hash,
           batch.deposits
         ),
-        verifyTx: newState.bridgeState.latestTx
+        verifyTx: newState.bridgeState.latestTx,
       };
     }
-    
-    if (batch.status === 'SUBMITTED_FOR_VERIFICATION' && 
-        batch.verifyTx.status === 'MINED'
+
+    if (
+      batch.status === 'SUBMITTED_FOR_VERIFICATION' &&
+      batch.verifyTx.status === 'MINED'
     ) {
       newState.depositBatches[i] = {
         ...batch,
@@ -718,7 +743,6 @@ function withdrawalsOldEnough(
   }
   return false;
 }
-
 
 export function save(path: string, state: OperatorState) {
   const jsonString = JSON.stringify(

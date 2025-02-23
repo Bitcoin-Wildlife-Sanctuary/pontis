@@ -33,7 +33,9 @@ function currentBlock(): Observable<number> {
     switchMap(() => from(getCurrentL1BlockNumber())),
     retry({
       delay: (error, retryCount) => {
-        console.warn(`CurrentBlock retry attempt #${retryCount}, due to: ${error.message}`);
+        console.warn(
+          `CurrentBlock retry attempt #${retryCount}, due to: ${error.message}`
+        );
         return timer(POLL_INTERVAL);
       },
     }),
@@ -63,21 +65,23 @@ export function deposits(initialBlockNumber: number): Observable<Deposits> {
 }
 
 async function getCurrentL1BlockNumber(): Promise<number> {
-  return l1Api.getL1CurrentBlockNumber(createL1Provider(env.useRpc, env.rpcConfig, env.l1Network));
+  return l1Api.getL1CurrentBlockNumber(
+    createL1Provider(env.useRpc, env.rpcConfig, env.l1Network)
+  );
 }
 
 async function depositsInRange(
   blockFrom: number,
   blockTo: number
 ): Promise<Deposit[]> {
-  const deposits = await  l1Api.listDeposits(
-   blockFrom,
-   blockTo,
-   env.operatorSigner,
-   env.l1Network,
-   createL1Provider(env.useRpc, env.rpcConfig, env.l1Network),
-   env.createChainProvider()
+  const deposits = await l1Api.listDeposits(
+    blockFrom,
+    blockTo,
+    env.operatorSigner,
+    env.l1Network,
+    createL1Provider(env.useRpc, env.rpcConfig, env.l1Network),
+    env.createChainProvider()
   );
   // console.log('deposits', blockFrom, blockTo, deposits)
-  return deposits
+  return deposits;
 }

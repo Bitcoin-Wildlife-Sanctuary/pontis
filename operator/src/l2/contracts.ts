@@ -33,8 +33,8 @@ async function declareAndDeploy(
     contract,
     casm,
     constructorCalldata,
-    salt: "123",
-    unique: true
+    salt: '123',
+    unique: true,
   });
 
   return new Contract(

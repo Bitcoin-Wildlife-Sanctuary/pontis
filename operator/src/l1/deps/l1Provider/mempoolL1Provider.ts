@@ -1,35 +1,56 @@
-import { L1Provider, Utxo, DEFAULT_FROM_BLOCK, DEFAULT_TO_BLOCK, UNCONFIRMED_BLOCK_NUMBER } from "./type";
-import { MempoolChainProvider } from "l1";
-import * as bitcoinjs from '@scrypt-inc/bitcoinjs-lib'
-import { utils } from "l1";
-import fetch from 'cross-fetch'
-import { L1TxStatus } from "../../../state";
+import {
+  L1Provider,
+  Utxo,
+  DEFAULT_FROM_BLOCK,
+  DEFAULT_TO_BLOCK,
+  UNCONFIRMED_BLOCK_NUMBER,
+} from './type';
+import { MempoolChainProvider } from 'l1';
+import * as bitcoinjs from '@scrypt-inc/bitcoinjs-lib';
+import { utils } from 'l1';
+import fetch from 'cross-fetch';
+import { L1TxStatus } from '../../../state';
 
-export class MempoolL1Provider extends MempoolChainProvider implements L1Provider {
-    async getCurrentBlockNumber(): Promise<number> {
-        const res = await fetch(`${this.getMempoolApiHost()}/api/blocks/tip/height`)
-        const data = await res.text()
-        if (res.status !== 200) {
-            throw new Error(`Failed to get current block number: status: ${res.status}, body: ${data}`)
-        }
-        return parseInt(data)
+export class MempoolL1Provider
+  extends MempoolChainProvider
+  implements L1Provider
+{
+  async getCurrentBlockNumber(): Promise<number> {
+    const res = await fetch(
+      `${this.getMempoolApiHost()}/api/blocks/tip/height`
+    );
+    const data = await res.text();
+    if (res.status !== 200) {
+      throw new Error(
+        `Failed to get current block number: status: ${res.status}, body: ${data}`
+      );
     }
-    async listUtxos(address: string, fromBlock?: number, toBlock?: number): Promise<Utxo[]> {
-        fromBlock = fromBlock ?? DEFAULT_FROM_BLOCK;
-        toBlock = toBlock ?? DEFAULT_TO_BLOCK;
-        
-        const script = Buffer.from(
-            bitcoinjs.address.toOutputScript(
-                address,
-                utils.supportedNetworkToBtcNetwork(this.network)
-            )
-        ).toString('hex')
-        const res = await fetch(`${this.getMempoolApiHost()}/api/address/${address}/utxo`)
-        if (res.status !== 200) {
-            throw new Error(`Failed to list utxos: status: ${res.status}, body: ${await res.text()}`)
-        }
-        const data = await res.json()
-        /*
+    return parseInt(data);
+  }
+  async listUtxos(
+    address: string,
+    fromBlock?: number,
+    toBlock?: number
+  ): Promise<Utxo[]> {
+    fromBlock = fromBlock ?? DEFAULT_FROM_BLOCK;
+    toBlock = toBlock ?? DEFAULT_TO_BLOCK;
+
+    const script = Buffer.from(
+      bitcoinjs.address.toOutputScript(
+        address,
+        utils.supportedNetworkToBtcNetwork(this.network)
+      )
+    ).toString('hex');
+    const res = await fetch(
+      `${this.getMempoolApiHost()}/api/address/${address}/utxo`
+    );
+    if (res.status !== 200) {
+      throw new Error(
+        `Failed to list utxos: status: ${res.status}, body: ${await res.text()}`
+      );
+    }
+    const data = await res.json();
+    /*
         data: 
         [
             {
@@ -53,44 +74,46 @@ export class MempoolL1Provider extends MempoolChainProvider implements L1Provide
             }
         ]
         */
-        const utxos = data.map((utxo: any) => ({
-            txId: utxo.txid,
-            outputIndex: utxo.vout,
-            satoshis: Number(utxo.value),
-            script: utxo.script || script,
-            blockNumber: utxo.status.block_height || UNCONFIRMED_BLOCK_NUMBER,
-        }))
-        // todo: confirm should use equal or greater than fromBlock
-        return utxos.filter((utxo: Utxo) => utxo.blockNumber >= fromBlock && utxo.blockNumber <= toBlock)
+    const utxos = data.map((utxo: any) => ({
+      txId: utxo.txid,
+      outputIndex: utxo.vout,
+      satoshis: Number(utxo.value),
+      script: utxo.script || script,
+      blockNumber: utxo.status.block_height || UNCONFIRMED_BLOCK_NUMBER,
+    }));
+    // todo: confirm should use equal or greater than fromBlock
+    return utxos.filter(
+      (utxo: Utxo) =>
+        utxo.blockNumber >= fromBlock && utxo.blockNumber <= toBlock
+    );
+  }
+  async getTransactionStatus(txid: string): Promise<L1TxStatus> {
+    const res = await fetch(`${this.getMempoolApiHost()}/api/tx/${txid}`);
+    if (res.status === 404) {
+      return {
+        type: 'l1tx',
+        hash: txid,
+        status: 'DROPPED',
+      };
     }
-    async getTransactionStatus(txid: string): Promise<L1TxStatus> {
-        const res = await fetch(`${this.getMempoolApiHost()}/api/tx/${txid}`)
-        if (res.status === 404) {
-            return {
-                type: 'l1tx',
-                hash: txid,
-                status: 'DROPPED',
-            }
-        }
-        if (res.status !== 200) {
-            throw new Error(`Failed to get transaction status: status: ${res.status}, body: ${await res.text()}`)
-        }
-        const data = await res.json()
-        if (data.status.confirmed) {
-            return {
-                type: 'l1tx',
-                hash: txid,
-                status: 'MINED',
-                blockNumber: data.status.block_height,
-            }
-        }
-        return {
-            type: 'l1tx',
-            hash: txid,
-            status: 'UNCONFIRMED',
-        }
+    if (res.status !== 200) {
+      throw new Error(
+        `Failed to get transaction status: status: ${res.status}, body: ${await res.text()}`
+      );
     }
-    
+    const data = await res.json();
+    if (data.status.confirmed) {
+      return {
+        type: 'l1tx',
+        hash: txid,
+        status: 'MINED',
+        blockNumber: data.status.block_height,
+      };
+    }
+    return {
+      type: 'l1tx',
+      hash: txid,
+      status: 'UNCONFIRMED',
+    };
+  }
 }
-
-

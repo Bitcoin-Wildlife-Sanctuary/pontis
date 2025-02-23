@@ -26,9 +26,6 @@ Assuming that aggregation happens in rounds:
 
 ### Register aggregated withdrawals in the Bridge State Contract
 
-
-
-
 - `registerWithdrawalBatch(withdrawalBatchId: number, root: string) -> Promise<L1TxHashAndStatus>` - create and send a withdrawal batch registration transaction
 
 ### Withdrawals expansion
