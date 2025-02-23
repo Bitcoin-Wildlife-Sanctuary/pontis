@@ -23,12 +23,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v2
-      - run: cd l1
-      - run: npm install
-      - run: npm build
-      - run: cd ../operator
-      - run: npm install
-      - run: npm run format:check
+      - name: Install and build in l1
+        run: |
+          cd l1
+          npm install
+          npm run build
+      - name: Install and format check in operator
+        run: |
+          cd operator
+          npm install
+          npm run format:check
 
   l2-test:
     runs-on: ubuntu-latest
