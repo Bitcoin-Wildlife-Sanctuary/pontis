@@ -20,18 +20,21 @@ jobs:
 
   prettier:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./operator
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v2
-      - run: pwd
+      - run: cd l1
+      - run: npm install
+      - run: npm build
+      - run: cd ../operator
       - run: npm install
       - run: npm run format:check
 
   l2-test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./l2
     steps:
       - uses: actions/checkout@v4
       - uses: software-mansion/setup-scarb@v1
@@ -40,9 +43,6 @@ jobs:
       - uses: foundry-rs/setup-snfoundry@v3
         with:
           starknet-foundry-version: 0.34.0                  
-      - run: cd l1
-      - run: npm build
-      - run: cd ../operator
       - run: scarb --version
       - run: scarb test
 
