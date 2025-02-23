@@ -1,0 +1,12 @@
+{
+  "diff": true,
+  "node-option": ["import=tsx"],
+  "extensions": ["ts"],
+  "spec": ["./tests/**/withdraw.test.ts"],
+  "package": "./package.json",
+  "reporter": "spec",
+  "slow": "75",
+  "timeout": "60000",
+  "ui": "bdd",
+  "watch-files": ["./tests/**/*.test.ts"]
+}

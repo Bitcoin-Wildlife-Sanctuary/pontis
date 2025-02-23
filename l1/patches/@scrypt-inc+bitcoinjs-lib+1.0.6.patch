@@ -1,0 +1,13 @@
+diff --git a/node_modules/@scrypt-inc/bitcoinjs-lib/dist/cjs/psbt.d.ts b/node_modules/@scrypt-inc/bitcoinjs-lib/dist/cjs/psbt.d.ts
+index 7a64f16..61dfdbc 100644
+--- a/node_modules/@scrypt-inc/bitcoinjs-lib/dist/cjs/psbt.d.ts
++++ b/node_modules/@scrypt-inc/bitcoinjs-lib/dist/cjs/psbt.d.ts
+@@ -63,7 +63,7 @@ export declare class Psbt {
+     static fromHex(data: string, opts?: PsbtOptsOptional): Psbt;
+     static fromBuffer(buffer: Uint8Array, opts?: PsbtOptsOptional): Psbt;
+     private __CACHE;
+-    private opts;
++    public opts: PsbtOptsOptional;
+     constructor(opts?: PsbtOptsOptional, data?: PsbtBase);
+     get inputCount(): number;
+     get version(): number;

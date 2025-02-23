@@ -1,0 +1,102 @@
+{
+  "private": true,
+  "name": "l1",
+  "version": "0.1.0",
+  "description": "",
+  "author": "",
+  "main": "./dist/cjs/index.js",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "require": "./dist/cjs/index.js",
+      "import": "./dist/esm/index.js",
+      "types": "./dist/types/index.d.ts"
+    },
+    "./dist/*": {
+      "require": "./dist/cjs/*.js",
+      "import": "./dist/esm/*.js",
+      "types": "./dist/types/*.d.ts"
+    },
+    "./artifacts/*.json": {
+      "require": "./artifacts/*.json",
+      "import": "./artifacts/*.json"
+    }
+  },
+  "scripts": {
+    "postinstall": "patch-package",
+    "cli": "ts-node cli.ts",
+    "prebuild": "npm run clean",
+    "build": "npm run build:cjs && npm run build:esm && npm run compile",
+    "build:cjs": "tsc -p tsconfig.cjs.json",
+    "build:esm": "tsc -p tsconfig.esm.json",
+    "deploy": "npx ts-node ./deploy.ts",
+    "clean": "rimraf scrypt.index.json && rimraf dist && rimraf artifacts",
+    "//compile": "due to yarn workspace dependency hoisting makes npx do not konw how to find scrypt-cli, we cannot install scrypt-cli as a dependency",
+    "compile": "npx --yes scrypt-cli compile",
+    "pretest": "npm run build",
+    "test": "npm run test:local",
+    "test:local": "mocha --config=.mocharc.deposit.json && mocha --config=.mocharc.withdraw.json",
+    "//": "env.REMOTE_NETWORK instead of env.NETWORK, because env.NETWORK is used in scrypt-ts module, which may verify script in bsv network. this env is used in tests.",
+    "test:btc-signet": "cross-env REMOTE_NETWORK=btc-signet mocha --config=.mocharc.deposit.json --no-timeouts && cross-env REMOTE_NETWORK=btc-signet mocha --config=.mocharc.withdraw.json --no-timeouts",
+    "test:fractal-testnet": "cross-env REMOTE_NETWORK=fractal-testnet mocha --config=.mocharc.deposit.json --no-timeouts && cross-env REMOTE_NETWORK=fractal-testnet mocha --config=.mocharc.withdraw.json --no-timeouts",
+    "genkey": "npx ts-node tests/utils/genPrivateKey.ts",
+    "lint": "eslint . --ext .js,.ts --fix && prettier --write --ignore-unknown \"**/*\"",
+    "lint-check": "eslint . --ext .js,.ts && prettier --check --ignore-unknown \"**/*\""
+  },
+  "lint-staged": {
+    "**/*": [
+      "prettier --write --ignore-unknown"
+    ],
+    "**/*.{ts,js}": [
+      "eslint --cache --fix"
+    ]
+  },
+  "dependencies": {
+    "@bitcoinerlab/secp256k1": "^1.1.1",
+    "@scrypt-inc/bitcoinjs-lib": "^1.0.6",
+    "@scure/btc-signer": "^1.6.0",
+    "bip174": "^3.0.0-rc.1",
+    "commander": "^12.1.0",
+    "cross-fetch": "^4.1.0",
+    "decimal.js": "^10.5.0",
+    "dotenv": "^16.0.3",
+    "lodash-es": "^4.17.21",
+    "lru": "^3.1.0",
+    "scrypt-ts": "^1.4.4",
+    "@cmdcode/buff": "^2.2.4",
+    "@cmdcode/crypto-tools": "^2.7.4",
+    "@cmdcode/tapscript": "^1.4.6",
+    "axios": "^1.6.2",
+    "bitcore-lib-inquisition": "^10.3.1",
+    "js-sha256": "^0.11.0",
+    "ecpair": "^2.1.0",
+    "ecurve": "^1.0.6"
+  },
+  "devDependencies": {
+    "@types/chai": "^4.3.4",
+    "@types/chai-as-promised": "^7.1.5",
+    "@types/ecurve": "^1.0.3",
+    "@types/lodash-es": "^4.17.12",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^18.11.10",
+    "@typescript-eslint/eslint-plugin": "^6.5.0",
+    "@typescript-eslint/parser": "^6.5.0",
+    "chai": "^4.3.6",
+    "chai-as-promised": "^7.1.1",
+    "cross-env": "^7.0.3",
+    "eslint": "^8.48.0",
+    "eslint-config-prettier": "^8.6.0",
+    "lint-staged": "^13.1.0",
+    "mocha": "^10.1.0",
+    "node-fetch": "^3.3.2",
+    "patch-package": "^8.0.0",
+    "prettier": "^2.8.2",
+    "regtest-client": "^0.2.1",
+    "rimraf": "^3.0.2",
+    "scrypt-ts-transpiler": "1.2.24",
+    "ts-node": "^10.9.1",
+    "tsx": "^4.19.2",
+    "typescript": "5.4.5"
+  }
+}

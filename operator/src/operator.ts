@@ -9,9 +9,7 @@ import {
   Observable,
   pipe,
   scan,
-  switchScan,
   tap,
-  timer,
 } from 'rxjs';
 import {
   BridgeEvent,
@@ -28,8 +26,7 @@ import {
   L1TxId,
   getAllL2Txs,
 } from './state';
-import { difference, isEqual, some } from 'lodash';
-import { deepEqual } from 'assert';
+import { isEqual } from 'lodash';
 
 function diff<TI>(a: TI[], b: TI[]): TI[] {
   const result = [];

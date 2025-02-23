@@ -1,93 +1,120 @@
-import { Account, cairo, constants, RpcProvider } from 'starknet';
-
-import { contractEvents, l2BlockNumber, l2Events } from './l2/events';
+import { Account, RpcProvider } from 'starknet';
+import { importAddressesIntoNode } from './l1/prepare';
 import {
   closePendingWithdrawalBatch,
   contractFromAddress,
-  init,
-  l2TxStatus,
   submitDepositsToL2,
-  toDigest,
 } from './l2/contracts';
 import * as devnet from './l2/devnet';
 import {
   applyChange,
   BridgeEnvironment,
   Deposit,
-  Deposits,
-  L1Tx,
   L1TxHash,
-  L1TxId,
-  L1TxStatus,
-  L2Tx,
   L2TxId,
-  L2TxStatus,
+  load,
   OperatorState,
+  save,
 } from './state';
 import { setupOperator } from './operator';
-import { aggregateDeposits, finalizeBatch } from './l1/l1mocks';
-import { l1TransactionStatus } from './l1/transactions';
+// import { aggregateDeposits, finalizeBatch } from './l1/l1mocks';
+import {
+  l1TransactionStatus,
+  aggregateDeposits,
+  finalizeDepositBatch,
+  verifyDepositBatch,
+} from './l1/transactions';
 import { deposits, l1BlockNumber } from './l1/events';
-import { merge, of, Subject } from 'rxjs';
+import { EMPTY, merge, of } from 'rxjs';
+import { createBridgeContract } from './l1/api';
+import { existsSync } from 'fs';
+import * as env from './l1/env';
+import { l2TransactionStatus } from './l2/transactions';
+import { l2BlockNumber, l2Events } from './l2/events';
+import { loadContractArtifacts } from './l1/utils/contractUtil';
+
+async function initialState(path: string): Promise<OperatorState> {
+  loadContractArtifacts();
+  await importAddressesIntoNode();
+  if (existsSync(path)) {
+    return load(path);
+  } else {
+    const bridgeState = await createBridgeContract(
+      env.operatorSigner,
+      env.l1Network,
+      env.createUtxoProvider(),
+      env.createChainProvider(),
+      env.l1FeeRate
+    );
+    return {
+      l1BlockNumber: 0,
+      l2BlockNumber: 0,
+      bridgeState,
+      depositBatches: [],
+      withdrawalBatches: [],
+      pendingDeposits: [],
+    };
+  }
+}
 
 async function sandboxOperator() {
-  const initialState: OperatorState = {
-    l1BlockNumber: 0,
-    l2BlockNumber: 0,
-    total: 0n,
-    depositBatches: [],
-    withdrawalBatches: [],
-    pendingDeposits: [],
-  };
+  const path = './operator_state.json';
 
-  function saveState(state: OperatorState) {}
+  const provider = new RpcProvider({ nodeUrl: 'http://127.0.0.1:5050/rpc' });
+
+  const admin = new Account(
+    provider,
+    devnet.admin.address,
+    devnet.admin.privateKey
+    // undefined,
+    // constants.TRANSACTION_VERSION.V3
+  );
+
+  const btcAddress = `0x7071546bd5561c25948f3307c160409a23493608d0afdda4dbfbe597a7d45fc`;
+  const bridgeAddress =
+    '0x552b45c4d9e098618c11997912045ae364bd2262166644debc7ac1248483644';
+
+  const bridge = await contractFromAddress(provider, bridgeAddress);
+  const btc = await contractFromAddress(provider, btcAddress);
+  bridge.connect(admin);
+
+  const startState = await initialState(path);
 
   const env: BridgeEnvironment = {
     DEPOSIT_BATCH_SIZE: 4,
-    MAX_DEPOSIT_BLOCK_AGE: 4,
+    MAX_DEPOSIT_BLOCK_AGE: 2,
     MAX_WITHDRAWAL_BLOCK_AGE: 2,
     MAX_WITHDRAWAL_BATCH_SIZE: 2,
-    aggregateDeposits: async (txs: L1Tx[]) => aggregateDeposits(txs),
-    finalizeBatch: async (tx: L1Tx) => finalizeBatch(tx),
-    submitDepositsToL2: async (
-      hash: L1TxHash,
-      deposits: Deposit[]
-    ): Promise<L2Tx> => {
-      throw new Error('Not implemented');
+    submitDepositsToL2: (hash: L1TxHash, deposits: Deposit[]) => {
+      return submitDepositsToL2(admin, bridge, BigInt('0x' + hash), deposits);
     },
-    closePendingWithdrawalBatch: async (): Promise<L2Tx> => {
-      throw new Error('Not implemented');
-    },
+    closePendingWithdrawalBatch: () =>
+      closePendingWithdrawalBatch(admin, bridge),
+    aggregateDeposits,
+    finalizeDepositBatch,
+    verifyDepositBatch,
   };
 
-  const manualDesposits = new Subject<Deposits>();
-
   const operator = setupOperator(
-    initialState,
+    startState,
     env,
-    of(), // no block events for now
-    merge(
-      l1BlockNumber(),
-      deposits(initialState.l1BlockNumber),
-      manualDesposits
-    ),
-    of(), // no l2 events for now
+    l1BlockNumber(),
+    deposits(startState.l1BlockNumber),
+    //    merge(l2Events(provider, startState.l2BlockNumber, [bridgeAddress]), l2BlockNumber(provider)),
+    l2Events(provider, startState.l2BlockNumber, [bridgeAddress]),
     l1TransactionStatus,
-    (tx: L2TxId) => {
-      throw new Error('Not implemented');
-    },
+    (tx) => l2TransactionStatus(provider, tx),
     applyChange,
-    saveState
+    (state) => save(path, state)
   );
 
   operator.subscribe((_) => {});
 
-  // const depositTx = send deposit tx here
-
-  // this is how you would manually trigger a deposit:
-  // send a transaction, then call next on the subject
-  // operator will pick it up and process it
-  // manualDesposits.next({ type: "l2Tx", depositTx})
+  // console.log("stating");
+  // l2TransactionStatus(provider, {
+  //   type: 'l2tx',
+  //   hash: '0x2d1ebc1d7e6a58010e6c7a8e2dad1885d3ea32a093a32e1316fe0c8d5ceac45',
+  // }).subscribe(console.log)
 }
 
 sandboxOperator().catch(console.error);

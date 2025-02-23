@@ -7,7 +7,7 @@ type L1Address = u256;
 #[derive(Drop, Serde)]
 struct Deposit {
     recipient: ContractAddress,
-    amount: u256,
+    amount: u32,
 }
 
 #[starknet::interface]
@@ -110,16 +110,17 @@ pub mod Bridge {
             let mut deposits_ = deposits;
             let mut leafs: Array<Digest> = array![];
             while let Option::Some(Deposit { recipient, amount }) = deposits_.pop_front() {
-                leafs.append(HelpersTrait::double_sha256_deposit(*recipient, *amount));
+                leafs.append(HelpersTrait::hash256_deposit(*recipient, *amount));
             };
 
-            let root = HelpersTrait::merkle_root(leafs.span());
+            let root = HelpersTrait::merkle_root_with_levels(leafs.span());
             let btc = self.btc.read();
-            let mut total = 0;
+            let mut total = 0_u256;
             let mut deposits_ = deposits;
             while let Option::Some(d) = deposits_.pop_front() {
-                btc.mint(*d.recipient, *d.amount);
-                total = total + *d.amount;
+                let amount_u256: u256 = (*d.amount).into();
+                btc.mint(*d.recipient, amount_u256);
+                total = total + amount_u256;
             };
 
             let id = double_sha256_parent(@txid, @root);
@@ -146,19 +147,28 @@ pub mod Bridge {
 
     #[generate_trait]
     pub impl HelpersImpl of HelpersTrait {
-        fn double_sha256_deposit(recipient: ContractAddress, amount: u256) -> Digest {
+        fn hash256_deposit(recipient: ContractAddress, amount: u32) -> Digest {
             let mut b: WordArray = Default::default();
 
             let recipient: felt252 = recipient.into();
             let recipient: u256 = recipient.into();
             let recipient: Digest = recipient.into();
-            b.append_span(recipient.value.span());
 
-            let amount: Digest = amount.into();
-            b.append_span(amount.value.span());
+            b.append_span(recipient.value.span());
+            b.append_bytes(amount.into(), 4);
 
             double_sha256_word_array(b)
         }
+
+        fn hash256_inner_deposit_node(level: u8, a: @Digest, b: @Digest) -> Digest {
+            let mut input: WordArray = Default::default();
+            input.append_u8(level);
+            input.append_span(a.value.span());
+            input.append_span(b.value.span());
+
+            double_sha256_word_array(input)
+        }
+
         fn double_sha256_withdrawal(recipient: L1Address, amount: u256) -> Digest {
             let mut b: WordArray = Default::default();
 
@@ -171,6 +181,7 @@ pub mod Bridge {
 
             double_sha256_word_array(b)
         }
+
         fn merkle_root(hashes: Span<Digest>) -> Digest {
             let mut hashes = hashes;
 
@@ -182,6 +193,24 @@ pub mod Bridge {
                 };
                 assert!(hashes.len() == 0, "Number of hashes should be a power of 2");
                 hashes = next_hashes.span();
+            };
+
+            *hashes.at(0)
+        }
+        fn merkle_root_with_levels(hashes: Span<Digest>) -> Digest {
+            let mut hashes = hashes;
+
+            let mut level: u8 = 1;
+
+            while hashes.len() > 1 {
+                let mut next_hashes: Array<Digest> = array![];
+                while let Option::Some(v) = hashes.multi_pop_front::<2>() {
+                    let [a, b] = (*v).unbox();
+                    next_hashes.append(Self::hash256_inner_deposit_node(level, @a, @b));
+                };
+                assert!(hashes.len() == 0, "Number of hashes should be a power of 2");
+                hashes = next_hashes.span();
+                level += 1;
             };
 
             *hashes.at(0)

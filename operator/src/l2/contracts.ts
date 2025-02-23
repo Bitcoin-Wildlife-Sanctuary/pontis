@@ -33,6 +33,8 @@ async function declareAndDeploy(
     contract,
     casm,
     constructorCalldata,
+    salt: '123',
+    unique: true,
   });
 
   return new Contract(
@@ -91,7 +93,7 @@ export async function submitDepositsToL2(
     toDigest(hash),
     deposits.map(({ recipient, amount }) => ({
       recipient: BigInt(recipient),
-      amount: cairo.uint256(amount),
+      amount,
     })),
   ]);
   // we need to remove lenght due to the faulty handling of
