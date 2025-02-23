@@ -148,7 +148,6 @@ pub mod Bridge {
     #[generate_trait]
     pub impl HelpersImpl of HelpersTrait {
         fn hash256_deposit(recipient: ContractAddress, amount: u32) -> Digest {
-
             let mut b: WordArray = Default::default();
 
             let recipient: felt252 = recipient.into();
@@ -162,12 +161,11 @@ pub mod Bridge {
         }
 
         fn hash256_inner_deposit_node(level: u8, a: @Digest, b: @Digest) -> Digest {
-            
             let mut input: WordArray = Default::default();
             input.append_u8(level);
             input.append_span(a.value.span());
             input.append_span(b.value.span());
-        
+
             double_sha256_word_array(input)
         }
 
