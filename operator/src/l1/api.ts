@@ -307,7 +307,7 @@ export async function finalizeDepositBatchOnL1(
 
     if (!bridgeUtxo) {
         console.log('bridgeUtxos', bridgeUtxos);
-        throw new Error('bridge utxo not found');
+        throw new Error(`bridge utxo of: ${bridgeState.latestTx.hash} not found`);
     }
 
     const emptyBatchIDIndex = bridgeState.merkleTree.findIndex(batch => batch === BridgeCovenant.EMPTY_BATCH_ID);

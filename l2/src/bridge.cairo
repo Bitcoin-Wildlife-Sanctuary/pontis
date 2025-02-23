@@ -20,7 +20,6 @@ pub trait IBridge<TContractState> {
 #[starknet::contract]
 pub mod Bridge {
     use core::num::traits::zero::Zero;
-    use core::sha256::compute_sha256_u32_array;
     use openzeppelin_access::ownable::OwnableComponent;
     use starknet::storage::VecTrait;
     use starknet::ContractAddress;
@@ -151,17 +150,13 @@ pub mod Bridge {
         fn hash256_deposit(recipient: ContractAddress, amount: u32) -> Digest {
 
             let mut b: WordArray = Default::default();
-            b.append_u8(0);
 
-            let mut input: Array<u32> = array![];
             let recipient: felt252 = recipient.into();
             let recipient: u256 = recipient.into();
             let recipient: Digest = recipient.into();
 
-            input.append_span(recipient.value.span());
-            input.append(amount);
-
-            b.append_span(compute_sha256_u32_array(input, 0, 0).span());
+            b.append_span(recipient.value.span());
+            b.append_bytes(amount.into(), 4);
 
             double_sha256_word_array(b)
         }
