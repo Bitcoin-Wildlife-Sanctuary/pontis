@@ -20,22 +20,79 @@ export const Gx =
 export const PREIMAGE_SIGHASH = '00' // SIGHASH_ALL
 export const PREIMAGE_EPOCH = '00'
 
+/**
+ * The sighash preimage.
+ * ref: https://github.com/bitcoin/bips/blob/master/bip-0341.mediawiki#common-signature-message
+ */
 export type SHPreimage = {
+  /**
+   * (4): the nVersion of the transaction.
+   */
   txVer: ByteString
+  /**
+   * (4): the nLockTime of the transaction.
+   */
   nLockTime: ByteString
+  /**
+   * (32): the SHA256 of the serialization of all input outpoints.
+   */
   hashPrevouts: ByteString
+  /**
+   * (32): the SHA256 of the serialization of all input amounts.
+   */
   hashSpentAmounts: ByteString
+  /**
+   * (32): the SHA256 of all spent outputs' scriptPubKeys, serialized as script inside CTxOut.
+   */
   hashSpentScripts: ByteString
+  /**
+   * (32): the SHA256 of the serialization of all input nSequence.
+   */
   hashSequences: ByteString
+  /**
+   * (32): the SHA256 of the serialization of all outputs in CTxOut format.
+   */
   hashOutputs: ByteString
+  /**
+   * (1): equal to (ext_flag * 2) + annex_present, where annex_present is 0 if no annex is present, or 1 otherwise (the original witness stack has two or more witness elements, and the first byte of the last element is 0x50)
+   */
   spendType: ByteString
+  /**
+   * (4): index of this input in the transaction input vector. Index of the first input is 0.
+   */
   inputNumber: ByteString
+  /**
+   * (32): the tap leaf hash of the input
+   * ref: https://github.com/bitcoin/bips/blob/master/bip-0342.mediawiki#common-signature-message-extension | BIP342
+   */
   hashTapLeaf: ByteString
+  /**
+   * (1): the key version. 
+   * a constant value 0x00 representing the current version of public keys in the tapscript signature opcode execution.
+   * ref: https://github.com/bitcoin/bips/blob/master/bip-0342.mediawiki#common-signature-message-extension
+   */
   keyVer: ByteString
+  /**
+   * (4): the opcode position of the last executed OP_CODESEPARATOR before the currently executed signature opcode, with the value in little endian (or 0xffffffff if none executed). The first opcode in a script has a position of 0. A multi-byte push opcode is counted as one opcode, regardless of the size of data being pushed. Opcodes in parsed but unexecuted branches count towards this value as well.
+   * ref: https://github.com/bitcoin/bips/blob/master/bip-0342.mediawiki#common-signature-message-extension
+   */
   codeSeparator: ByteString
 
+  /**
+   * (1): the sighash type.
+   */
   sigHash: ByteString
+
+
+  /**
+   * data for sign in contract
+   * ref: https://scryptplatform.medium.com/trustless-ordinal-sales-using-op-cat-enabled-covenants-on-bitcoin-0318052f02b2
+   */
   _e: ByteString // e without last byte
+  /**
+   * data for sign in contract
+   * ref: https://scryptplatform.medium.com/trustless-ordinal-sales-using-op-cat-enabled-covenants-on-bitcoin-0318052f02b2
+   */
   eSuffix: bigint // last byte of e
 }
 
@@ -83,7 +140,6 @@ export class SigHashUtils extends SmartContractLib {
     assert(e == shPreimage._e + eLastByte, 'invalid value of _e')
     const s =
       SigHashUtils.Gx + shPreimage._e + int2ByteString(shPreimage.eSuffix + 1n)
-    //assert(this.checkSig(Sig(s), SigHashUtils.Gx)) TODO (currently done outside)
     return Sig(s)
   }
 }

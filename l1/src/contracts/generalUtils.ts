@@ -17,6 +17,9 @@ export class GeneralUtils extends SmartContractLib {
     toByteString('0000000000000000000000000000000000000000')
   )
 
+  @prop()
+  static readonly L2_ADDRESS_LENGTH: bigint = 32n
+
   @method()
   static padAmt(amt: bigint): ByteString {
     // note: here only allow max 21.47483647 BTC, otherwise it thows. the reason is bitcoin vm only support int32 math
@@ -53,8 +56,11 @@ export class GeneralUtils extends SmartContractLib {
 
   @method()
   static getStateOutput(hash1: ByteString, hash2: ByteString): ByteString {
+    // todo: optimize this function, because we use plain state data in deposit transaction, which is not hashed;
     // hash2 can be empty;
     // todo here maybe exist vulnerability when simply concatenate hash1 and hash2; but in poc, it's acceptable
+    // todo: add tag to the state output
+    // todo: change the state hash from sha256 to hash160 to save the size of the state output
     const hash = hash1 + hash2
 
     // opReturn data is max 80 bytes; 
@@ -71,9 +77,17 @@ export class GeneralUtils extends SmartContractLib {
     )
   }
 
+  /**
+   * Get the contract output. 
+   * output=satoshis[8 bytes] + spkLength[1 byte] + spk[34 bytes]
+   * 
+   * @param amt - The amount of the output.
+   * @param spk - The script pubkey of the output.
+   * @returns The contract output.
+   */
   @method()
   static getContractOutput(amt: bigint, spk: ByteString): ByteString {
-    assert(len(spk) == 34n) // spk is 34(0x22) bytes long
+    assert(len(spk) == 34n) // spk is 34(0x22) bytes long, p2tr address
     return GeneralUtils.padAmt(amt) + toByteString('22') + spk
   }
 }

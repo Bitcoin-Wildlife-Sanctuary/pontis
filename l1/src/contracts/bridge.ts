@@ -18,46 +18,106 @@ import { MerklePath, MerkleProof } from './merklePath'
 import { GeneralUtils } from './generalUtils'
 import { InputsSegments, TxUtils } from './txUtil'
 
+/**
+ * Using the BridgeTransaction type, you can construct a * bridge bitcoin transaction hash.
+ * for how to build a BridgeTransaction from a bridge transaction, please refer to the BridgeCovenant.backtrace
+ */
 export type BridgeTransaction = {
-  ver: ByteString // version of the transaction
-  inputs: InputsSegments // inputLengh + all inputs of the transaction
-
-  contractSPK: ByteString // the script pubkey of the bridge contract output
-  expanderSPK: ByteString // the script pubkey of the expander contract output
-
-  contractAmt: bigint // the amount of the bridge contract output
-  expanderAmt: bigint // the amount of the expander contract output
-  expanderStateHash: Sha256 // the state hash of the expander state output
-
-  // bridge contract state
-  batchesRoot: Sha256 // the hash of the batches, stored in OP_RETURN output
-  depositAggregatorSPK: ByteString // Aggregator SPK's are separated from the script
-  changeOutput: ByteString // the change output, optional, if exists.
+  /**
+   * The version of the transaction.
+   * currently, ther version is always 2, in ByteString format 0x02000000.
+   */
+  ver: ByteString
+  /**
+   * The inputs of the transaction. Split into segments due to the max variable size of bvm.
+   */
+  inputs: InputsSegments
+  /**
+   * The script pubkey of the bridge contract output
+   */
+  contractSPK: ByteString
+  /**
+   * The script pubkey of the expander contract output
+   */
+  expanderSPK: ByteString
+  /**
+   * The amount of the bridge contract output
+   */
+  contractAmt: bigint
+  /**
+   * The amount of the expander contract output
+   */
+  expanderAmt: bigint
+  /**
+   * The state hash of the expander state output
+   */
+  expanderStateHash: Sha256
+  /**
+   * The merkle root of the batches, used for calculating the bridge state hash
+   */
+  batchesRoot: Sha256
+  /**
+   * The script pubkey of the deposit aggregator contract output
+   */
+  depositAggregatorSPK: ByteString
+  /**
+   * The change output, optional, if exists.
+   */
+  changeOutput: ByteString
+  /**
+   * The locktime of the transaction
+   */
   locktime: ByteString
 }
 
 export class Bridge extends SmartContract {
+  /**
+   * The operator pubkey
+   * @dev-note: the pubkey is xonly
+   */
   @prop()
-  /// @dev-note: xonly
   operator: PubKey
 
+  /**
+   * The script pubkey of the withdrawalExpander contract output
+   */
   @prop()
   expanderSPK: ByteString
 
+  /**
+   * Constructor
+   * @param operator - The operator pubkey
+   * @param expanderSPK - The script pubkey of the expander contract output
+   */
   constructor(operator: PubKey, expanderSPK: ByteString) {
     super(...arguments)
     this.operator = operator
     this.expanderSPK = expanderSPK
   }
 
+  /**
+   * Finalize the L1 deposit.
+   * used when the aggregations are done, and the satoshis of the aggregator utxo should be merged into the bridge utxo.
+   * 
+   * tx: bridgeInput + aggregatorInput + feeInput => stateOutput + bridgeOutput + changeOutput(optional)
+   * 
+   * @param shPreimage - The sighash preimage.
+   * @param sigOperator - The operator signature.
+   * @param prevTx - The previous bridge transaction.
+   * @param aggregatorTx - The previous aggregator transaction.
+   * @param isLevel0Aggregator - Whether the aggregator is a level 0 aggregator.
+   * @param feePrevout - The fee input.
+   * @param batchProof - The batch proof.
+   * @param changeOutput - The change output.
+   */
   @method()
   public finalizeL1Deposit(
     shPreimage: SHPreimage,
     sigOperator: Sig,
-    prevTx: BridgeTransaction, // Previous bridge update transaction.
-    aggregatorTx: AggregatorTransaction, // Root aggregator transaction.
+    prevTx: BridgeTransaction,
+    aggregatorTx: AggregatorTransaction,
     isLevel0Aggregator: boolean,
-    fundingPrevout: ByteString,
+    feePrevout: ByteString,
 
     batchProof: MerkleProof,
 
@@ -78,10 +138,10 @@ export class Bridge extends SmartContract {
     )
 
     // Check this transaction unlocks specified outputs in the correct order.
-    const hashPrevouts = Bridge.getHashDepositTxPrevouts(
+    const hashPrevouts = Bridge.getFinalizeL1PrevoutsHash(
       prevTxId,
       aggregatorTxId,
-      fundingPrevout
+      feePrevout
     )
     assert(hashPrevouts == shPreimage.hashPrevouts)
 
@@ -99,7 +159,7 @@ export class Bridge extends SmartContract {
     )
 
     // Construct new batches root
-    // optimize: change txid => outpoint to  avoid replaying issue. currently the index of aggregator outpoint is always 0, which is verified in Bridge.getHashDepositTxPrevouts
+    // optimize: change txid => outpoint to  avoid replaying issue. currently the index of aggregator outpoint is always 0, which is verified in Bridge.
     const batchID = sha256(aggregatorTxId + aggregatorTx.hashData)
     const batchesRootNew: Sha256 = MerklePath.calcMerkleRoot(
       batchID,
@@ -125,20 +185,32 @@ export class Bridge extends SmartContract {
     assert(hashOutputs == shPreimage.hashOutputs)
   }
 
+  /**
+   * Finalize the L2 deposit.
+   * used when the operator has sent the bitocin to the deposit addresses on l2 for a deposit batch. So the operator notify the bridge contract on L1 that the deposit batch is done.
+   * 
+   * tx: bridgeInput + feeInput => stateOutput + bridgeOutput + changeOutput(optional)
+   * 
+   * @param shPreimage - The sighash preimage.
+   * @param sigOperator - The operator signature.
+   * @param prevTx - The previous bridge transaction.
+   * @param feePrevout - The fee prevout of current transaction.
+   * @param batchId - The batch id. Generated on finalizeL1Deposit.
+   * @param batchProof - The batch proof.
+   * @param changeOutput - The change output of current transaction.
+   */
   @method()
   public finalizeL2Deposit(
     shPreimage: SHPreimage,
     sigOperator: Sig,
     prevTx: BridgeTransaction, // Previous bridge update transaction.
-    fundingPrevout: ByteString,
+    feePrevout: ByteString,
 
     batchId: Sha256,
     batchProof: MerkleProof,
 
     changeOutput: ByteString
   ) {
-    // finalizeDepositTx: bridgeInput + feeInput => bridgeOutput + stateOutput
-
     // Check sighash preimage.
     const s = SigHashUtils.checkSHPreimage(shPreimage)
     assert(this.checkSig(s, SigHashUtils.Gx))
@@ -150,9 +222,9 @@ export class Bridge extends SmartContract {
     const prevTxId = Bridge.getTxId(prevTx, this.expanderSPK)
 
     // Check this transaction unlocks specified outputs in the correct order.
-    const hashPrevouts = Bridge.getHashNonDepositTxPrevouts(
+    const hashPrevouts = Bridge.getNonFinalizeL1PrevoutsHash(
       prevTxId,
-      fundingPrevout
+      feePrevout
     )
     assert(hashPrevouts == shPreimage.hashPrevouts)
 
@@ -187,12 +259,29 @@ export class Bridge extends SmartContract {
     assert(hashOutputs == shPreimage.hashOutputs)
   }
 
+  /**
+   * Create a withdrawal transaction.
+   * 
+   * Used when the users want to withdraw from L2 to L1.
+   * The users request their withdrawals on L2, the operator collects the withdrawals.
+   * Then call this function to create a withdrawalExpander utxo on L1 to start the L1 withdrawal process.
+   * 
+   * tx: bridgeInput + feeInput => stateOutput + bridgeOutput + expanderOutput + changeOutput(optional)
+   * 
+   * @param shPreimage - The sighash preimage.
+   * @param sigOperator - The operator signature.
+   * @param prevTx - The previous bridge transaction.
+   * @param feePrevout - The fee prevout of current transaction.
+   * @param expanderRoot - The root of the expander merkle tree.
+   * @param sumAmt - The total amount to withdraw.
+   * @param changeOutput - The change output of current transaction.
+   */
   @method()
   public createWithdrawal(
     shPreimage: SHPreimage,
     sigOperator: Sig,
     prevTx: BridgeTransaction, // Previous bridge update transaction.
-    fundingPrevout: ByteString,
+    feePrevout: ByteString,
 
     expanderRoot: Sha256,
     sumAmt: bigint,
@@ -209,9 +298,9 @@ export class Bridge extends SmartContract {
     const prevTxId = Bridge.getTxId(prevTx, this.expanderSPK)
 
     // Check this transaction unlocks specified outputs in the correct order.
-    const hashPrevouts = Bridge.getHashNonDepositTxPrevouts(
+    const hashPrevouts = Bridge.getNonFinalizeL1PrevoutsHash(
       prevTxId,
-      fundingPrevout
+      feePrevout
     )
     assert(hashPrevouts == shPreimage.hashPrevouts)
 
@@ -245,13 +334,30 @@ export class Bridge extends SmartContract {
     assert(hashOutputs == shPreimage.hashOutputs)
   }
 
+  /**
+   * Get the txid of the bridge transaction.
+   * 
+   * deployBridgeContract tx: 
+   * feeInput => stateOutput + bridgeOutput + changeOutput(optional)
+   * 
+   * finalizeL1Deposit  tx: 
+   * bridgeInput + depositAggregatorInput + feeInput => stateOutput + bridgeOutput + changeOutput(optional)
+   * 
+   * finalizeL2Deposit tx: 
+   * bridgeInput + feeInput => stateOutput + bridgeOutput + changeOutput(optional)
+   * 
+   * createWithdrawal tx: 
+   * bridgeInput + feeInput => stateOutput + bridgeOutput + expanderOutput + changeOutput(optional)
+   * 
+   * @param tx - The bridge transaction.
+   * @param expanderSPK - The script pubkey of the expander contract output.
+   * @returns The txid of the bridge transaction.
+   */
   @method()
   static getTxId(tx: BridgeTransaction, expanderSPK: ByteString): Sha256 {
-    // deployContract: feeInput => stateOutput + bridgeOutput + changeOutput
-    // finalizeL1Deposit  : bridgeInput + depositAggregatorInput + feeInput => stateOutput + bridgeOutput + changeOutput
-    // finalizeL2Deposit: bridgeInput + feeInput => stateOutput + bridgeOutput + changeOutput
-    // createWithdrawal: bridgeInput + feeInput => stateOutput + bridgeOutput + expanderOutput + changeOutput
+    // if the expander amount is 0, it's not a createWithdrawal tx.
     let nOutputs: bigint = tx.expanderAmt == 0n ? 2n : 3n
+    // if the change output is not empty, add 1 to the number of outputs
     if (tx.changeOutput != toByteString('')) {
       nOutputs += 1n
     }
@@ -263,6 +369,7 @@ export class Bridge extends SmartContract {
     )
 
     let expanderOut = toByteString('')
+    // if the expander amount is not 0, there is an expander output
     if (tx.expanderAmt != 0n) {
       expanderOut = GeneralUtils.getContractOutput(
         tx.expanderAmt,
@@ -283,8 +390,16 @@ export class Bridge extends SmartContract {
     )
   }
 
+  /**
+   * Get the hash of the finalizeL1Deposit transaction prevouts.
+   * 
+   * @param prevTxId - The previous transaction id.
+   * @param aggregatorTxId - The aggregator transaction id.
+   * @param feePrevout - The fee prevout.
+   * @returns The hash of the finalizeL1Deposit transaction prevouts.
+   */
   @method()
-  static getHashDepositTxPrevouts(
+  static getFinalizeL1PrevoutsHash(
     prevTxId: Sha256,
     aggregatorTxId: Sha256,
     feePrevout: ByteString
@@ -298,8 +413,15 @@ export class Bridge extends SmartContract {
     )
   }
 
+  /**
+   * Get the hash of the non-finalizeL1Deposit transaction prevouts.
+   * 
+   * @param prevTxId - The previous transaction id.
+   * @param feePrevout - The fee prevout.
+   * @returns The hash of the non-finalizeL1Deposit transaction prevouts.
+   */
   @method()
-  static getHashNonDepositTxPrevouts(
+  static getNonFinalizeL1PrevoutsHash(
     prevTxId: Sha256,
     feePrevout: ByteString
   ): Sha256 {
