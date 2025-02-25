@@ -39,11 +39,6 @@ export type Node = {
 }
 
 /**
- * The length of the node.
- */
-export const NODE_LENGTH = 32
-
-/**
  * The merkle proof.
  */
 export type MerkleProof = FixedArray<Node, typeof MERKLE_PROOF_MAX_DEPTH> // If shorter than max depth, pad with invalid nodes.

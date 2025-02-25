@@ -59,6 +59,12 @@ export type AggregatorTransaction = {
 }
 
 export class AggregatorUtils extends SmartContractLib {
+  /**
+   * Get the txid of a deposit aggregator transaction.
+   * @param tx the deposit aggregator transaction
+   * @param isLeaf whether the transaction is a leaf deposit transaction
+   * @returns the txid of the deposit aggregator transaction
+   */
   @method()
   static getTxId(tx: AggregatorTransaction, isLeaf: boolean): Sha256 {
     // leaf deposit tx: feeInput => aggregatorContractOutput + stateOutput

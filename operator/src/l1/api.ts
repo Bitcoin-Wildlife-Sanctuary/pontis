@@ -686,12 +686,6 @@ async function parseDataFromWithdrawalBatch(
     }
   }
 
-  const isSameLevel = expanderStates.every(
-    (state) => state.level === expanderStates[0].level
-  );
-  if (!isSameLevel) {
-    throw new Error('something wrong, all the level must be the same');
-  }
   // verify all the level withdrawalExpanders is not spent
   {
     const addresses = await getContractAddresses(operatorSigner, l1Network);

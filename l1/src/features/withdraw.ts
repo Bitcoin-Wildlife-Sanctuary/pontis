@@ -31,8 +31,8 @@ export async function expandWithdrawal(
   const hash = WithdrawalExpanderCovenant.serializeState(
     expanderUtxo.state
   )
-  WithdrawalMerkle.assertHashExists(allWithdrawals, hash);
-  if (expanderUtxo.state.level <= WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE) {
+  const node = WithdrawalMerkle.assertHashExists(allWithdrawals, hash);
+  if (node.level <= WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE) {
     throw new Error(`withdrawal expander level should be greater than ${WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE}`)
   }
 
@@ -54,6 +54,10 @@ export async function expandWithdrawal(
     tracedWithdrawalExpander.covenant.operator,
     WithdrawalMerkle.getStateForHash(allWithdrawals, children.rightChild.hash)
   )
+
+  if (expanderUtxo.state.type === 'leaf') {
+    throw new Error('expander utxo is a leaf')
+  }
 
   if (
     outputWithdrawalExpander0Covenant.serializedState() !==
@@ -163,9 +167,8 @@ function buildExpandWithdrawalTx(
   if (feeUtxo.satoshis < feeRate * (estimatedVSize || 1)) {
     throw new Error('fee utxo is not enough')
   }
-
-  if (withdrawalExpanderUtxo.state.level <= 2n) {
-    throw new Error('withdrawal expander level should be greater than 2')
+  if (withdrawalExpanderUtxo.state.type === 'leaf') {
+    throw new Error('withdrawal expander utxo is a leaf')
   }
 
   if (
@@ -181,6 +184,7 @@ function buildExpandWithdrawalTx(
     throw new Error('right child root hash mismatch')
   }
   if (
+    outputWithdrawalExpander0Covenant.state.type === 'branch' &&
     withdrawalExpanderUtxo.state.leftAmt !==
     outputWithdrawalExpander0Covenant.state.leftAmt +
       outputWithdrawalExpander0Covenant.state.rightAmt
@@ -188,6 +192,7 @@ function buildExpandWithdrawalTx(
     throw new Error('left amt mismatch')
   }
   if (
+    outputWithdrawalExpander1Covenant.state.type === 'branch' &&
     withdrawalExpanderUtxo.state.rightAmt !==
     outputWithdrawalExpander1Covenant.state.leftAmt +
       outputWithdrawalExpander1Covenant.state.rightAmt
@@ -251,8 +256,8 @@ export async function distributeWithdrawals(
   const hash = WithdrawalExpanderCovenant.serializeState(
     withdrawalExpanderUtxo.state
   )
-  WithdrawalMerkle.assertHashExists(allWithdrawals, hash);
-  if (withdrawalExpanderUtxo.state.level > WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE) {
+  const node = WithdrawalMerkle.assertHashExists(allWithdrawals, hash);
+  if (node.level > WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE) {
     throw new Error(`withdrawal expander level should be less than ${WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE}`)
   }
   const {withdrawals} = withdrawalLevels.find((v) => v.hash === hash)
@@ -368,22 +373,8 @@ function buildDistributeWithdrawalsTx(
   if (feeUtxo.satoshis < feeRate * (estimatedVSize || 1)) {
     throw new Error('fee utxo is not enough')
   }
-  if (withdrawalExpanderUtxo.state.level > 2n) {
-    throw new Error('withdrawal expander level should be less than 2')
-  }
-
-  if (withdrawalExpanderUtxo.state.level === 0n) {
-    if (withdrawals.length !== 1) {
-      throw new Error('withdrawals length should be 1 when level=0')
-    }
-  } else if (withdrawalExpanderUtxo.state.level === 1n) {
-    if (withdrawals.length !== 2) {
-      throw new Error('withdrawals length should be 2 when level=1')
-    }
-  } else if (withdrawalExpanderUtxo.state.level === 2n) {
-    if (withdrawals.length !== 4) {
-      throw new Error('withdrawals length should be 4 when level=2')
-    }
+  if (withdrawals.length > 4) {
+    throw new Error('withdrawals length should be less than 4')
   }
 
   // fill withdrawals with empty withdrawals to 4
@@ -418,7 +409,6 @@ function buildDistributeWithdrawalsTx(
 
       tracedWithdrawalExpander.trace.prevTx.isCreateWithdrawalTx ||
         withdrawalExpanderUtxo.utxo.outputIndex === 1,
-      withdrawalExpanderUtxo.state.level,
 
       tracedWithdrawalExpander.trace.prevTx,
 
