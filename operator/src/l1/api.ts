@@ -19,6 +19,8 @@ import {
   bridgeFeatures,
   depositFeatures,
   BatchId,
+  WithdrawalNode,
+  ExpansionMerkleTree,
 } from 'l1';
 import {
   BridgeCovenantState,
@@ -353,6 +355,33 @@ export async function aggregateLevelDeposits(
   );
 }
 
+type ContractAddressKeys = keyof Awaited<ReturnType<typeof getContractAddresses>>;
+
+async function findUtxo(  
+  operatorSigner: Signer,
+  l1Network: SupportedNetwork, 
+  l1Provider: L1Provider,
+  address: ContractAddressKeys, 
+  txId: string
+) {  
+    const addresses = await getContractAddresses(operatorSigner, l1Network);
+    const utxos = await l1Provider.listUtxos(
+      addresses[address],
+      DEFAULT_FROM_BLOCK,
+      DEFAULT_TO_BLOCK
+    );
+    const utxo = utxos.find(
+      (utxo: Utxo) => utxo.txId === txId
+    );
+  
+    if (!utxo) {
+      console.log('utxos', utxos);
+      throw new Error(`${address} utxo of: ${txId} not found`);
+    }
+
+    return utxo;
+}
+
 /// finalize a deposit batch on l1
 export async function finalizeDepositBatchOnL1(
   operatorSigner: Signer,
@@ -367,20 +396,9 @@ export async function finalizeDepositBatchOnL1(
   const operatorPubKey = await operatorSigner.getPublicKey();
   const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
 
-  const addresses = await getContractAddresses(operatorSigner, l1Network);
-  const bridgeUtxos = await l1Provider.listUtxos(
-    addresses.bridge,
-    DEFAULT_FROM_BLOCK,
-    DEFAULT_TO_BLOCK
+  const bridgeUtxo = await findUtxo(
+    operatorSigner, l1Network, l1Provider, 'bridge', bridgeState.latestTx.hash
   );
-  const bridgeUtxo = bridgeUtxos.find(
-    (utxo: Utxo) => utxo.txId === bridgeState.latestTx.hash
-  );
-
-  if (!bridgeUtxo) {
-    console.log('bridgeUtxos', bridgeUtxos);
-    throw new Error(`bridge utxo of: ${bridgeState.latestTx.hash} not found`);
-  }
 
   const emptyBatchIDIndex = bridgeState.merkleTree.findIndex(
     (batch) => batch === BridgeCovenant.EMPTY_BATCH_ID
@@ -529,66 +547,112 @@ beingExpanded: is being expanded or distributed on l1
 expanded: is distributed on l1
 */
 
-export async function createWithdrawal(
-  operatorSigner: Signer,
-  l1Network: SupportedNetwork,
-  utxoProvider: UtxoProvider,
-  chainProvider: ChainProvider,
-  l1Provider: L1Provider,
-  offchainDataProvider: OffchainDataProvider,
-  feeRate: number,
-  batch: WithdrawalBatch
-): Promise<L1TxHash> {
-  // 1. verify the batch is valid
-  if ((batch as WithdrawalBatch & { status: 'EXPANDED' }).withdrawBatchTx) {
-    throw new Error('expander is already created, should not create again');
+// export async function createWithdrawal(
+//   operatorSigner: Signer,
+//   l1Network: SupportedNetwork,
+//   utxoProvider: UtxoProvider,
+//   chainProvider: ChainProvider,
+//   l1Provider: L1Provider,
+//   offchainDataProvider: OffchainDataProvider,
+//   feeRate: number,
+//   batch: WithdrawalBatch
+// ): Promise<L1TxHash> {
+//   // 1. verify the batch is valid
+//   if ((batch as WithdrawalBatch & { status: 'EXPANDED' }).withdrawBatchTx) {
+//     throw new Error('expander is already created, should not create again');
+//   }
+//   if (batch.withdrawals.length === 0) {
+//     throw new Error('batch must have at least 1 withdrawal');
+//   }
+
+//   // 2. build tx
+//   const [bridgeUtxo, bridgeState] = await checkBridgeUtxo(
+//     offchainDataProvider,
+//     l1Provider,
+//     operatorSigner,
+//     l1Network
+//   );
+//   const operatorPubKey = await operatorSigner.getPublicKey();
+//   const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
+
+//   const res = await bridgeFeatures.createWithdrawalExpander(
+//     operatorSigner,
+//     l1Network,
+//     utxoProvider,
+//     chainProvider,
+
+//     {
+//       operator: PubKey(operatorPubKey),
+//       expanderSPK: spks.withdrawExpander,
+//       state: bridgeState,
+//       utxo: bridgeUtxo,
+//     },
+//     batch.withdrawals.map((withdrawal) => ({
+//       l1Address: withdrawal.recipient,
+//       amt: withdrawal.amount,
+//     })),
+//     feeRate
+//   );
+//   await offchainDataProvider.setLatestBridgeTxid(res.txid as L1TxHash);
+//   await offchainDataProvider.setBridgeState(
+//     res.txid as L1TxHash,
+//     res.bridgeState.batchesRoot,
+//     res.bridgeState.merkleTree,
+//     res.bridgeState.depositAggregatorSPK
+//   );
+//   // console.log(`createWithdrawal(batch) done, txid: ${res.txid}`)
+//   return res.txid as L1TxHash;
+// }
+
+export async function createWithdrawal2(
+    operatorSigner: Signer,
+    l1Network: SupportedNetwork,
+    utxoProvider: UtxoProvider,
+    chainProvider: ChainProvider,
+    l1Provider: L1Provider,
+    bridgeState: BridgeCovenantState,
+    withdrawalMerkleRoot: Sha256,
+    outputWithdrawalState: WithdrawalExpanderState,
+    feeRate: number,
+): Promise<BridgeCovenantState> {
+
+    const bridgeUtxo = await findUtxo(
+        operatorSigner, l1Network, l1Provider, 'bridge', bridgeState.latestTx.hash
+      );
+
+    const operatorPubKey = await operatorSigner.getPublicKey();
+    const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
+  
+    const res = await bridgeFeatures.createWithdrawalExpander2(
+      operatorSigner,
+      l1Network,
+      utxoProvider,
+      chainProvider,
+  
+      {
+        operator: PubKey(operatorPubKey),
+        expanderSPK: spks.withdrawExpander,
+        state: bridgeState,
+        utxo: bridgeUtxo,
+      },
+      withdrawalMerkleRoot,
+      outputWithdrawalState,
+      feeRate
+    );
+    
+    return {
+        ...res.bridgeState,
+        latestTx: {
+          type: 'l1tx',
+          status: 'UNCONFIRMED',
+          hash: res.txid,
+        },
+      };
   }
-  if (batch.withdrawals.length === 0) {
-    throw new Error('batch must have at least 1 withdrawal');
-  }
 
-  // 2. build tx
-  const [bridgeUtxo, bridgeState] = await checkBridgeUtxo(
-    offchainDataProvider,
-    l1Provider,
-    operatorSigner,
-    l1Network
-  );
-  const operatorPubKey = await operatorSigner.getPublicKey();
-  const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
-
-  const res = await bridgeFeatures.createWithdrawalExpander(
-    operatorSigner,
-    l1Network,
-    utxoProvider,
-    chainProvider,
-
-    {
-      operator: PubKey(operatorPubKey),
-      expanderSPK: spks.withdrawExpander,
-      state: bridgeState,
-      utxo: bridgeUtxo,
-    },
-    batch.withdrawals.map((withdrawal) => ({
-      l1Address: withdrawal.recipient,
-      amt: withdrawal.amount,
-    })),
-    feeRate
-  );
-  await offchainDataProvider.setLatestBridgeTxid(res.txid as L1TxHash);
-  await offchainDataProvider.setBridgeState(
-    res.txid as L1TxHash,
-    res.bridgeState.batchesRoot,
-    res.bridgeState.merkleTree,
-    res.bridgeState.depositAggregatorSPK
-  );
-  // console.log(`createWithdrawal(batch) done, txid: ${res.txid}`)
-  return res.txid as L1TxHash;
-}
 
 export function shouldExpand(batch: WithdrawalBatch): boolean {
   if (
-    batch.status !== 'SUBMITTED_FOR_EXPANSION' &&
     batch.status !== 'BEING_EXPANDED'
   )
     return false;
@@ -597,9 +661,6 @@ export function shouldExpand(batch: WithdrawalBatch): boolean {
   const height = Math.ceil(Math.log2(batch.withdrawals.length));
   if (height <= WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE)
     return false;
-
-  // expanding is not started, return true
-  if (batch.status === 'SUBMITTED_FOR_EXPANSION') return true;
 
   const currentExpandCount = batch.expansionTxs.length;
 
@@ -613,7 +674,6 @@ export function shouldExpand(batch: WithdrawalBatch): boolean {
 
 export function shouldDistribute(batch: WithdrawalBatch): boolean {
   if (
-    batch.status !== 'SUBMITTED_FOR_EXPANSION' &&
     batch.status !== 'BEING_EXPANDED'
   )
     return false;
@@ -635,7 +695,6 @@ async function parseDataFromWithdrawalBatch(
   expanderStates: WithdrawalExpanderState[];
 }> {
   if (
-    batch.status !== 'SUBMITTED_FOR_EXPANSION' &&
     batch.status !== 'BEING_EXPANDED' &&
     batch.status !== 'EXPANDED'
   ) {
@@ -785,6 +844,75 @@ export async function expandLevelWithdrawals(
   }
   return broadcastRes.broadcastedTxids as L1TxHash[];
 }
+
+export async function expandLevelWithdrawals2(
+    operatorSigner: Signer,
+    l1Network: SupportedNetwork,
+    enhancedUtxoProvider: EnhancedProvider,
+    l1Provider: L1Provider,
+    chainProvider: ChainProvider,
+    feeRate: number,
+    level: number,
+    withdrawalsTree: ExpansionMerkleTree,
+    expansionLevelTxs: string[]
+  ): Promise<L1TxHash[]> {
+    const expanderTxs = await Promise.all(
+        expansionLevelTxs.map((txId) =>
+          chainProvider.getRawTransaction(txId).then(Transaction.fromHex)
+        )
+      );
+
+    const operatorPubKey = await operatorSigner.getPublicKey();
+    const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
+  
+    const expanderUtxos = 
+        expanderTxs.map(tx => utils.getUtxoByScript(tx, spks.withdrawExpander)).flat();
+
+    for (let i = 0; i < expanderUtxos.length; i++) {
+      const traceableUtxo: TraceableWithdrawalExpanderUtxo = {
+        operator: PubKey(operatorPubKey),
+        state: WithdrawalMerkle.getStateForHashFromTree(
+            withdrawalsTree, 
+            withdrawalsTree.levels[level][i].hash
+          ),
+        utxo: expanderUtxos[i],
+      };
+
+      if (traceableUtxo.state.leftAmt === 0n && traceableUtxo.state.rightAmt === 0n)
+        continue;
+
+      const leftState = WithdrawalMerkle.getStateForHashFromTree(
+        withdrawalsTree, 
+        withdrawalsTree.levels[level+1][2*i].hash
+      );
+
+      const rightState = WithdrawalMerkle.getStateForHashFromTree(
+        withdrawalsTree, 
+        withdrawalsTree.levels[level+1][2 * i +1].hash
+      );
+
+      const res = await withdrawFeatures.expandWithdrawal2(
+        operatorSigner,
+        l1Network,
+        enhancedUtxoProvider,
+        enhancedUtxoProvider,
+        traceableUtxo,
+        leftState,
+        rightState,
+        feeRate
+      );
+    }
+    const broadcastRes = await enhancedUtxoProvider.finalBroadcast();
+    if (
+      broadcastRes.failedBroadcastTxError &&
+      broadcastRes.broadcastedTxids.length === 0
+    ) {
+      throw broadcastRes.failedBroadcastTxError;
+    }
+    return broadcastRes.broadcastedTxids as L1TxHash[];
+  }
+  
+
 
 export async function distributeLevelWithdrawals(
   operatorSigner: Signer,

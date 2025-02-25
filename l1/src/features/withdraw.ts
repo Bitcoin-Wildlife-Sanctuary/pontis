@@ -5,6 +5,7 @@ import { Signer } from '../lib/signer'
 import {
   TracedWithdrawalExpander,
   WithdrawalExpanderCovenant,
+  WithdrawalExpanderState,
 } from '../covenants/withdrawalExpanderCovenant'
 import { Sha256, UTXO } from 'scrypt-ts'
 import { TraceableWithdrawalExpanderUtxo } from '../covenants/withdrawalExpanderCovenant'
@@ -53,6 +54,100 @@ export async function expandWithdrawal(
   const outputWithdrawalExpander1Covenant = new WithdrawalExpanderCovenant(
     tracedWithdrawalExpander.covenant.operator,
     WithdrawalMerkle.getStateForHash(allWithdrawals, children.rightChild.hash)
+  )
+
+  if (
+    outputWithdrawalExpander0Covenant.serializedState() !==
+    expanderUtxo.state.leftChildRootHash
+  ) {
+    throw new Error('left child root hash mismatch')
+  }
+  if (
+    outputWithdrawalExpander1Covenant.serializedState() !==
+    expanderUtxo.state.rightChildRootHash
+  ) {
+    throw new Error('right child root hash mismatch')
+  }
+
+  const est = estimateExpandWithdrawalVSize(
+    network,
+    expanderUtxo,
+    tracedWithdrawalExpander,
+    outputWithdrawalExpander0Covenant,
+    outputWithdrawalExpander1Covenant,
+    changeAddress,
+    feeRate
+  )
+  const total = feeRate * est.vSize
+  const utxos = await utxoProvider.getUtxos(changeAddress, {
+    total: Number(total),
+  })
+  if (utxos.length === 0) {
+    throw new Error(`Insufficient satoshis input amount: no utxos found`)
+  }
+  const feeUtxo = pickLargeFeeUtxo(utxos)
+  if (feeUtxo.satoshis < total) {
+    throw new Error(
+      `Insufficient satoshis input amount: fee utxo(${feeUtxo.satoshis}) < total(${total})`
+    )
+  }
+
+  const psbt = buildExpandWithdrawalTx(
+    network,
+    feeUtxo,
+    expanderUtxo,
+    tracedWithdrawalExpander,
+    outputWithdrawalExpander0Covenant,
+    outputWithdrawalExpander1Covenant,
+    changeAddress,
+    feeRate
+  )
+  const signedPsbt = await signer.signPsbt(psbt.toHex(), psbt.psbtOptions())
+  const txPsbt = psbt.combine(ExtPsbt.fromHex(signedPsbt))
+  await txPsbt.finalizeAllInputsAsync()
+  const tx = txPsbt.extractTransaction()
+  await chainProvider.broadcast(tx.toHex())
+  markSpent(utxoProvider, tx)
+  return {
+    psbt,
+    txid: tx.getId(),
+    withdrawalExpander0Utxo: outputToUtxo(tx, CONTRACT_INDEXES.outputIndex.withdrawalExpander.inDepositAggregatorTx.first),
+    withdrawalExpander0State: outputWithdrawalExpander0Covenant.state!,
+
+    withdrawalExpander1Utxo: expanderUtxo.state.rightAmt > 0n ? outputToUtxo(tx, CONTRACT_INDEXES.outputIndex.withdrawalExpander.inDepositAggregatorTx.second) : undefined,
+    withdrawalExpander1State: expanderUtxo.state.rightAmt > 0n ? outputWithdrawalExpander1Covenant.state! : undefined,
+  }
+}
+
+export async function expandWithdrawal2(
+  signer: Signer,
+  network: SupportedNetwork,
+  utxoProvider: UtxoProvider,
+  chainProvider: ChainProvider,
+
+  expanderUtxo: TraceableWithdrawalExpanderUtxo,
+  leftState: WithdrawalExpanderState,
+  rightState: WithdrawalExpanderState,
+  feeRate: number
+) {
+  const changeAddress = await signer.getAddress()
+
+  if (expanderUtxo.state.level <= WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE) {
+    throw new Error(`withdrawal expander level should be greater than ${WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE}`)
+  }
+
+  const tracedWithdrawalExpander = await WithdrawalExpanderCovenant.backtrace(
+    expanderUtxo,
+    chainProvider
+  )
+
+  const outputWithdrawalExpander0Covenant = new WithdrawalExpanderCovenant(
+    tracedWithdrawalExpander.covenant.operator,
+    leftState
+  ) 
+  const outputWithdrawalExpander1Covenant = new WithdrawalExpanderCovenant(
+    tracedWithdrawalExpander.covenant.operator,
+    rightState
   )
 
   if (

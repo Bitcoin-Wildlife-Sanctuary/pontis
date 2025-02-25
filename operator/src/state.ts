@@ -1,7 +1,7 @@
 import { L2Event } from './l2/events';
 import { assert } from 'console';
 import { cloneDeep, max } from 'lodash';
-import { BridgeState, DepositAggregatorState } from 'l1';
+import { BridgeState, DepositAggregatorState, WithdrawalExpanderCovenant, WithdrawalExpanderState, WithdrawalExpanderState2, WithdrawalMerkle, WithdrawalNode } from 'l1';
 import { l2AddressToHex } from './l1/utils/contractUtil';
 import { readFileSync, writeFileSync } from 'fs';
 
@@ -116,6 +116,10 @@ export type Withdrawal = {
   blockNumber: number;
 };
 
+export type WithdrawalExpansionState = WithdrawalExpanderState2 & {
+  tx: L1Tx
+}
+
 type WithdrawalBatchCommon = {
   id: bigint;
   withdrawals: Withdrawal[];
@@ -139,18 +143,11 @@ export type WithdrawalBatch =
       closeWithdrawalBatchTx: L2Tx;
     } & WithdrawalBatchCommon)
   | ({
-      status: 'SUBMITTED_FOR_EXPANSION';
-      withdrawals: Withdrawal[];
-      hash: string;
-      closeWithdrawalBatchTx: L2Tx;
-      withdrawBatchTx: L1Tx;
-    } & WithdrawalBatchCommon)
-  | ({
       status: 'BEING_EXPANDED';
       withdrawals: Withdrawal[];
       hash: string;
       closeWithdrawalBatchTx: L2Tx;
-      withdrawBatchTx: L1Tx;
+      expansionTree: ExpansionMerkleTree;
       expansionTxs: L1Tx[][];
     } & WithdrawalBatchCommon)
   | ({
@@ -158,7 +155,7 @@ export type WithdrawalBatch =
       withdrawals: Withdrawal[];
       hash: string;
       closeWithdrawalBatchTx: L2Tx;
-      withdrawBatchTx: L1Tx;
+      expansionTree: ExpansionMerkleTree;
       expansionTxs: L1Tx[][];
     } & WithdrawalBatchCommon);
 
@@ -214,6 +211,13 @@ export type BridgeEnvironment = {
     batchId: string
   ) => Promise<BridgeCovenantState>;
   closePendingWithdrawalBatch: () => Promise<L2Tx>;
+  createWithdrawalExpander: (
+    bridgeState: BridgeCovenantState,
+    hash: string, expectedWithdrawalState: WithdrawalExpanderState
+  ) => Promise<BridgeCovenantState>;
+  expandWithdrawals: (
+    withdrawals: Withdrawal[], hash: string, expansionTxs: L1Tx[]
+  ) => Promise<L1Tx[]>;
 };
 
 let i = 0;
@@ -341,14 +345,6 @@ function updateL1TxStatus(state: OperatorState, status: L1TxStatus) {
   }
 
   for (const wb of state.withdrawalBatches) {
-    if (
-      wb.status === 'SUBMITTED_FOR_EXPANSION' ||
-      wb.status === 'BEING_EXPANDED' ||
-      wb.status === 'EXPANDED'
-    ) {
-      update(wb.withdrawBatchTx);
-    }
-
     if (wb.status === 'BEING_EXPANDED' || wb.status === 'EXPANDED') {
       for (const expansionArray of wb.expansionTxs) {
         for (let i = 0; i < expansionArray.length; i++) {
@@ -399,14 +395,6 @@ export function getAllL1Txs(state: OperatorState): Set<L1TxId> {
   }
 
   for (const wb of state.withdrawalBatches) {
-    if (
-      wb.status === 'SUBMITTED_FOR_EXPANSION' ||
-      wb.status === 'BEING_EXPANDED' ||
-      wb.status === 'EXPANDED'
-    ) {
-      l1Txs.push(wb.withdrawBatchTx);
-    }
-
     if (wb.status === 'BEING_EXPANDED' || wb.status === 'EXPANDED') {
       for (const expansionArr of wb.expansionTxs) {
         l1Txs.push(...expansionArr);
@@ -448,7 +436,6 @@ function updateL2TxStatus(state: OperatorState, status: L2TxStatus) {
     if (
       wb.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED' ||
       wb.status === 'CLOSED' ||
-      wb.status === 'SUBMITTED_FOR_EXPANSION' ||
       wb.status === 'BEING_EXPANDED' ||
       wb.status === 'EXPANDED'
     ) {
@@ -477,7 +464,6 @@ export function getAllL2Txs(state: OperatorState): Set<L2TxId> {
     if (
       wb.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED' ||
       wb.status === 'CLOSED' ||
-      wb.status === 'SUBMITTED_FOR_EXPANSION' ||
       wb.status === 'BEING_EXPANDED' ||
       wb.status === 'EXPANDED'
     ) {
@@ -703,6 +689,7 @@ async function closeWithdrawalBatch(
       state.withdrawalBatches[i] = {
         ...batch,
         status: 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED',
+        // TODO: make sure which batch we are closing, it might be closed by external tx
         closeWithdrawalBatchTx: await env.closePendingWithdrawalBatch(),
       };
     }
@@ -718,7 +705,7 @@ async function updateWithdrawalBatch(
     for (let i = 0; i < state.withdrawalBatches.length; i++) {
       const batch = state.withdrawalBatches[i];
       if (batch.id === change.id) {
-        assert(batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED');
+        assert(batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED' || batch.status == 'PENDING');
         if (batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED') {
           state.withdrawalBatches[i] = {
             ...batch,
@@ -742,6 +729,60 @@ function withdrawalsOldEnough(
     }
   }
   return false;
+}
+
+async function initiateWithdrawalsExpansion(env: BridgeEnvironment, state: OperatorState) {
+  // iterate over withdrawal batches and find CLOSED one
+  for (let i = 0; i < state.withdrawalBatches.length; i++) {
+    const batch = state.withdrawalBatches[i];
+    if (batch.status === 'CLOSED') {
+      const expansionTree = WithdrawalMerkle.getMerkleTree(batch.withdrawals.map(w => ({
+        l1Address: w.recipient,
+        amt: w.amount
+      })));
+
+      const expectedWithdrawalState = WithdrawalMerkle.getStateForHashFromTree(
+        expansionTree, expansionTree.root
+      );
+      
+      const bridgeState = await env.createWithdrawalExpander(
+        state.bridgeState,
+        batch.hash,
+        expectedWithdrawalState, 
+      );
+
+      state.bridgeState = bridgeState;
+
+      state.withdrawalBatches[i] = {
+        ...batch,
+        status: 'BEING_EXPANDED',
+        expansionTree,
+        expansionTxs: [[bridgeState.latestTx]],
+      };
+    }
+  }
+}
+
+async function manageExpansion(env: BridgeEnvironment, state: OperatorState) {
+  for (let i = 0; i < state.withdrawalBatches.length; i++) {
+    const batch = state.withdrawalBatches[i];
+    if (batch.status === 'BEING_EXPANDED') {
+      const expansionTxs = batch.expansionTxs.at(-1);
+      if (expansionTxs && expansionTxs.every((tx) => tx.status === 'MINED')) {
+        if (expansionTxs.length === batch.withdrawals.length) {
+          state.withdrawalBatches[i] = {
+            ...batch,
+            status: 'EXPANDED',
+          };
+        } else {
+          const newExpansionLevel = await env.expandWithdrawals(
+            batch.withdrawals, batch.hash, expansionTxs
+          );
+          batch.expansionTxs.push(newExpansionLevel);
+        }
+      }
+    }
+  }
 }
 
 export function save(path: string, state: OperatorState) {
@@ -771,3 +812,4 @@ export function load(path: string): OperatorState {
 
   return state as OperatorState;
 }
+

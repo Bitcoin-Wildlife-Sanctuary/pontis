@@ -113,6 +113,11 @@ export class BridgeMerkle {
   }
 }
 
+export type ExpansionMerkleTree = {
+  root: Sha256
+  levels: WithdrawalNode[][]
+}
+
 export type Withdrawal = {
   l1Address: ByteString // p2wpkh address
   amt: bigint
@@ -125,10 +130,7 @@ export type WithdrawalNode = {
 }
 // todo: maybe add a hash prefix to avoid tree collision
 export class WithdrawalMerkle {
-  private static calculateMerkle(withdrawalList: Array<Withdrawal>): {
-    root: Sha256
-    levels: WithdrawalNode[][]
-  } {
+  private static calculateMerkle(withdrawalList: Array<Withdrawal>): ExpansionMerkleTree {
     let startLevel = 0n
     if (withdrawalList.length == 0) {
       throw new Error('withdrawalList length must be greater than 0')
@@ -221,6 +223,12 @@ export class WithdrawalMerkle {
     return withdrawals
   }
 
+  static getMerkleTree(withdrawals: Withdrawal[]) {
+    withdrawals = cloneDeep(withdrawals)
+    withdrawals = this.padEmptyWithdrawals(withdrawals)
+    return this.calculateMerkle(withdrawals)  
+  }
+
   static getMerkleRoot(withdrawals: Withdrawal[]) {
     withdrawals = cloneDeep(withdrawals)
     withdrawals = this.padEmptyWithdrawals(withdrawals)
@@ -252,6 +260,26 @@ export class WithdrawalMerkle {
     const node = levels.flat().find((v) => v.hash === hash)
     if (!node) {
       throw new Error(`expander hash: ${hash} not found in any level`)
+    }
+  }
+
+  static getStateForHashFromTree(tree: ReturnType<typeof this.getMerkleTree>, hash: Sha256) {
+    const levels = tree.levels;
+    const node = levels.flat().find((v) => v.hash === hash)
+    if (node.level === 0n) {
+      return WithdrawalExpanderCovenant.createLeafState(
+        node.withdrawals[0].l1Address,
+        node.withdrawals[0].amt
+      )
+    } else {
+      const children = this.getHashChildrenFromTree(tree, hash)
+      return WithdrawalExpanderCovenant.createNonLeafState(
+        node.level,
+        children.leftChild.hash,
+        children.rightChild.hash,
+        children.leftChild.amt,
+        children.rightChild.amt
+      )
     }
   }
 
@@ -305,6 +333,28 @@ export class WithdrawalMerkle {
       rightChild,
     }
   }
+
+  static getHashChildrenFromTree(tree: ReturnType<typeof this.getMerkleTree>, currentHash: Sha256) {
+    const levels = tree.levels.flat()
+    const currentIndex = levels.findIndex((node) => node.hash === currentHash)
+    if (currentIndex === -1) {
+      throw new Error('currentHash not found in any level')
+    }
+    const currentNode = levels[currentIndex]
+    if (currentNode.withdrawals.length == 1) {
+      throw new Error('currentNode can not be leaf node')
+    }
+
+    // for an node at index i, its children are at index 2i+1 and 2i+2
+    // https://www.geeksforgeeks.org/binary-heap/
+    const leftChild = levels[currentIndex * 2 + 1]
+    const rightChild = levels[currentIndex * 2 + 2]
+    return {
+      leftChild,
+      rightChild,
+    }
+  }
+
 
   static checkWithdrawalValid(withdrawal: Withdrawal) {
     // todo: check address is valid
