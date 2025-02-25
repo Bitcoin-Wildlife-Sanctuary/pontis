@@ -55,7 +55,7 @@ export async function expandWithdrawal(
     WithdrawalMerkle.getStateForHash(allWithdrawals, children.rightChild.hash)
   )
 
-  if (expanderUtxo.state.type === 'leaf') {
+  if (expanderUtxo.state.type === 'LEAF') {
     throw new Error('expander utxo is a leaf')
   }
 
@@ -167,7 +167,7 @@ function buildExpandWithdrawalTx(
   if (feeUtxo.satoshis < feeRate * (estimatedVSize || 1)) {
     throw new Error('fee utxo is not enough')
   }
-  if (withdrawalExpanderUtxo.state.type === 'leaf') {
+  if (withdrawalExpanderUtxo.state.type === 'LEAF') {
     throw new Error('withdrawal expander utxo is a leaf')
   }
 
@@ -184,7 +184,7 @@ function buildExpandWithdrawalTx(
     throw new Error('right child root hash mismatch')
   }
   if (
-    outputWithdrawalExpander0Covenant.state.type === 'branch' &&
+    outputWithdrawalExpander0Covenant.state.type === 'INTERNAL' &&
     withdrawalExpanderUtxo.state.leftAmt !==
     outputWithdrawalExpander0Covenant.state.leftAmt +
       outputWithdrawalExpander0Covenant.state.rightAmt
@@ -192,7 +192,7 @@ function buildExpandWithdrawalTx(
     throw new Error('left amt mismatch')
   }
   if (
-    outputWithdrawalExpander1Covenant.state.type === 'branch' &&
+    outputWithdrawalExpander1Covenant.state.type === 'INTERNAL' &&
     withdrawalExpanderUtxo.state.rightAmt !==
     outputWithdrawalExpander1Covenant.state.leftAmt +
       outputWithdrawalExpander1Covenant.state.rightAmt

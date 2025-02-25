@@ -23,11 +23,11 @@ import { toXOnly } from '../lib/utils'
 import { CONTRACT_INDEXES, getChangeOutput } from './util'
 
 export type WithdrawalExpanderState = {
-  type: 'leaf',
+  type: 'LEAF',
   withdrawAddressScript: ByteString,
   withdrawAmt: bigint,
 } | {
-  type: 'branch',
+  type: 'INTERNAL',
   leftAmt: bigint,
   rightAmt: bigint,
   leftChildRootHash: Sha256,
@@ -141,7 +141,7 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
         if (!shPreimage) {
           throw new Error('Input context is not available')
         }
-        if (state.type === 'leaf') {
+        if (state.type === 'LEAF') {
           throw new Error('leaf state cannot be expanded')
         }
 
@@ -266,7 +266,7 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
   }
 
   static serializeState(state: WithdrawalExpanderState) {
-    if (state.type === 'leaf') {
+    if (state.type === 'LEAF') {
       return WithdrawalExpander.getLeafNodeHash(
         state.withdrawAddressScript,
         state.withdrawAmt 
@@ -288,7 +288,7 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
     rightAmt: bigint
   ): WithdrawalExpanderState {
     return {
-      type: 'branch',
+      type: 'INTERNAL',
       leftChildRootHash,
       rightChildRootHash,
       leftAmt,
@@ -301,7 +301,7 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
     withdrawAmt: bigint
   ): WithdrawalExpanderState {
     return {
-      type: 'leaf',
+      type: 'LEAF',
       withdrawAddressScript,
       withdrawAmt,
     }
