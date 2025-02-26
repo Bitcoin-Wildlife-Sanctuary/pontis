@@ -1,12 +1,12 @@
-import {Col, LineChart, Row, Text} from '../../components';
-import {ChartCard, Container, ContentCard, GridCard, GridCardItem} from './styled';
+import {Col, Divider, Icon, LineChart, Row, Text} from '../../components';
+import {ChartCard, Container, ContentCard, ContentCardTitle, GridCard, GridCardItem, Table} from './styled';
 
 const Landing: React.FC = () => {
   return (
     <Container>
       <Col $alignItems="center" $gap="medium">
-        <Text.HeadlineLarge>Pontis</Text.HeadlineLarge>
-        <Text.HeadlineSmall>OP_CAT enabled Bitcoin &lt;-&gt; Starknet Bridge</Text.HeadlineSmall>
+        <Text.HeadlineLarge as="h1">Pontis</Text.HeadlineLarge>
+        <Text.HeadlineSmall as="h2">OP_CAT enabled Bitcoin &lt;-&gt; Starknet Bridge</Text.HeadlineSmall>
       </Col>
 
       <Col $flex={1} $gap="large">
@@ -72,7 +72,56 @@ const Landing: React.FC = () => {
 
         <Row $gap="large">
           <Col $flex={1} $gap="large">
-            <ContentCard />
+            <ContentCard>
+              <ContentCardTitle>Pending</ContentCardTitle>
+              <Divider $marginBottom="small" />
+
+              <Table>
+                <thead>
+                  <tr>
+                    <th>
+                      <Text.Subtitle $fontWeight={600}>RECIPIENT</Text.Subtitle>
+                    </th>
+                    <th>
+                      <Text.Subtitle $fontWeight={600}>AMOUNT</Text.Subtitle>
+                    </th>
+                    <th>
+                      <Text.Subtitle $fontWeight={600}>ORIGIN TRANSACTION</Text.Subtitle>
+                    </th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {Array.from({length: 5}).map((_, index) => (
+                    <tr key={index.toString()}>
+                      <td>
+                        <a href="#">
+                          <Row $alignItems="center" $gap="xsmall">
+                            <Text.BodyStrong $color="inherit">0x02d8...493b</Text.BodyStrong>
+
+                            <Icon name="ExternalLink" color="inherit" size={18} />
+                          </Row>
+                        </a>
+                      </td>
+
+                      <td>
+                        <Text.BodyStrong>0.509</Text.BodyStrong>
+                      </td>
+
+                      <td>
+                        <a href="#">
+                          <Row $alignItems="center" $gap="xsmall">
+                            <Text.BodyStrong $color="inherit">1a6d...a0dd</Text.BodyStrong>
+
+                            <Icon name="ExternalLink" color="inherit" size={18} />
+                          </Row>
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </ContentCard>
             <ContentCard />
           </Col>
 

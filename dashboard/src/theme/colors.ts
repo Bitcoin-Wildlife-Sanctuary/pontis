@@ -25,6 +25,9 @@ export const darkThemeColors = {
   textLight: '#A0A0A0',
   textStrong: '#FAFAFA',
 
+  link: '#00C3F9',
+  linkHover: '#2774D4',
+
   border: '#3D3D3D',
 
   success: '#55E065',

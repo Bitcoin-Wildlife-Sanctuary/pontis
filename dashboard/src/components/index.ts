@@ -1,3 +1,5 @@
+export {Divider} from './Divider';
+export {Icon} from './Icon';
 export {Col, Flex, Row} from './Layout';
 export {default as LineChart} from './LineChart';
 export {PageLayout} from './PageLayout';

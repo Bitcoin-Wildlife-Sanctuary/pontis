@@ -33,6 +33,7 @@ export const PAGE_PADDINGS = {
 } satisfies Record<Size, number>;
 
 const spacings = {
+  none: 0,
   xxsmall: 6,
   xsmall: 8,
   small: 12,

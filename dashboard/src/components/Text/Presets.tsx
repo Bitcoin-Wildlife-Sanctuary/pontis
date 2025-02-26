@@ -37,3 +37,9 @@ export const Body = createTextVariant({
   $fontSize: 16,
   $fontWeight: 400,
 });
+
+export const BodyStrong = createTextVariant({
+  $color: 'textStrong',
+  $fontSize: 16,
+  $fontWeight: 600,
+});

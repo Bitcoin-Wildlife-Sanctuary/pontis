@@ -1,6 +1,6 @@
 import styled from 'styled-components';
 
-import {Col} from '../../components';
+import {Col, Text} from '../../components';
 import {BREAKPOINTS, PAGE_PADDINGS} from '../../theme';
 
 export const Container = styled(Col)`
@@ -18,12 +18,19 @@ export const Container = styled(Col)`
 `;
 
 export const ContentCard = styled.div`
+  display: flex;
+  flex-direction: column;
   width: 100%;
   /* TODO: remove min-height as its temporary */
   min-height: 20px;
   background-color: ${({theme}) => theme.colors.elevated};
   border: 1px solid ${({theme}) => theme.colors.border};
   border-radius: 8px;
+`;
+
+export const ContentCardTitle = styled(Text.Title).attrs({$textAlign: 'center'})`
+  display: inline-block;
+  padding: ${({theme}) => theme.spacings.small}px;
 `;
 
 export const ChartCard = styled(ContentCard)`
@@ -55,4 +62,18 @@ export const GridCardItem = styled(ContentCard)`
   background-color: ${({theme}) => theme.colors.elevated};
   border-radius: 0;
   border: 0;
+`;
+
+export const Table = styled.table`
+  border-collapse: collapse;
+
+  tr {
+    border-bottom: 1px solid ${({theme}) => theme.colors.border};
+  }
+
+  th,
+  td {
+    padding: ${({theme}) => `${theme.spacings.small}px ${theme.spacings.medium}px`};
+    text-align: left;
+  }
 `;

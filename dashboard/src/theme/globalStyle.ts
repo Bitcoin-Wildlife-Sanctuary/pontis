@@ -33,4 +33,19 @@ export const GlobalStyle = createGlobalStyle`
     min-height: 100dvh;
     flex-direction: column;
   }
+
+  h1, h2, h3, h4, h5, h6 {
+    margin: 0;
+    margin-block: 0;
+  }
+
+  a {
+    color: ${({theme}) => theme.colors.link};
+    text-decoration: none;
+    transition: ${({theme}) => theme.transitions.duration.medium} ${({theme}) => theme.transitions.timing.bezierOut};
+  }
+
+  a:hover {
+    color: ${({theme}) => theme.colors.linkHover};
+  }
 `;
