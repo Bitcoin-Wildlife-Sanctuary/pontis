@@ -24,3 +24,7 @@ export const ContentCard = styled.div`
   border: 1px solid ${({theme}) => theme.colors.border};
   border-radius: 8px;
 `;
+
+export const ChartCard = styled(ContentCard)`
+  padding: ${({theme}) => theme.spacings.small}px;
+`;

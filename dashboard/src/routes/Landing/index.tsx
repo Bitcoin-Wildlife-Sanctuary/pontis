@@ -1,5 +1,5 @@
-import {Col, Row, Text} from '../../components';
-import {Container, ContentCard} from './styled';
+import {Col, LineChart, Row, Text} from '../../components';
+import {ChartCard, Container, ContentCard} from './styled';
 
 const Landing: React.FC = () => {
   return (
@@ -11,7 +11,23 @@ const Landing: React.FC = () => {
 
       <Col flex={1} gap="large">
         <Row gap="large">
-          <ContentCard />
+          <ChartCard>
+            <LineChart
+              labels={['Mon', 'Tue', 'Wen', 'Thu', 'Fri', 'Sat', 'Sun']}
+              datasets={[
+                {
+                  label: 'L1 -> L2',
+                  data: [12, 19, 3, 5, 2, 3, 5],
+                  borderColor: '#FF718B',
+                },
+                {
+                  label: 'L2 -> L1',
+                  data: [4, 9, 5, 3, 19, 2, 4],
+                  borderColor: '#4A3AFF',
+                },
+              ]}
+            />
+          </ChartCard>
           <ContentCard />
           <ContentCard />
         </Row>
