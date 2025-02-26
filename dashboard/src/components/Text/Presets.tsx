@@ -1,33 +1,39 @@
 import styled from 'styled-components';
 
-import {TextWrapper} from './TextWrapper';
+import {type TextWrapperProps, TextWrapper} from './TextWrapper';
 
-export const HeadlineLarge = styled(TextWrapper).attrs({
+const createTextVariant = (props: TextWrapperProps) => {
+  const Variant = styled(TextWrapper)``;
+  Variant.defaultProps = props;
+  return Variant;
+};
+
+export const HeadlineLarge = createTextVariant({
   color: 'textStrong',
   fontSize: 48,
   fontWeight: 700,
-})``;
+});
 
-export const HeadlineSmall = styled(TextWrapper).attrs({
+export const HeadlineSmall = createTextVariant({
   color: 'textLight',
   fontSize: 24,
   fontWeight: 600,
-})``;
+});
 
-export const Title = styled(TextWrapper).attrs({
+export const Title = createTextVariant({
   color: 'textStrong',
   fontSize: 22,
   fontWeight: 600,
-})``;
+});
 
-export const Subtitle = styled(TextWrapper).attrs({
+export const Subtitle = createTextVariant({
   color: 'textLight',
   fontSize: 16,
   fontWeight: 700,
-})``;
+});
 
-export const Body = styled(TextWrapper).attrs({
+export const Body = createTextVariant({
   color: 'text',
   fontSize: 16,
   fontWeight: 400,
-})``;
+});

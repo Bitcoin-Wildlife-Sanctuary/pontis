@@ -1,5 +1,5 @@
 import {Col, LineChart, Row, Text} from '../../components';
-import {ChartCard, Container, ContentCard} from './styled';
+import {ChartCard, Container, ContentCard, GridCard, GridCardItem} from './styled';
 
 const Landing: React.FC = () => {
   return (
@@ -28,8 +28,46 @@ const Landing: React.FC = () => {
               ]}
             />
           </ChartCard>
-          <ContentCard />
-          <ContentCard />
+
+          <GridCard>
+            <GridCardItem>
+              <Text.Subtitle textAlign="center">L1 Block Number</Text.Subtitle>
+              <Text.Title>406906</Text.Title>
+            </GridCardItem>
+
+            <GridCardItem>
+              <Text.Subtitle textAlign="center">L2 Block Number</Text.Subtitle>
+              <Text.Title>0</Text.Title>
+            </GridCardItem>
+
+            <GridCardItem>
+              <Text.Subtitle textAlign="center">Latest TX Status</Text.Subtitle>
+              <Text.Title>Unconfirmed</Text.Title>
+            </GridCardItem>
+
+            <GridCardItem>
+              <Text.Subtitle textAlign="center">Latest TX Hash</Text.Subtitle>
+              <Text.Title>ab5a7...c5d91</Text.Title>
+            </GridCardItem>
+          </GridCard>
+
+          <GridCard>
+            <GridCardItem>
+              <Text.Subtitle textAlign="center">Batches Root</Text.Subtitle>
+              <Text.Title>1b02a...d9d1d</Text.Title>
+            </GridCardItem>
+
+            <GridCardItem>
+              <Text.Subtitle textAlign="center">Deposit Aggregator SPK</Text.Subtitle>
+              <Text.Title>51204...3451</Text.Title>
+            </GridCardItem>
+
+            <GridCardItem>
+              <Text.Subtitle textAlign="center">Merkle Tree</Text.Subtitle>
+              <Text.Title fontSize={16}>a293f678caf512f9...06fd6f415d090a30</Text.Title>
+              <Text.Title fontSize={16}>f6a7fbf50bd65442...42d59774478acfcb</Text.Title>
+            </GridCardItem>
+          </GridCard>
         </Row>
 
         <Row gap="large">
