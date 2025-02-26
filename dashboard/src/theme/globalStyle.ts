@@ -1,7 +1,17 @@
 import {createGlobalStyle} from 'styled-components';
 
-// eslint-disable-next-line import/no-unused-modules
 export const GlobalStyle = createGlobalStyle`
+  :root {
+    // TODO: change these values to match the theme spacings
+    --bs-gutter-x: 1.5rem;
+    --bs-gutter-y: 0;
+  }
+
+  .gy-large {
+    // TODO: change these values to match the theme spacings
+    --bs-gutter-y: 1rem;
+  }
+
   * {
     box-sizing: border-box;
     font-family: ${({theme}) => theme.fonts.default};

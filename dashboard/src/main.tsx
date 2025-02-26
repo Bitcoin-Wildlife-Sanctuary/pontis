@@ -1,3 +1,6 @@
+// We can disregard this warning, as it's a css file
+// eslint-disable-next-line @typescript-eslint/no-restricted-imports
+import 'bootstrap/dist/css/bootstrap-grid.css';
 import '@csstools/normalize.css';
 
 import ReactDOM from 'react-dom/client';
