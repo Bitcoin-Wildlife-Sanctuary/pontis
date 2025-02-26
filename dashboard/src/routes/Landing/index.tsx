@@ -10,7 +10,7 @@ const Landing: React.FC = () => {
       </Col>
 
       <Col $gap="large" className="container">
-        <GridRow className="gy-3">
+        <GridRow className="gy-large">
           <GridCol className="d-flex" xl={4} lg={6}>
             <ChartCard>
               <LineChart
@@ -76,7 +76,7 @@ const Landing: React.FC = () => {
           </GridCol>
         </GridRow>
 
-        <GridRow className="gy-3">
+        <GridRow className="gy-large">
           <GridCol lg={6} md={12}>
             <Col $flex={1} $gap="large">
               <ContentCard>

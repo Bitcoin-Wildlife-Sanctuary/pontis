@@ -1,15 +1,22 @@
 import {createGlobalStyle} from 'styled-components';
 
+import {rem} from '../utils/units';
+
 export const GlobalStyle = createGlobalStyle`
-  :root {
-    // TODO: change these values to match the theme spacings
-    --bs-gutter-x: 1.5rem;
+  :root,
+  .row {
+    --bs-gutter-x: ${({theme}) => rem(theme.spacings.large)};
     --bs-gutter-y: 0;
   }
 
+  .g-large,
   .gy-large {
-    // TODO: change these values to match the theme spacings
-    --bs-gutter-y: 1rem;
+    --bs-gutter-y: ${({theme}) => rem(theme.spacings.large)};
+  }
+
+  .g-large,
+  .gx-large {
+    --bs-gutter-x: ${({theme}) => rem(theme.spacings.large)};
   }
 
   * {
