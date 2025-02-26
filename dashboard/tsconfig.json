@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "moduleResolution": "Node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "noImplicitReturns": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "exactOptionalPropertyTypes": false,
+    "noErrorTruncation": true,
+    "noUncheckedIndexedAccess": true,
+    "noEmit": true,
+    "lib": ["ESNext", "ESNext.String", "DOM", "DOM.Iterable"],
+    "baseUrl": "./",
+    "target": "es5",
+    "module": "ESNext",
+    "incremental": true,
+    "jsx": "react-jsx"
+  },
+  "include": ["src", "src/vite-env.d.ts"],
+  "references": [{ "path": "./tsconfig.node.json" }]
+}

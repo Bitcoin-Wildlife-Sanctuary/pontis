@@ -1,0 +1,41 @@
+name: Client
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+  pull_request:
+permissions: read-all
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: yarn install
+        working-directory: dashboard
+
+      - name: Format Check
+        run: yarn format:check
+        working-directory: dashboard
+
+      - name: Type Checking
+        run: yarn ts:check
+        working-directory: dashboard
+
+      - name: Lint Check
+        run: yarn lint:check
+        working-directory: dashboard
+
+      - name: Build the project
+        run: yarn build
+        working-directory: dashboard
