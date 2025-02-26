@@ -409,6 +409,81 @@ export async function distributeWithdrawals(
   }
 }
 
+export async function distributeWithdrawals2(
+  signer: Signer,
+  network: SupportedNetwork,
+  utxoProvider: UtxoProvider,
+  chainProvider: ChainProvider,
+
+  withdrawalExpanderUtxo: TraceableWithdrawalExpanderUtxo,
+  withdrawals: Withdrawal[],
+
+  feeRate: number
+) {
+  const changeAddress = await signer.getAddress()
+
+  const hash = WithdrawalExpanderCovenant.serializeState(
+    withdrawalExpanderUtxo.state
+  )
+  
+  const tracedWithdrawalExpander = await WithdrawalExpanderCovenant.backtrace(
+    withdrawalExpanderUtxo,
+    chainProvider
+  )
+
+  const est = estimateDistributeWithdrawalsVSize(
+    network,
+    withdrawalExpanderUtxo,
+    tracedWithdrawalExpander,
+    withdrawals,
+    changeAddress,
+    feeRate
+  )
+  const total = feeRate * est.vSize
+  const utxos = await utxoProvider.getUtxos(changeAddress, {
+    total: Number(total),
+  })
+  if (utxos.length === 0) {
+    throw new Error(`Insufficient satoshis input amount: no utxos found`)
+  }
+  const feeUtxo = pickLargeFeeUtxo(utxos)
+  if (feeUtxo.satoshis < total) {
+    throw new Error(
+      `Insufficient satoshis input amount: fee utxo(${feeUtxo.satoshis}) < total(${total})`
+    )
+  }
+
+  const psbt = buildDistributeWithdrawalsTx(
+    network,
+    feeUtxo,
+    withdrawalExpanderUtxo,
+    tracedWithdrawalExpander,
+    withdrawals,
+    changeAddress,
+    feeRate
+  )
+  
+  const signedPsbt = await signer.signPsbt(psbt.toHex(), psbt.psbtOptions())
+  const txPsbt = psbt.combine(ExtPsbt.fromHex(signedPsbt))
+  await txPsbt.finalizeAllInputsAsync()
+  const tx = txPsbt.extractTransaction()
+  await chainProvider.broadcast(tx.toHex())
+  markSpent(utxoProvider, tx)
+
+  const withdrawalLen =
+    psbt.getChangeOutput().length === 0 ? tx.outs.length : tx.outs.length - 1
+  const withdrawalUtxos = tx.outs
+    .slice(0, withdrawalLen)
+    .map((_, outputIndex) => outputToUtxo(tx, outputIndex) as UTXO)
+
+  return {
+    psbt,
+    txid: tx.getId(),
+    withdrawalUtxos,
+  }
+}
+
+
 function estimateDistributeWithdrawalsVSize(
   network: SupportedNetwork,
   withdrawalExpanderUtxo: TraceableWithdrawalExpanderUtxo,

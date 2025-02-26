@@ -1,9 +1,19 @@
 import { L2Event } from './l2/events';
 import { assert } from 'console';
 import { cloneDeep, max } from 'lodash';
-import { BridgeState, DepositAggregatorState, WithdrawalExpanderCovenant, WithdrawalExpanderState, WithdrawalExpanderState2, WithdrawalMerkle, WithdrawalNode } from 'l1';
+import {
+  BridgeState,
+  DepositAggregatorState,
+  ExpansionMerkleTree,
+  WithdrawalExpanderCovenant,
+  WithdrawalExpanderState,
+  WithdrawalExpanderState2,
+  WithdrawalMerkle,
+  WithdrawalNode,
+} from 'l1';
 import { l2AddressToHex } from './l1/utils/contractUtil';
 import { readFileSync, writeFileSync } from 'fs';
+import { Sha256 } from 'scrypt-ts';
 
 export type L1Address = `0x${string}`;
 export type L2Address = `0x${string}`;
@@ -117,8 +127,8 @@ export type Withdrawal = {
 };
 
 export type WithdrawalExpansionState = WithdrawalExpanderState2 & {
-  tx: L1Tx
-}
+  tx: L1Tx;
+};
 
 type WithdrawalBatchCommon = {
   id: bigint;
@@ -213,10 +223,18 @@ export type BridgeEnvironment = {
   closePendingWithdrawalBatch: () => Promise<L2Tx>;
   createWithdrawalExpander: (
     bridgeState: BridgeCovenantState,
-    hash: string, expectedWithdrawalState: WithdrawalExpanderState
+    hash: Sha256,
+    expectedWithdrawalState: WithdrawalExpanderState
   ) => Promise<BridgeCovenantState>;
   expandWithdrawals: (
-    withdrawals: Withdrawal[], hash: string, expansionTxs: L1Tx[]
+    level: number,
+    tree: ExpansionMerkleTree,
+    expansionTxs: L1Tx[]
+  ) => Promise<L1Tx[]>;
+  distributeWithdrawals: (
+    level: number,
+    tree: ExpansionMerkleTree,
+    expansionTxs: L1Tx[]
   ) => Promise<L1Tx[]>;
 };
 
@@ -675,6 +693,7 @@ async function handleWithdrawal(state: OperatorState, change: L2Event) {
     });
   }
 }
+
 async function closeWithdrawalBatch(
   env: BridgeEnvironment,
   state: OperatorState
@@ -705,7 +724,10 @@ async function updateWithdrawalBatch(
     for (let i = 0; i < state.withdrawalBatches.length; i++) {
       const batch = state.withdrawalBatches[i];
       if (batch.id === change.id) {
-        assert(batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED' || batch.status == 'PENDING');
+        assert(
+          batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED' ||
+            batch.status == 'PENDING'
+        );
         if (batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED') {
           state.withdrawalBatches[i] = {
             ...batch,
@@ -731,24 +753,29 @@ function withdrawalsOldEnough(
   return false;
 }
 
-async function initiateWithdrawalsExpansion(env: BridgeEnvironment, state: OperatorState) {
-  // iterate over withdrawal batches and find CLOSED one
+async function initiateWithdrawalsExpansion(
+  env: BridgeEnvironment,
+  state: OperatorState
+) {
   for (let i = 0; i < state.withdrawalBatches.length; i++) {
     const batch = state.withdrawalBatches[i];
     if (batch.status === 'CLOSED') {
-      const expansionTree = WithdrawalMerkle.getMerkleTree(batch.withdrawals.map(w => ({
-        l1Address: w.recipient,
-        amt: w.amount
-      })));
+      const expansionTree = WithdrawalMerkle.getMerkleTree(
+        batch.withdrawals.map((w) => ({
+          l1Address: w.recipient,
+          amt: w.amount,
+        }))
+      );
 
       const expectedWithdrawalState = WithdrawalMerkle.getStateForHashFromTree(
-        expansionTree, expansionTree.root
+        expansionTree,
+        expansionTree.root
       );
-      
+
       const bridgeState = await env.createWithdrawalExpander(
         state.bridgeState,
-        batch.hash,
-        expectedWithdrawalState, 
+        Sha256(batch.hash),
+        expectedWithdrawalState
       );
 
       state.bridgeState = bridgeState;
@@ -768,6 +795,7 @@ async function manageExpansion(env: BridgeEnvironment, state: OperatorState) {
     const batch = state.withdrawalBatches[i];
     if (batch.status === 'BEING_EXPANDED') {
       const expansionTxs = batch.expansionTxs.at(-1);
+      const level = batch.expansionTxs.length - 1;
       if (expansionTxs && expansionTxs.every((tx) => tx.status === 'MINED')) {
         if (expansionTxs.length === batch.withdrawals.length) {
           state.withdrawalBatches[i] = {
@@ -775,10 +803,23 @@ async function manageExpansion(env: BridgeEnvironment, state: OperatorState) {
             status: 'EXPANDED',
           };
         } else {
-          const newExpansionLevel = await env.expandWithdrawals(
-            batch.withdrawals, batch.hash, expansionTxs
-          );
-          batch.expansionTxs.push(newExpansionLevel);
+          if (
+            batch.expansionTree.levels.length - batch.expansionTxs.length ===
+            1
+          ) {
+            const newExpansionLevel = await env.distributeWithdrawals(
+              level,
+              batch.expansionTree,
+              expansionTxs
+            );
+          } else {
+            const newExpansionLevel = await env.expandWithdrawals(
+              level,
+              batch.expansionTree,
+              expansionTxs
+            );
+            batch.expansionTxs.push(newExpansionLevel);
+          }
         }
       }
     }
@@ -812,4 +853,3 @@ export function load(path: string): OperatorState {
 
   return state as OperatorState;
 }
-

@@ -136,18 +136,16 @@ export class WithdrawalMerkle {
       throw new Error('withdrawalList length must be greater than 0')
     }
     if (withdrawalList.length === 1) {
+      const hash = WithdrawalExpander.getLeafNodeHash(
+        withdrawalList[0].l1Address,
+        withdrawalList[0].amt
+      );
       return {
-        root: WithdrawalExpander.getLeafNodeHash(
-          withdrawalList[0].l1Address,
-          withdrawalList[0].amt
-        ),
+        root: hash,
         levels: [
           [
             {
-              hash: WithdrawalExpander.getLeafNodeHash(
-                withdrawalList[0].l1Address,
-                withdrawalList[0].amt
-              ),
+              hash,
               amt: withdrawalList[0].amt,
               level: startLevel,
               withdrawals: [withdrawalList[0]],
@@ -263,7 +261,7 @@ export class WithdrawalMerkle {
     }
   }
 
-  static getStateForHashFromTree(tree: ReturnType<typeof this.getMerkleTree>, hash: Sha256) {
+  static getStateForHashFromTree(tree: ExpansionMerkleTree, hash: Sha256) {
     const levels = tree.levels;
     const node = levels.flat().find((v) => v.hash === hash)
     if (node.level === 0n) {
@@ -334,7 +332,7 @@ export class WithdrawalMerkle {
     }
   }
 
-  static getHashChildrenFromTree(tree: ReturnType<typeof this.getMerkleTree>, currentHash: Sha256) {
+  static getHashChildrenFromTree(tree: ExpansionMerkleTree, currentHash: Sha256) {
     const levels = tree.levels.flat()
     const currentIndex = levels.findIndex((node) => node.hash === currentHash)
     if (currentIndex === -1) {
@@ -367,6 +365,12 @@ export class WithdrawalMerkle {
       throw new Error('withdrawal address must be p2tr, p2wsh or p2wpkh script')
     }
   }
+
+  static getNodeForHashFromTree(tree: ExpansionMerkleTree, hash: Sha256) {
+    const levels = tree.levels;
+    return levels.flat().find((v) => v.hash === hash)
+  }
+
 }
 
 /**

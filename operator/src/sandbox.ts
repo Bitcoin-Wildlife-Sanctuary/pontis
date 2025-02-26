@@ -11,7 +11,6 @@ import {
   BridgeEnvironment,
   Deposit,
   L1TxHash,
-  L2TxId,
   load,
   OperatorState,
   save,
@@ -23,14 +22,16 @@ import {
   aggregateDeposits,
   finalizeDepositBatch,
   verifyDepositBatch,
+  expandWithdrawals,
+  createWithdrawalExpander,
+  distributeWithdrawals,
 } from './l1/transactions';
 import { deposits, l1BlockNumber } from './l1/events';
-import { EMPTY, merge, of } from 'rxjs';
 import { createBridgeContract } from './l1/api';
 import { existsSync } from 'fs';
 import * as env from './l1/env';
 import { l2TransactionStatus } from './l2/transactions';
-import { l2BlockNumber, l2Events } from './l2/events';
+import { l2Events } from './l2/events';
 import { loadContractArtifacts } from './l1/utils/contractUtil';
 
 async function initialState(path: string): Promise<OperatorState> {
@@ -93,6 +94,9 @@ async function sandboxOperator() {
     aggregateDeposits,
     finalizeDepositBatch,
     verifyDepositBatch,
+    createWithdrawalExpander,
+    expandWithdrawals,
+    distributeWithdrawals,
   };
 
   const operator = setupOperator(
