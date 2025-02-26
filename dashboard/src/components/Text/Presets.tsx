@@ -9,31 +9,31 @@ const createTextVariant = (props: TextWrapperProps) => {
 };
 
 export const HeadlineLarge = createTextVariant({
-  color: 'textStrong',
-  fontSize: 48,
-  fontWeight: 700,
+  $color: 'textStrong',
+  $fontSize: 48,
+  $fontWeight: 700,
 });
 
 export const HeadlineSmall = createTextVariant({
-  color: 'textLight',
-  fontSize: 24,
-  fontWeight: 600,
+  $color: 'textLight',
+  $fontSize: 24,
+  $fontWeight: 600,
 });
 
 export const Title = createTextVariant({
-  color: 'textStrong',
-  fontSize: 22,
-  fontWeight: 600,
+  $color: 'textStrong',
+  $fontSize: 22,
+  $fontWeight: 600,
 });
 
 export const Subtitle = createTextVariant({
-  color: 'textLight',
-  fontSize: 16,
-  fontWeight: 700,
+  $color: 'textLight',
+  $fontSize: 16,
+  $fontWeight: 700,
 });
 
 export const Body = createTextVariant({
-  color: 'text',
-  fontSize: 16,
-  fontWeight: 400,
+  $color: 'text',
+  $fontSize: 16,
+  $fontWeight: 400,
 });

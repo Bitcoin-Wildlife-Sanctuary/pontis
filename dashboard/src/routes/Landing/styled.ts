@@ -27,6 +27,9 @@ export const ContentCard = styled.div`
 `;
 
 export const ChartCard = styled(ContentCard)`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: ${({theme}) => theme.spacings.small}px;
 `;
 
