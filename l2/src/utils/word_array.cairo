@@ -305,6 +305,13 @@ impl WordSpanIntoArray of Into<WordSpan, WordArray> {
     }
 }
 
+impl WordSpanDefault of Default<WordSpan> {
+    fn default() -> WordSpan {
+        Default::<WordArray>::default().span()
+    }
+}
+
+
 #[cfg(target: 'test')]
 pub mod hex {
     use core::traits::DivRem;
