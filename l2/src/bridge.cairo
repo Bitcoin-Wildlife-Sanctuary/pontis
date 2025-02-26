@@ -1,8 +1,8 @@
 use starknet::ContractAddress;
 use crate::utils::hash::Digest;
+use crate::utils::word_array::WordSpan;
 
-// TODO: Add the correct type for L1Address
-type L1Address = u256;
+type L1Address = WordSpan;
 
 #[derive(Drop, Serde)]
 struct Deposit {
@@ -14,7 +14,7 @@ struct Deposit {
 pub trait IBridge<TContractState> {
     fn deposit(ref self: TContractState, txid: Digest, deposits: Span<Deposit>);
     fn withdraw(ref self: TContractState, recipient: L1Address, amount: u256);
-    fn close_withdrawal_batch(ref self: TContractState);
+    fn close_withdrawal_batch(ref self: TContractState, id: u128);
 }
 
 #[starknet::contract]
@@ -138,10 +138,10 @@ pub mod Bridge {
             self.emit(WithdrawEvent { id: self.batch.id.read(), recipient, amount });
         }
 
-        fn close_withdrawal_batch(ref self: ContractState) {
+        fn close_withdrawal_batch(ref self: ContractState, id: u128) {
             self.ownable.assert_only_owner();
 
-            self.close_batch_internal();
+            self.close_batch_internal(id);
         }
     }
 
@@ -170,11 +170,7 @@ pub mod Bridge {
         }
 
         fn double_sha256_withdrawal(recipient: L1Address, amount: u256) -> Digest {
-            let mut b: WordArray = Default::default();
-
-            let recipient: u256 = recipient.into();
-            let recipient: Digest = recipient.into();
-            b.append_span(recipient.value.span());
+            let mut b: WordArray = recipient.into();
 
             let amount: Digest = amount.into();
             b.append_span(amount.value.span());
@@ -261,7 +257,7 @@ pub mod Bridge {
             let original_size = self.batch.size.read();
 
             if original_size == Self::TREE_MAX_SIZE {
-                self.close_batch_internal();
+                self.close_batch_internal(self.batch.id.read());
             }
 
             let mut value = withdrawal;
@@ -311,14 +307,26 @@ pub mod Bridge {
             root
         }
 
-        fn close_batch_internal(ref self: ContractState) {
-            let root = self.root();
+        fn close_batch_internal(ref self: ContractState, requested_id: u128) {
+
             let id = self.batch.id.read();
 
+            assert!(id >= requested_id, "Wrong batch id requested");
+
+            if(id != requested_id) {
+                return;
+            }
+
+            let root = self.root();
+            
             self.batch.id.write(id + 1);
             self.batch.size.write(0);
 
             self.emit(CloseBatchEvent { id, root });
+        }
+
+        fn close_batch_for_testing(ref self: ContractState) {
+            self.close_batch_internal(self.batch.id.read());
         }
     }
 }
@@ -424,7 +432,8 @@ mod withdrawals_tests {
             HelpersImpl::merkle_root(complement_with_zeros(data)),
             "merkle root mismatch",
         );
-        bridge.close_batch_internal();
+
+        bridge.close_batch_for_testing();
     }
 
     #[test]
@@ -456,6 +465,9 @@ mod bridge_tests {
         Deposit, Bridge::{Event, CloseBatchEvent, ProgresiveHelpersImpl}, IBridgeDispatcher,
         IBridgeDispatcherTrait,
     };
+
+    use crate::utils::word_array::hex::words_from_hex;
+    use crate::utils::word_array::WordArrayTrait;
 
     use openzeppelin_access::ownable::interface::{IOwnableDispatcher, IOwnableDispatcherTrait};
 
@@ -519,14 +531,14 @@ mod bridge_tests {
 
         start_cheat_caller_address_global(bob_address);
         btc.approve(bridge.contract_address, 50);
-        bridge.withdraw(808_u256, 50);
+        bridge.withdraw(words_from_hex("8080").span(), 50);
 
         start_cheat_caller_address_global(carol_address);
         btc.approve(bridge.contract_address, 50);
-        bridge.withdraw(808_u256, 50);
+        bridge.withdraw(words_from_hex("8080").span(), 50);
 
         cheat_caller_address(bridge.contract_address, admin_address, CheatSpan::TargetCalls(1));
-        bridge.close_withdrawal_batch();
+        bridge.close_withdrawal_batch(0);
     }
 
     #[test]
@@ -545,7 +557,7 @@ mod bridge_tests {
         start_cheat_caller_address_global(alice_address);
         btc.approve(bridge.contract_address, 2000);
         for _ in 0..ProgresiveHelpersImpl::TREE_MAX_SIZE + 1 {
-            bridge.withdraw(808_u256, 1);
+            bridge.withdraw(words_from_hex("8080").span(), 1);
         };
 
         spy
@@ -556,7 +568,7 @@ mod bridge_tests {
                         Event::CloseBatchEvent(
                             CloseBatchEvent {
                                 id: 0,
-                                root: 0x6849d71bb3026db34e73ee25d236d16c2159f27d5f5877214b494a78a6c934e4_u256
+                                root: 95311252102440718178582621104701739409720546408266107166172413683077514559281_u256
                                     .into(),
                             },
                         ),

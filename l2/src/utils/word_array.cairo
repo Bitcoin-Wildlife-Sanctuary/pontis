@@ -16,7 +16,7 @@ pub struct WordArray {
 }
 
 /// Span of a [WordArray]
-#[derive(Copy, Drop, Debug, PartialEq)]
+#[derive(Copy, Drop, Debug, PartialEq, Serde)]
 pub struct WordSpan {
     input: Span<u32>,
     last_input_word: u32,
