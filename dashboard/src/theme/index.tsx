@@ -3,6 +3,8 @@ import {ThemeProvider as SCThemeProvider} from 'styled-components';
 
 import {darkThemeColors} from './colors';
 
+type Size = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
+
 export const BREAKPOINTS = {
   xs: 0,
   sm: 576,
@@ -10,14 +12,34 @@ export const BREAKPOINTS = {
   lg: 992,
   xl: 1200,
   xxl: 1400,
-};
+} satisfies Record<Size, number>;
 
 export const MAX_WIDTHS = {
+  xs: 540,
   sm: 540,
   md: 720,
   lg: 960,
   xl: 1140,
   xxl: 1320,
+} satisfies Record<Size, number>;
+
+export const PAGE_PADDINGS = {
+  xs: 16,
+  sm: 16,
+  md: 24,
+  lg: 32,
+  xl: 40,
+  xxl: 64,
+} satisfies Record<Size, number>;
+
+const spacings = {
+  xxsmall: 6,
+  xsmall: 8,
+  small: 12,
+  medium: 16,
+  large: 24,
+  xlarge: 32,
+  xxlarge: 64,
 };
 
 const transitions = {
@@ -41,6 +63,7 @@ const misc = {
     default: 'Inter, sans-serif',
   },
   transitions,
+  spacings,
 };
 
 export function getTheme(theme: 'dark') {
