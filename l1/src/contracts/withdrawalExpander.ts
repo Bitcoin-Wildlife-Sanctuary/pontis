@@ -16,36 +16,73 @@ import {
 } from 'scrypt-ts'
 import { SHPreimage, SigHashUtils } from './sigHashUtils'
 import { GeneralUtils } from './generalUtils'
-import { MerklePath } from './merklePath'
 import { InputsSegments, TxUtils } from './txUtil'
 
+/**
+ * Using the ExpanderTransaction type, you can construct a * expander bitcoin transaction hash.
+ * for how to build a ExpanderTransaction from a expander transaction, please refer to the WithdrawalExpanderCovenant.getExpanderTransaction
+ */
 export type ExpanderTransaction = {
+  /**
+   * The version of the transaction.
+   * currently, ther version is always 2, in ByteString format 0x02000000.
+   */
   ver: ByteString
+  /**
+   * The inputs of the transaction. Split into segments due to the max variable size of bvm.
+   */
   inputs: InputsSegments
 
+  /**
+   * Whether the transaction is a createWithdrawal transaction.
+   */
   isCreateWithdrawalTx: boolean
-  // non-empty if prev tx is createWithdrawal tx, otherwise empty
+  /**
+   * The script pubkey of the bridge contract output.
+   * non-empty if isCreateWithdrawalTx is true, otherwise empty.
+   */
   bridgeSPK: ByteString
+  /**
+   * The amount of the bridge contract output.
+   * non-zero if isCreateWithdrawalTx is true, otherwise zero.
+   */
   bridgeAmt: bigint
+  /**
+   * The state hash of the bridge contract output.
+   * non-empty if isCreateWithdrawalTx is true, otherwise empty.
+   */
   bridgeStateHash: Sha256
-
+  /**
+   * The script pubkey of the expander contract output
+   */
   contractSPK: ByteString
-  output0Amt: bigint // always non-zero;
-  output1Amt: bigint // zero when prev tx is createWithdrawal tx or prev tx has no second expander output;
+  /**
+   * The amount of the first expander contract output.
+   * non-zero.
+   */
+  output0Amt: bigint
+  /**
+   * The amount of the second expander contract output.
+   * zero when prev tx is createWithdrawal tx or prev tx has no second expander output;
+   */
+  output1Amt: bigint
+  /**
+   * The state hash of the first expander contract output.
+   */
   stateHash0: Sha256
+  /**
+   * The state hash of the second expander contract output.
+   * non-empty if output1Amt > 0n, otherwise empty.
+   */
   stateHash1: Sha256
-
+  /**
+   * The change output of the transaction.
+   */
   changeOutput: ByteString
+  /**
+   * The locktime of the transaction.
+   */
   locktime: ByteString
-}
-
-export type ExpanderState = {
-  withdrawalRoot: Sha256
-}
-
-export type WithdrawalState = {
-  address: ByteString
-  amt: bigint
 }
 
 export class WithdrawalExpander extends SmartContract {
@@ -58,6 +95,17 @@ export class WithdrawalExpander extends SmartContract {
     this.operator = operator
   }
 
+  /**
+   * Distribute the withdrawals to the expander outputs.
+   * @param shPreimage sighash preimage of current tx
+   * @param sigOperator the operator signature of current tx
+   * @param isFirstExpanderOutput if current expander is the first expander output
+   * @param prevTx previous expander transaction
+   * @param withdrwalAddresses the addresses of the withdrawals
+   * @param withdrwalAmts the amounts of the withdrawals
+   * @param feePrevout fee prevout of current tx
+   * @param changeOutput change output of current tx
+   */
   @method()
   public distribute(
     shPreimage: SHPreimage,
@@ -65,13 +113,12 @@ export class WithdrawalExpander extends SmartContract {
 
     isFirstExpanderOutput: boolean,
 
-    prevLevel: bigint,
     prevTx: ExpanderTransaction,
 
     // we support max 4 withdrawals per tx
-    // if prevLevel is 0, 1 withdrawal;
-    // if prevLevel is 1, 1 or 2 withdrawals, allow 1 empty leaf;
-    // if prevLevel is 2, 1, 2 or 3 withdrawals, allow 3 empty leaves;
+    // if current utxo level is 0, 1 withdrawal;
+    // if current utxo level is 1, 1~2 withdrawals, allow 1 empty leaf;
+    // if current utxo level is 2, 1~4 withdrawals, allow 3 empty leaves;
     withdrwalAddresses: FixedArray<ByteString, 4>,
     withdrwalAmts: FixedArray<bigint, 4>,
 
@@ -113,22 +160,19 @@ export class WithdrawalExpander extends SmartContract {
       withdrwalAmts[3]
     )
 
-    const level1LeftNodeHash = WithdrawalExpander.getNodeHash(
-      1n,
+    const level1LeftNodeHash = WithdrawalExpander.getBranchNodeHash(
       withdrwalAmts[0],
       leafHash0,
       withdrwalAmts[1],
       leafHash1
     )
-    const level1RightNodeHash = WithdrawalExpander.getNodeHash(
-      1n,
+    const level1RightNodeHash = WithdrawalExpander.getBranchNodeHash(
       withdrwalAmts[2],
       leafHash2,
       withdrwalAmts[3],
       leafHash3
     )
-    const level2NodeHash = WithdrawalExpander.getNodeHash(
-      2n,
+    const level2NodeHash = WithdrawalExpander.getBranchNodeHash(
       withdrwalAmts[0] + withdrwalAmts[1],
       level1LeftNodeHash,
       withdrwalAmts[2] + withdrwalAmts[3],
@@ -138,13 +182,17 @@ export class WithdrawalExpander extends SmartContract {
     const stateHash = isFirstExpanderOutput
       ? prevTx.stateHash0
       : prevTx.stateHash1
-    // verify withdrawal address and amt are trustable
-    if (prevLevel == 0n) {
-      assert(stateHash == leafHash0)
-    } else if (prevLevel == 1n) {
-      assert(stateHash == level1LeftNodeHash)
-    } else if (prevLevel == 2n) {
-      assert(stateHash == level2NodeHash)
+
+    let maxLeftCount = 0n;
+    if (stateHash === leafHash0) {
+      // current expander tree only has 1 withdrawal
+      maxLeftCount = 1n;
+    } else if (stateHash === level1LeftNodeHash) {
+      // current expander tree has 2 withdrawals, allow 1 empty leaf
+      maxLeftCount = 2n;
+    } else if (stateHash === level2NodeHash) {
+      // current expander tree has 1~4 withdrawals, allow 3 empty leaves
+      maxLeftCount = 4n;
     } else {
       assert(false, 'withdrawal level must be 0, 1 or 2')
     }
@@ -152,8 +200,8 @@ export class WithdrawalExpander extends SmartContract {
     // verify outputs are correct
     let outputs = toByteString('')
     for (let i = 0; i < 4; i++) {
-      if (withdrwalAmts[i] > 0n) {
-        outputs += WithdrawalExpander.getAddressOutput(
+      if (withdrwalAmts[i] > 0n && i < maxLeftCount) {
+        outputs += WithdrawalExpander.buildAddressOutput(
           withdrwalAddresses[i],
           GeneralUtils.padAmt(withdrwalAmts[i])
         )
@@ -164,39 +212,32 @@ export class WithdrawalExpander extends SmartContract {
   }
 
   /**
-   * Expands current node of exapnsion tree into further two nodes or leaves.
-   *
-   * @param shPreimage - Sighash preimage of the currently executing transaction.
-   * @param sigOperator - Signature of bridge operator.
-   * @param isExpandingPrevTxFirstOutput - Indicates wether expanding first or second output (i.e. branch).
-   * @param isPrevTxBridge - Indicates wether prev tx is the bridge.
-   * @param prevTxBridge - Previous bridge tx data. Ignored if prev tx not bridge.
-   * @param prevTxExpander - Previous expander tx data. Ignored if prev tx is bridge.
-   * @param prevAggregationData - Aggregation data of previous transaction.
-   * @param currentAggregationData  - Aggregation data of current trnasaction.
-   * @param nextAggregationData0 - Subsequent aggregation data of first branch.
-   * @param nextAggregationData1 - Subsequent aggregation data of second branch.
-   * @param isExpandingLeaves - Indicates wether we're exapnding into leaves.
-   * @param withdrawalData0 - Withdrawal data of fist leaf. Ignored if not expanding into leaves.
-   * @param withdrawalData1 - Withdrawal data of second leaf. Ignored if not expanding into leaves.
-   * @param isLastAggregationLevel - Indicates wether we're on the last level of the aggregation tree (one above leaves).
-   * @param feePrevout - The prevout for the fee UTXO.
+   * expand current utxo into two new utxos.
+   * @param shPreimage sighash preimage of current tx
+   * @param sigOperator the operator signature of current tx
+   * @param isFirstExpanderOutput if current expander is the first expander output
+   * @param prevTx previous expander transaction
+   * @param childExpandNodeHash0 left child node hash
+   * @param childExpandNodeHash1 right child node hash
+   * @param childExpanderAmt0 left child expander amount, required, must be non-zero
+   * @param childExpanderAmt1 right child expander amount, optional, if 0, no right child expander output
+   * @param feePrevout fee prevout of current tx
+   * @param changeOutput change output of current tx
    */
   @method()
   public expand(
     shPreimage: SHPreimage,
     sigOperator: Sig,
 
-    isFirstExpanderOutput: boolean, // if expanding first or second output
+    isFirstExpanderOutput: boolean,
 
-    prevLevel: bigint,
     prevTx: ExpanderTransaction,
 
     childExpandNodeHash0: Sha256,
     childExpandNodeHash1: Sha256,
 
-    childExpanderAmt0: bigint, // always none-zero, if 0, throws
-    childExpanderAmt1: bigint, // if 0, no new expander1 outputs
+    childExpanderAmt0: bigint,
+    childExpanderAmt1: bigint,
 
     feePrevout: ByteString,
 
@@ -224,12 +265,8 @@ export class WithdrawalExpander extends SmartContract {
     // Check we're unlocking contract UTXO via the first input.
     assert(shPreimage.inputNumber == toByteString('00000000'))
 
-    // verify prevLevel is greater than 2n
-    assert(prevLevel > 2n)
-
     // verify stateHash is correct
-    const nodeHash = WithdrawalExpander.getNodeHash(
-      prevLevel,
+    const nodeHash = WithdrawalExpander.getBranchNodeHash(
       childExpanderAmt0,
       childExpandNodeHash0,
       childExpanderAmt1,
@@ -270,25 +307,36 @@ export class WithdrawalExpander extends SmartContract {
     assert(sha256(outputs) == shPreimage.hashOutputs)
   }
 
+  /**
+   * Get the hash of the leaf node. 
+   * for WithdrawalExpander contract, merkle node hash is state hash.
+   * @param address the address of the leaf node
+   * @param amt the amount of the leaf node
+   * @returns the hash of the leaf node
+   */
   @method()
   static getLeafNodeHash(address: ByteString, amt: bigint): Sha256 {
     // sha256(address) to avoid issue with dynamic address length
-    return sha256(
-      MerklePath.levelToByteString(0n) +
-        sha256(sha256(address) + GeneralUtils.padAmt(amt))
-    )
+    return sha256(sha256(address) + GeneralUtils.padAmt(amt))
   }
 
+  /**
+   * Get the hash of the branch node.
+   * for WithdrawalExpander contract, merkle node hash is state hash.
+   * @param leftAmt the amount of the left child node
+   * @param leftChild the hash of the left child node
+   * @param rightAmt the amount of the right child node
+   * @param rightChild the hash of the right child node
+   * @returns the hash of the branch node
+   */
   @method()
-  static getNodeHash(
-    level: bigint,
+  static getBranchNodeHash(
     leftAmt: bigint,
     leftChild: Sha256,
     rightAmt: bigint,
     rightChild: Sha256
   ): Sha256 {
     return sha256(
-      MerklePath.levelToByteString(level) +
         GeneralUtils.padAmt(leftAmt) +
         leftChild +
         GeneralUtils.padAmt(rightAmt) +
@@ -297,18 +345,10 @@ export class WithdrawalExpander extends SmartContract {
   }
 
   /**
-   *
-   * @param batchesRoot
-   * @param depositAggregatorSPK
-   * @returns
+   * Get the txid of a expander transaction.
+   * @param tx the expander transaction
+   * @returns the txid of the expander transaction
    */
-  static getStateHash(
-    batchesRoot: Sha256,
-    depositAggregatorSPK: ByteString
-  ): Sha256 {
-    return sha256(batchesRoot + depositAggregatorSPK)
-  }
-
   @method()
   static getTxId(tx: ExpanderTransaction): Sha256 {
     // createWithdrawalTx: bridge + fee => state + bridge + withdrawalExpander + change(optional);
@@ -352,6 +392,14 @@ export class WithdrawalExpander extends SmartContract {
     )
   }
 
+  /**
+   * Get the hash of the prevouts. Used to compare with the hashPrevouts in sighash preimage.
+   * @param prevTxId the txid of the previous transaction
+   * @param feePrevout the fee prevout of the current transaction
+   * @param isCreateWithdrawalTx whether the previous transaction is a createWithdrawal transaction
+   * @param isExpandingPrevTxFirstOutput whether the current transaction is expanding the first output of the previous transaction
+   * @returns the hash of the prevouts
+   */
   @method()
   static getHashPrevouts(
     prevTxId: Sha256,
@@ -368,8 +416,14 @@ export class WithdrawalExpander extends SmartContract {
     return sha256(prevTxId + contractOutIdx + feePrevout)
   }
 
+  /**
+   * Build the output of an address.
+   * @param addressScript the script pubkey of the address
+   * @param satoshis the amount of the output
+   * @returns the output of the address
+   */
   @method()
-  static getAddressOutput(
+  static buildAddressOutput(
     addressScript: ByteString,
     satoshis: ByteString
   ): ByteString {

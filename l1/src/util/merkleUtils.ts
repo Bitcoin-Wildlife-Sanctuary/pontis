@@ -184,8 +184,7 @@ export class WithdrawalMerkle {
         const left = leafHashes[i]
         const right = leafHashes[i + 1]
         newLeafHashes.push({
-          hash: WithdrawalExpander.getNodeHash(
-            startLevel,
+          hash: WithdrawalExpander.getBranchNodeHash(
             left.amt,
             left.hash,
             right.amt,
@@ -238,7 +237,6 @@ export class WithdrawalMerkle {
       )
     } else {
       return WithdrawalExpanderCovenant.createNonLeafState(
-        BigInt(levels.length - 1),
         levels[1][0].hash,
         levels[1][1].hash,
         levels[1][0].amt,
@@ -253,6 +251,7 @@ export class WithdrawalMerkle {
     if (!node) {
       throw new Error(`expander hash: ${hash} not found in any level`)
     }
+    return node
   }
 
   static getStateForHash(allWithdrawals: Withdrawal[], hash: Sha256) {
@@ -267,7 +266,6 @@ export class WithdrawalMerkle {
     } else {
       const children = this.getHashChildren(allWithdrawals, hash)
       return WithdrawalExpanderCovenant.createNonLeafState(
-        node.level,
         children.leftChild.hash,
         children.rightChild.hash,
         children.leftChild.amt,
