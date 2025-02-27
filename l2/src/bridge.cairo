@@ -581,9 +581,8 @@ mod bridge_tests {
             );
 
         cheat_caller_address(bridge.contract_address, alice_address, CheatSpan::TargetCalls(1));
-    
-        bridge.withdraw(words_from_hex("8080").span(), 50);
 
+        bridge.withdraw(words_from_hex("8080").span(), 50);
     }
 
     #[test]
@@ -616,19 +615,6 @@ mod bridge_tests {
 
         cheat_caller_address(bridge.contract_address, admin_address, CheatSpan::TargetCalls(1));
         bridge.close_withdrawal_batch(0);
-    }
-
-    #[test]
-    fn abc() {
-        // fn withdraw(ref self: TContractState, recipient: L1Address, amount: u32);
-
-        let recipient = words_from_hex("03bfac5406925f9fa00194aa5fd093f60775d90475dcf88c24359eddd385b398a8").span();
-        let amount = 10_u32;
-        
-        let mut s = array![];
-        recipient.serialize(ref s);
-        amount.serialize(ref s);
-        println!("{:?}", s);
     }
 
     #[test]

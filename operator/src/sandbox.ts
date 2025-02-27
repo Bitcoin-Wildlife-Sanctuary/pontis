@@ -85,7 +85,7 @@ async function sandboxOperator() {
     DEPOSIT_BATCH_SIZE: 4,
     MAX_DEPOSIT_BLOCK_AGE: 2,
     MAX_WITHDRAWAL_BLOCK_AGE: 2,
-    MAX_WITHDRAWAL_BATCH_SIZE: 2,
+    MAX_WITHDRAWAL_BATCH_SIZE: 4,
     submitDepositsToL2: (hash: L1TxHash, deposits: Deposit[]) => {
       return submitDepositsToL2(admin, bridge, BigInt('0x' + hash), deposits);
     },
