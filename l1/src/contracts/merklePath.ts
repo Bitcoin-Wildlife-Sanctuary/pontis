@@ -11,32 +11,46 @@ import {
   prop,
 } from 'scrypt-ts'
 
+/**
+ * The maximum depth of the merkle proof.
+ */
 export const MERKLE_PROOF_MAX_DEPTH = 4
 
-/*
- - on the left
- - on the right
-*/
+/**
+ * The position of the node in the merkle tree.
+ */
 export enum NodePos {
   Left,
   Right,
 }
 
+/**
+ * The node of merkle proof.
+ */
 export type Node = {
+  /**
+   * The hash of the sibling node.
+   */
   hash: ByteString
+  /**
+   * The position of the sibling node.
+   */
   pos: NodePos
 }
 
+/**
+ * The length of the node.
+ */
 export const NODE_LENGTH = 32
 
-// todo: confirm the depth of bridge state merkle tree
+/**
+ * The merkle proof.
+ */
 export type MerkleProof = FixedArray<Node, typeof MERKLE_PROOF_MAX_DEPTH> // If shorter than max depth, pad with invalid nodes.
 
-export type IntermediateValues = FixedArray<
-  ByteString,
-  typeof MERKLE_PROOF_MAX_DEPTH
->
-
+/**
+ * The merkle path utility.
+ */
 export class MerklePath extends SmartContractLib {
   @prop()
   static readonly NULL_NODE: Sha256 = Sha256(
@@ -45,6 +59,12 @@ export class MerklePath extends SmartContractLib {
     )
   )
 
+  /**
+   * Calculate the merkle root.
+   * @param leaf - The leaf node hash
+   * @param merkleProof - The merkle proof.
+   * @returns The merkle root.
+   */
   @method()
   static calcMerkleRoot(leaf: Sha256, merkleProof: MerkleProof): Sha256 {
     let root = leaf
@@ -70,8 +90,8 @@ export class MerklePath extends SmartContractLib {
 
   /**
    * Convert level to byte string.
-   * @param level
-   * @returns
+   * @param level - The level.
+   * @returns The byte string.
    */
   @method()
   static levelToByteString(level: bigint): ByteString {

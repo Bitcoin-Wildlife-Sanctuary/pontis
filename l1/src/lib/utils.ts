@@ -184,11 +184,11 @@ export function getDummyL2Address(): ByteString {
 }
 
 // todo confirm this is correct
-export function getDummyLengthedScript(): ByteString {
-  const script = Buffer.alloc(32)
-  const buf = Buffer.concat([Buffer.from([0x00]), script])
-  return toByteString(tools.toHex(buf))
-}
+// export function getDummyLengthedScript(): ByteString {
+//   const script = Buffer.alloc(32)
+//   const buf = Buffer.concat([Buffer.from([0x00]), script])
+//   return toByteString(tools.toHex(buf))
+// }
 
 export function getDummyUtxo(address?: string, satoshis?: number): UTXO {
   address = address || getDummyAddress()

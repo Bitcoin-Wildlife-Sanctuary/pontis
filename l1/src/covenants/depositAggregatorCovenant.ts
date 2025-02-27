@@ -55,7 +55,7 @@ export function stateToBatchID(
           state.depositAddress,
           state.depositAmt
         )
-      : DepositAggregator.hashAggregatedDepositData(
+      : DepositAggregator.hashAggregatorData(
           state.level,
           state.prevHashData0,
           state.prevHashData1
@@ -118,7 +118,7 @@ export interface TraceableDepositAggregatorUtxo extends DepositAggregatorUtxo {
 }
 
 export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> {
-  static readonly LOCKED_ASM_VERSION = 'f5ffe171a5ceef4165cf33edb0c177ba'
+  static readonly LOCKED_ASM_VERSION = '7c5d2b5c86df5d3e886b048e1a51eec0'
 
   constructor(
     readonly operator: PubKey,
@@ -159,7 +159,7 @@ export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> 
         state.depositAmt
       )
     } else {
-      return DepositAggregator.hashAggregatedDepositData(
+      return DepositAggregator.hashAggregatorData(
         state.level,
         state.prevHashData0,
         state.prevHashData1

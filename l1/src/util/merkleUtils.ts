@@ -136,16 +136,18 @@ export class WithdrawalMerkle {
       throw new Error('withdrawalList length must be greater than 0')
     }
     if (withdrawalList.length === 1) {
-      const hash = WithdrawalExpander.getLeafNodeHash(
-        withdrawalList[0].l1Address,
-        withdrawalList[0].amt
-      );
       return {
-        root: hash,
+        root: WithdrawalExpander.getLeafNodeHash(
+          withdrawalList[0].l1Address,
+          withdrawalList[0].amt
+        ),
         levels: [
           [
             {
-              hash,
+              hash: WithdrawalExpander.getLeafNodeHash(
+                withdrawalList[0].l1Address,
+                withdrawalList[0].amt
+              ),
               amt: withdrawalList[0].amt,
               level: startLevel,
               withdrawals: [withdrawalList[0]],
@@ -224,7 +226,7 @@ export class WithdrawalMerkle {
   static getMerkleTree(withdrawals: Withdrawal[]) {
     withdrawals = cloneDeep(withdrawals)
     withdrawals = this.padEmptyWithdrawals(withdrawals)
-    return this.calculateMerkle(withdrawals)  
+    return this.calculateMerkle(withdrawals)
   }
 
   static getMerkleRoot(withdrawals: Withdrawal[]) {

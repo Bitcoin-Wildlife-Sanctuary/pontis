@@ -18,25 +18,39 @@ import { GeneralUtils } from './generalUtils'
 import { SpentSPKs, TxUtils } from './txUtil'
 import { MerklePath } from './merklePath'
 
+/**
+ * The data of the deposit.
+ */
 export type DepositData = {
-  // todo: confirm address length? 32 bytes?
+  /**
+   * The L2 address of the deposit.
+   */
   address: ByteString
+  /**
+   * The amount/satoshis of the deposit.
+   */
   amount: bigint
 }
 
 export class DepositAggregator extends SmartContract {
+  /**
+   * The operator of the deposit aggregator.
+   * @dev-note: the pubkey is xonly
+   */
   @prop()
-  /// @dev-note: xonly
   operator: PubKey
 
+  /**
+   * The script pubkey of the bridge contract output.
+   */
   @prop()
   bridgeSPK: ByteString
 
   /**
-   * Covenant used for the aggregation of deposits.
-   *
-   * @param operator - Public key of bridge operator.
-   * @param bridgeSPK - P2TR script of the bridge state covenant. Includes length prefix!
+   * Constructor
+   * Used to create a deposit aggregator contract. which means the user start to deposit from L1 to L2.
+   * @param operator - The operator of the deposit aggregator.
+   * @param bridgeSPK - The script pubkey of the bridge contract output.
    */
   constructor(operator: PubKey, bridgeSPK: ByteString) {
     super(...arguments)
@@ -45,19 +59,20 @@ export class DepositAggregator extends SmartContract {
   }
 
   /**
-   * Aggregates two aggregator transactions (or leaves) into one.
+   * Aggregates two aggregator utxos into one.
    *
-   * @param shPreimage - Sighash preimage of the currently executing transaction.
-   * @param sigOperator - Signature of the bridge operator.
-   * @param level - the level of the aggregation; zero is the first level, which is the leaf level
-   * @param prevTx0 - Transaction data of the first previous transaction being aggregated. Can be a leaf transaction containing the deposit request itself or an already aggregated transaction.
-   * @param prevTx1 - Transaction data of the second previous transaction being aggregated.
-   * @param ancestorTx0 - First ancestor transaction. These are used to inductively verify the transaction history; ignored when aggregating leaves.
-   * @param ancestorTx1 - Second ancestor transaction.
-   * @param ancestorTx2 - Third ancestor transaction.
-   * @param ancestorTx3 - Fourth ancestor transaction.
-   * @param isAncestorLeaf - Indicates whether the ancestor transactions are leaves.
-   * @param fundingPrevout - The prevout for the funding UTXO.
+   * tx: aggregatorInput0 + aggregatorInput1 + feeInput => stateOutput + aggregatorOutput + changeOutput(optional)
+   *
+   * @param shPreimage - The sighash preimage of the currently executing transaction.
+   * @param sigOperator - The signature of the bridge operator.
+   * @param level - The level of the aggregation; zero is the first level, which is the leaf level
+   * @param prevTx0 - The previous transaction of the first input
+   * @param prevTx1 - The previous transaction of the second input
+   * @param ancestorTx0 - The previous transaction of first input of prevTx0
+   * @param ancestorTx1 - The previous transaction of second input of prevTx0
+   * @param ancestorTx2 - The previous transaction of first input of prevTx1
+   * @param ancestorTx3 - The previous transaction of second input of prevTx1
+   * @param feePrevout - The prevout of the fee input
    * @param isFirstInput - Indicates whether this method is called from the first or second input.
    * @param depositData0 - Actual deposit data of the first deposit; used when aggregating leaves.
    * @param depositData1 - Actual deposit data of the second deposit; used when aggregating leaves.
@@ -73,14 +88,12 @@ export class DepositAggregator extends SmartContract {
     ancestorTx1: AggregatorTransaction,
     ancestorTx2: AggregatorTransaction,
     ancestorTx3: AggregatorTransaction,
-    fundingPrevout: ByteString,
+    feePrevout: ByteString,
     isFirstInput: boolean,
     depositData0: DepositData,
     depositData1: DepositData,
     changeOutput: ByteString
   ) {
-    // todo check two aggregator same level
-
     // Check sighash preimage.
     const s = SigHashUtils.checkSHPreimage(shPreimage)
     assert(this.checkSig(s, SigHashUtils.Gx))
@@ -99,7 +112,7 @@ export class DepositAggregator extends SmartContract {
     const hashPrevouts = AggregatorUtils.getHashPrevouts(
       prevTxId0,
       prevTxId1,
-      fundingPrevout
+      feePrevout
     )
     assert(hashPrevouts == shPreimage.hashPrevouts)
 
@@ -117,9 +130,6 @@ export class DepositAggregator extends SmartContract {
       // If prev txns are leaves, check that the hash in their state
       // OP_RETURN output corresponds to the data passed in as witnesses.
 
-      // todo: confirm address length? 32 bytes?
-      assert(len(depositData0.address) == 32n)
-      assert(len(depositData1.address) == 32n)
       const hashData0 = DepositAggregator.hashDepositData(
         depositData0.address,
         depositData0.amount
@@ -170,12 +180,12 @@ export class DepositAggregator extends SmartContract {
       assert(prevTx0.outputContractSPK == ancestorTx2.outputContractSPK)
       assert(prevTx0.outputContractSPK == ancestorTx3.outputContractSPK)
 
-      const hashData0 = DepositAggregator.hashAggregatedDepositData(
+      const hashData0 = DepositAggregator.hashAggregatorData(
         level,
         ancestorTx0.hashData,
         ancestorTx1.hashData
       )
-      const hashData1 = DepositAggregator.hashAggregatedDepositData(
+      const hashData1 = DepositAggregator.hashAggregatorData(
         level,
         ancestorTx2.hashData,
         ancestorTx3.hashData
@@ -188,7 +198,7 @@ export class DepositAggregator extends SmartContract {
     // Concatinate hashes from previous aggregation txns (or leaves)
     // and compute new hash. Store this new hash in the state OP_RETURN
     // output.
-    const newHash = DepositAggregator.hashAggregatedDepositData(
+    const newHash = DepositAggregator.hashAggregatorData(
       level + 1n,
       prevTx0.hashData,
       prevTx1.hashData
@@ -215,7 +225,7 @@ export class DepositAggregator extends SmartContract {
    * @param ancestorTx0 - First ancestor transaction. These are used to inductively verify the transaction history.
    * @param ancestorTx1 - Second ancestor transaction.
    * @param bridgeTxId - TXID of the latest bridge instance.
-   * @param fundingPrevout - Prevout of funding UTXO.
+   * @param feePrevout - Prevout of fee UTXO.
    */
   @method()
   public finalizeL1(
@@ -227,7 +237,7 @@ export class DepositAggregator extends SmartContract {
     ancestorTx1: AggregatorTransaction,
     bridgeTxId: Sha256,
     spentSPKs: SpentSPKs,
-    fundingPrevout: ByteString
+    feePrevout: ByteString
   ) {
     // Check sighash preimage.
     const s = SigHashUtils.checkSHPreimage(shPreimage)
@@ -243,12 +253,12 @@ export class DepositAggregator extends SmartContract {
     const hashPrevouts = AggregatorUtils.getHashPrevouts(
       bridgeTxId,
       prevTxId,
-      fundingPrevout
+      feePrevout
     )
     assert(hashPrevouts == shPreimage.hashPrevouts)
 
     // check bridgeSPK is valid
-    assert(TxUtils.checkSpentScripts(spentSPKs, shPreimage.hashSpentScripts))
+    TxUtils.checkSpentScripts(spentSPKs, shPreimage.hashSpentScripts)
     assert(spentSPKs[0] == this.bridgeSPK)
 
     // Make sure this is unlocked via second input.
@@ -282,18 +292,33 @@ export class DepositAggregator extends SmartContract {
     assert(true)
   }
 
+  /**
+   * Hash the deposit data.
+   * For depositData, we store the plain data, not hashed.
+   * @param depositAddress - The L2 address of the deposit.
+   * @param depositAmt - The amount of the deposit.
+   * @returns The hash of the deposit data.
+   */
   @method()
   static hashDepositData(
     depositAddress: ByteString,
     depositAmt: bigint
   ): ByteString {
     // for depositData, we store the plain data, not hashed.
-    assert(len(depositAddress) == 32n)
+    assert(len(depositAddress) == GeneralUtils.L2_ADDRESS_LENGTH)
     return depositAddress + GeneralUtils.padAmt(depositAmt)
   }
 
+  /**
+   * Hash the aggregated deposit data.
+   * for aggregatorData, we store the hash of the data, not the plain data.
+   * @param level - The level of the aggregation.
+   * @param left - The left hash of the aggregated deposit data.
+   * @param right - The right hash of the aggregated deposit data.
+   * @returns The hash of the aggregated deposit data.
+   */
   @method()
-  static hashAggregatedDepositData(
+  static hashAggregatorData(
     level: bigint,
     left: ByteString,
     right: ByteString

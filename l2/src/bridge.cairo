@@ -194,6 +194,24 @@ pub mod Bridge {
 
             *hashes.at(0)
         }
+        fn merkle_root_with_levels(hashes: Span<Digest>) -> Digest {
+            let mut hashes = hashes;
+
+            let mut level: u8 = 1;
+
+            while hashes.len() > 1 {
+                let mut next_hashes: Array<Digest> = array![];
+                while let Option::Some(v) = hashes.multi_pop_front::<2>() {
+                    let [a, b] = (*v).unbox();
+                    next_hashes.append(Self::hash256_inner_deposit_node(level, @a, @b));
+                };
+                assert!(hashes.len() == 0, "Number of hashes should be a power of 2");
+                hashes = next_hashes.span();
+                level += 1;
+            };
+
+            *hashes.at(0)
+        }
     }
 
     #[generate_trait]

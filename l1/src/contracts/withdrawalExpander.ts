@@ -75,7 +75,7 @@ export class WithdrawalExpander extends SmartContract {
     withdrwalAddresses: FixedArray<ByteString, 4>,
     withdrwalAmts: FixedArray<bigint, 4>,
 
-    fundingPrevout: ByteString,
+    feePrevout: ByteString,
     changeOutput: ByteString
   ) {
     // check sighash preimage
@@ -89,7 +89,7 @@ export class WithdrawalExpander extends SmartContract {
     const prevTxId = WithdrawalExpander.getTxId(prevTx)
     const hashPrevouts = WithdrawalExpander.getHashPrevouts(
       prevTxId,
-      fundingPrevout,
+      feePrevout,
       prevTx.isCreateWithdrawalTx,
       isFirstExpanderOutput
     )
@@ -180,7 +180,7 @@ export class WithdrawalExpander extends SmartContract {
    * @param withdrawalData0 - Withdrawal data of fist leaf. Ignored if not expanding into leaves.
    * @param withdrawalData1 - Withdrawal data of second leaf. Ignored if not expanding into leaves.
    * @param isLastAggregationLevel - Indicates wether we're on the last level of the aggregation tree (one above leaves).
-   * @param fundingPrevout - The prevout for the funding UTXO.
+   * @param feePrevout - The prevout for the fee UTXO.
    */
   @method()
   public expand(
@@ -198,7 +198,7 @@ export class WithdrawalExpander extends SmartContract {
     childExpanderAmt0: bigint, // always none-zero, if 0, throws
     childExpanderAmt1: bigint, // if 0, no new expander1 outputs
 
-    fundingPrevout: ByteString,
+    feePrevout: ByteString,
 
     changeOutput: ByteString
   ) {
@@ -215,7 +215,7 @@ export class WithdrawalExpander extends SmartContract {
     // Check passed prev tx is actually unlocked by the currently executing tx.
     const hashPrevouts = WithdrawalExpander.getHashPrevouts(
       prevTxId,
-      fundingPrevout,
+      feePrevout,
       prevTx.isCreateWithdrawalTx,
       isFirstExpanderOutput
     )
