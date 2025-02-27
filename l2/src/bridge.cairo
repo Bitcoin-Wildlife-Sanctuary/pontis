@@ -203,7 +203,7 @@ pub mod Bridge {
                 let mut next_hashes: Array<Digest> = array![];
                 while let Option::Some(v) = hashes.multi_pop_front::<2>() {
                     let [a, b] = (*v).unbox();
-                    next_hashes.append(Self::hash256_inner_deposit_node(level, @a, @b));
+                    next_hashes.append(Self::hash256_inner_nodes(level, @a, @b));
                 };
                 assert!(hashes.len() == 0, "Number of hashes should be a power of 2");
                 hashes = next_hashes.span();
@@ -568,6 +568,25 @@ mod bridge_tests {
     }
 
     #[test]
+    #[should_panic(expected: 'ERC20: insufficient allowance')]
+    fn test_bridge_not_allowed_to_burn() {
+        let (admin_address, alice_address, _, _, _, bridge) = fixture();
+
+        cheat_caller_address(bridge.contract_address, admin_address, CheatSpan::TargetCalls(1));
+
+        bridge
+            .deposit(
+                Default::default(),
+                array![Deposit { recipient: alice_address, amount: 100 }].span(),
+            );
+
+        cheat_caller_address(bridge.contract_address, alice_address, CheatSpan::TargetCalls(1));
+    
+        bridge.withdraw(words_from_hex("8080").span(), 50);
+
+    }
+
+    #[test]
     fn test_basic_flow() {
         let (admin_address, alice_address, bob_address, carol_address, btc, bridge) = fixture();
 
@@ -579,20 +598,37 @@ mod bridge_tests {
                 array![Deposit { recipient: alice_address, amount: 100 }].span(),
             );
 
-        start_cheat_caller_address_global(alice_address);
+        cheat_caller_address(btc.contract_address, alice_address, CheatSpan::TargetCalls(1));
         btc.transfer(bob_address, 50);
+
+        cheat_caller_address(btc.contract_address, alice_address, CheatSpan::TargetCalls(1));
         btc.transfer(carol_address, 50);
 
-        start_cheat_caller_address_global(bob_address);
+        cheat_caller_address(btc.contract_address, bob_address, CheatSpan::TargetCalls(1));
         btc.approve(bridge.contract_address, 50);
+        cheat_caller_address(bridge.contract_address, bob_address, CheatSpan::TargetCalls(1));
         bridge.withdraw(words_from_hex("8080").span(), 50);
 
-        start_cheat_caller_address_global(carol_address);
+        cheat_caller_address(btc.contract_address, carol_address, CheatSpan::TargetCalls(1));
         btc.approve(bridge.contract_address, 50);
+        cheat_caller_address(bridge.contract_address, carol_address, CheatSpan::TargetCalls(1));
         bridge.withdraw(words_from_hex("8080").span(), 50);
 
         cheat_caller_address(bridge.contract_address, admin_address, CheatSpan::TargetCalls(1));
         bridge.close_withdrawal_batch(0);
+    }
+
+    #[test]
+    fn abc() {
+        // fn withdraw(ref self: TContractState, recipient: L1Address, amount: u32);
+
+        let recipient = words_from_hex("03bfac5406925f9fa00194aa5fd093f60775d90475dcf88c24359eddd385b398a8").span();
+        let amount = 10_u32;
+        
+        let mut s = array![];
+        recipient.serialize(ref s);
+        amount.serialize(ref s);
+        println!("{:?}", s);
     }
 
     #[test]
