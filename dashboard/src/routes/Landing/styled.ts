@@ -75,12 +75,18 @@ export const TransactionsContainer = styled.div`
 
 export const SectionCard = styled(ContentCard)`
   min-height: 360px;
-  overflow-y: scroll;
 `;
 
 export const SectionCardTitle = styled(Text.Title).attrs({$textAlign: 'center'})`
   display: inline-block;
   padding: ${({theme}) => theme.spacings.small}px;
+  margin-bottom: ${({theme}) => theme.spacings.small}px;
+  border-bottom: 1px solid ${({theme}) => theme.colors.border};
+`;
+
+export const TableContainer = styled(Col)`
+  height: 100%;
+  overflow-y: scroll;
 `;
 
 export const Table = styled.table`
@@ -88,6 +94,12 @@ export const Table = styled.table`
 
   tr {
     border-bottom: 1px solid ${({theme}) => theme.colors.border};
+  }
+
+  thead {
+    background-color: ${({theme}) => theme.colors.elevated};
+    position: sticky;
+    top: 0;
   }
 
   th,

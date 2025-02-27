@@ -1,6 +1,15 @@
 import NiceCatImage from '../../assets/nice-cat.jpeg';
-import {Col, Divider, GridCol, GridRow, Icon, Row, Text} from '../../components';
-import {Container, ContentCard, LogoImage, SectionCard, SectionCardTitle, Table, TransactionsContainer} from './styled';
+import {Col, GridCol, GridRow, Icon, Row, Text} from '../../components';
+import {
+  Container,
+  ContentCard,
+  LogoImage,
+  SectionCard,
+  SectionCardTitle,
+  Table,
+  TableContainer,
+  TransactionsContainer,
+} from './styled';
 
 const Landing: React.FC = () => {
   return (
@@ -75,53 +84,54 @@ const Landing: React.FC = () => {
         <TransactionsContainer>
           <SectionCard className="pending">
             <SectionCardTitle>Pending</SectionCardTitle>
-            <Divider $marginBottom="small" />
 
-            <Table>
-              <thead>
-                <tr>
-                  <th>
-                    <Text.Subtitle $fontWeight={600}>RECIPIENT</Text.Subtitle>
-                  </th>
-                  <th>
-                    <Text.Subtitle $fontWeight={600}>AMOUNT</Text.Subtitle>
-                  </th>
-                  <th>
-                    <Text.Subtitle $fontWeight={600}>ORIGIN TRANSACTION</Text.Subtitle>
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {Array.from({length: 20}).map((_, index) => (
-                  <tr key={index.toString()}>
-                    <td>
-                      <a href="#">
-                        <Row $alignItems="center" $gap="xsmall">
-                          <Text.BodyStrong $color="inherit">0x02d8...493b</Text.BodyStrong>
-
-                          <Icon name="ExternalLink" color="inherit" size={18} />
-                        </Row>
-                      </a>
-                    </td>
-
-                    <td>
-                      <Text.BodyStrong>0.509</Text.BodyStrong>
-                    </td>
-
-                    <td>
-                      <a href="#">
-                        <Row $alignItems="center" $gap="xsmall">
-                          <Text.BodyStrong $color="inherit">1a6d...a0dd</Text.BodyStrong>
-
-                          <Icon name="ExternalLink" color="inherit" size={18} />
-                        </Row>
-                      </a>
-                    </td>
+            <TableContainer>
+              <Table>
+                <thead>
+                  <tr>
+                    <th>
+                      <Text.Subtitle $fontWeight={600}>RECIPIENT</Text.Subtitle>
+                    </th>
+                    <th>
+                      <Text.Subtitle $fontWeight={600}>AMOUNT</Text.Subtitle>
+                    </th>
+                    <th>
+                      <Text.Subtitle $fontWeight={600}>ORIGIN TRANSACTION</Text.Subtitle>
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </Table>
+                </thead>
+
+                <tbody>
+                  {Array.from({length: 20}).map((_, index) => (
+                    <tr key={index.toString()}>
+                      <td>
+                        <a href="#">
+                          <Row $alignItems="center" $gap="xsmall">
+                            <Text.BodyStrong $color="inherit">0x02d8...493b</Text.BodyStrong>
+
+                            <Icon name="ExternalLink" color="inherit" size={18} />
+                          </Row>
+                        </a>
+                      </td>
+
+                      <td>
+                        <Text.BodyStrong>0.509</Text.BodyStrong>
+                      </td>
+
+                      <td>
+                        <a href="#">
+                          <Row $alignItems="center" $gap="xsmall">
+                            <Text.BodyStrong $color="inherit">1a6d...a0dd</Text.BodyStrong>
+
+                            <Icon name="ExternalLink" color="inherit" size={18} />
+                          </Row>
+                        </a>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </TableContainer>
           </SectionCard>
 
           <SectionCard className="deposits" />
