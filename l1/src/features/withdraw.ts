@@ -132,13 +132,15 @@ export async function expandWithdrawal2(
   expanderUtxo: TraceableWithdrawalExpanderUtxo,
   leftState: WithdrawalExpanderState,
   rightState: WithdrawalExpanderState,
+
   feeRate: number
 ) {
   const changeAddress = await signer.getAddress()
 
-  if (expanderUtxo.state.level <= WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE) {
-    throw new Error(`withdrawal expander level should be greater than ${WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE}`)
-  }
+  // TODO: how to enforce this?
+  // if (expanderUtxo.state.level <= WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE) {
+  //   throw new Error(`withdrawal expander level should be greater than ${WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE}`)
+  // }
 
   const tracedWithdrawalExpander = await WithdrawalExpanderCovenant.backtrace(
     expanderUtxo,
@@ -153,6 +155,10 @@ export async function expandWithdrawal2(
     tracedWithdrawalExpander.covenant.operator,
     rightState
   )
+
+  if (expanderUtxo.state.type === 'LEAF') {
+    throw new Error('expander utxo is a leaf')
+  }
 
   if (
     outputWithdrawalExpander0Covenant.serializedState() !==
@@ -332,87 +338,87 @@ function buildExpandWithdrawalTx(
   return expandWithdrawalTx
 }
 
-export async function distributeWithdrawals(
-  signer: Signer,
-  network: SupportedNetwork,
-  utxoProvider: UtxoProvider,
-  chainProvider: ChainProvider,
+// export async function distributeWithdrawals(
+//   signer: Signer,
+//   network: SupportedNetwork,
+//   utxoProvider: UtxoProvider,
+//   chainProvider: ChainProvider,
 
-  withdrawalExpanderUtxo: TraceableWithdrawalExpanderUtxo,
-  allWithdrawals: Withdrawal[],
+//   withdrawalExpanderUtxo: TraceableWithdrawalExpanderUtxo,
+//   allWithdrawals: Withdrawal[],
 
-  feeRate: number
-) {
-  const changeAddress = await signer.getAddress()
+//   feeRate: number
+// ) {
+//   const changeAddress = await signer.getAddress()
 
-  const withdrawalLevels =
-    WithdrawalMerkle.getMerkleLevels(allWithdrawals).flat()
+//   const withdrawalLevels =
+//     WithdrawalMerkle.getMerkleLevels(allWithdrawals).flat()
 
-  const hash = WithdrawalExpanderCovenant.serializeState(
-    withdrawalExpanderUtxo.state
-  )
-  const node = WithdrawalMerkle.assertHashExists(allWithdrawals, hash);
-  if (node.level > WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE) {
-    throw new Error(`withdrawal expander level should be less than ${WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE}`)
-  }
-  const {withdrawals} = withdrawalLevels.find((v) => v.hash === hash)
+//   const hash = WithdrawalExpanderCovenant.serializeState(
+//     withdrawalExpanderUtxo.state
+//   )
+//   const node = WithdrawalMerkle.assertHashExists(allWithdrawals, hash);
+//   if (node.level > WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE) {
+//     throw new Error(`withdrawal expander level should be less than ${WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE}`)
+//   }
+//   const {withdrawals} = withdrawalLevels.find((v) => v.hash === hash)
   
-  const tracedWithdrawalExpander = await WithdrawalExpanderCovenant.backtrace(
-    withdrawalExpanderUtxo,
-    chainProvider
-  )
+//   const tracedWithdrawalExpander = await WithdrawalExpanderCovenant.backtrace(
+//     withdrawalExpanderUtxo,
+//     chainProvider
+//   )
 
-  const est = estimateDistributeWithdrawalsVSize(
-    network,
-    withdrawalExpanderUtxo,
-    tracedWithdrawalExpander,
-    withdrawals,
-    changeAddress,
-    feeRate
-  )
-  const total = feeRate * est.vSize
-  const utxos = await utxoProvider.getUtxos(changeAddress, {
-    total: Number(total),
-  })
-  if (utxos.length === 0) {
-    throw new Error(`Insufficient satoshis input amount: no utxos found`)
-  }
-  const feeUtxo = pickLargeFeeUtxo(utxos)
-  if (feeUtxo.satoshis < total) {
-    throw new Error(
-      `Insufficient satoshis input amount: fee utxo(${feeUtxo.satoshis}) < total(${total})`
-    )
-  }
+//   const est = estimateDistributeWithdrawalsVSize(
+//     network,
+//     withdrawalExpanderUtxo,
+//     tracedWithdrawalExpander,
+//     withdrawals,
+//     changeAddress,
+//     feeRate
+//   )
+//   const total = feeRate * est.vSize
+//   const utxos = await utxoProvider.getUtxos(changeAddress, {
+//     total: Number(total),
+//   })
+//   if (utxos.length === 0) {
+//     throw new Error(`Insufficient satoshis input amount: no utxos found`)
+//   }
+//   const feeUtxo = pickLargeFeeUtxo(utxos)
+//   if (feeUtxo.satoshis < total) {
+//     throw new Error(
+//       `Insufficient satoshis input amount: fee utxo(${feeUtxo.satoshis}) < total(${total})`
+//     )
+//   }
 
-  const psbt = buildDistributeWithdrawalsTx(
-    network,
-    feeUtxo,
-    withdrawalExpanderUtxo,
-    tracedWithdrawalExpander,
-    withdrawals,
-    changeAddress,
-    feeRate
-  )
+//   const psbt = buildDistributeWithdrawalsTx(
+//     network,
+//     feeUtxo,
+//     withdrawalExpanderUtxo,
+//     tracedWithdrawalExpander,
+//     withdrawals,
+//     changeAddress,
+//     feeRate
+//   )
   
-  const signedPsbt = await signer.signPsbt(psbt.toHex(), psbt.psbtOptions())
-  const txPsbt = psbt.combine(ExtPsbt.fromHex(signedPsbt))
-  await txPsbt.finalizeAllInputsAsync()
-  const tx = txPsbt.extractTransaction()
-  await chainProvider.broadcast(tx.toHex())
-  markSpent(utxoProvider, tx)
+//   const signedPsbt = await signer.signPsbt(psbt.toHex(), psbt.psbtOptions())
+//   const txPsbt = psbt.combine(ExtPsbt.fromHex(signedPsbt))
+//   await txPsbt.finalizeAllInputsAsync()
+//   const tx = txPsbt.extractTransaction()
+//   await chainProvider.broadcast(tx.toHex())
+//   markSpent(utxoProvider, tx)
 
-  const withdrawalLen =
-    psbt.getChangeOutput().length === 0 ? tx.outs.length : tx.outs.length - 1
-  const withdrawalUtxos = tx.outs
-    .slice(0, withdrawalLen)
-    .map((_, outputIndex) => outputToUtxo(tx, outputIndex) as UTXO)
+//   const withdrawalLen =
+//     psbt.getChangeOutput().length === 0 ? tx.outs.length : tx.outs.length - 1
+//   const withdrawalUtxos = tx.outs
+//     .slice(0, withdrawalLen)
+//     .map((_, outputIndex) => outputToUtxo(tx, outputIndex) as UTXO)
 
-  return {
-    psbt,
-    txid: tx.getId(),
-    withdrawalUtxos,
-  }
-}
+//   return {
+//     psbt,
+//     txid: tx.getId(),
+//     withdrawalUtxos,
+//   }
+// }
 
 export async function distributeWithdrawals2(
   signer: Signer,

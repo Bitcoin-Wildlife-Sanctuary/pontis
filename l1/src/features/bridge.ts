@@ -385,7 +385,9 @@ export async function createWithdrawalExpander2(
   //   WithdrawalMerkle.checkWithdrawalValid(withdrawal)
   // )
 
-  const sumAmt = outputWithdrawalState.leftAmt +  outputWithdrawalState.rightAmt;
+  const sumAmt = outputWithdrawalState.type === 'LEAF' ?
+    outputWithdrawalState.withdrawAmt :
+    outputWithdrawalState.leftAmt +  outputWithdrawalState.rightAmt;
   if (sumAmt > bridgeUtxo.utxo.satoshis) {
     throw new Error('withdrawal amt is greater than bridge utxo satoshis')
   }

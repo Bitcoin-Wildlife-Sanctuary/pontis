@@ -73,7 +73,7 @@ async function sandboxOperator() {
 
   const btcAddress = `0x7071546bd5561c25948f3307c160409a23493608d0afdda4dbfbe597a7d45fc`;
   const bridgeAddress =
-    '0x552b45c4d9e098618c11997912045ae364bd2262166644debc7ac1248483644';
+    '0xc23926ac357faf16ce9a043f547228e99a3e89510d893fa0a7b2c9351865ab';
 
   const bridge = await contractFromAddress(provider, bridgeAddress);
   const btc = await contractFromAddress(provider, btcAddress);
@@ -89,8 +89,8 @@ async function sandboxOperator() {
     submitDepositsToL2: (hash: L1TxHash, deposits: Deposit[]) => {
       return submitDepositsToL2(admin, bridge, BigInt('0x' + hash), deposits);
     },
-    closePendingWithdrawalBatch: () =>
-      closePendingWithdrawalBatch(admin, bridge),
+    closePendingWithdrawalBatch: (id: bigint) =>
+      closePendingWithdrawalBatch(admin, bridge, id),
     aggregateDeposits,
     finalizeDepositBatch,
     verifyDepositBatch,
@@ -98,6 +98,8 @@ async function sandboxOperator() {
     expandWithdrawals,
     distributeWithdrawals,
   };
+
+  // l2Events(provider, startState.l2BlockNumber, [bridgeAddress]).subscribe(console.log);
 
   const operator = setupOperator(
     startState,
@@ -111,14 +113,7 @@ async function sandboxOperator() {
     applyChange,
     (state) => save(path, state)
   );
-
   operator.subscribe((_) => {});
-
-  // console.log("stating");
-  // l2TransactionStatus(provider, {
-  //   type: 'l2tx',
-  //   hash: '0x2d1ebc1d7e6a58010e6c7a8e2dad1885d3ea32a093a32e1316fe0c8d5ceac45',
-  // }).subscribe(console.log)
 }
 
 sandboxOperator().catch(console.error);

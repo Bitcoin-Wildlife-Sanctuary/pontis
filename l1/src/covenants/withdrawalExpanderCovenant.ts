@@ -34,21 +34,6 @@ export type WithdrawalExpanderState = {
   rightChildRootHash: Sha256,
 }
 
-export type WithdrawalExpanderState2 = {
-  type: 'LEAF',
-  level: 0n,
-  withdrawAddressScript: ByteString
-  withdrawAmt: bigint
-} | {
-  type: 'INTERNAL',
-  level: bigint,
-  leftChildRootHash: Sha256
-  rightChildRootHash: Sha256
-  leftAmt: bigint
-  rightAmt: bigint
-}
-
-
 export interface TraceableWithdrawalExpanderUtxo
   extends WithdrawalExpanderUtxo {
   operator: PubKey

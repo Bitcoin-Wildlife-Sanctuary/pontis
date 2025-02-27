@@ -5,17 +5,14 @@ import {
   BridgeState,
   DepositAggregatorState,
   ExpansionMerkleTree,
-  WithdrawalExpanderCovenant,
   WithdrawalExpanderState,
-  WithdrawalExpanderState2,
   WithdrawalMerkle,
-  WithdrawalNode,
 } from 'l1';
 import { l2AddressToHex } from './l1/utils/contractUtil';
 import { readFileSync, writeFileSync } from 'fs';
 import { Sha256 } from 'scrypt-ts';
 
-export type L1Address = `0x${string}`;
+export type L1Address = string;
 export type L2Address = `0x${string}`;
 
 export type L1TxHash = string;
@@ -126,7 +123,7 @@ export type Withdrawal = {
   blockNumber: number;
 };
 
-export type WithdrawalExpansionState = WithdrawalExpanderState2 & {
+export type WithdrawalExpansionState = WithdrawalExpanderState & {
   tx: L1Tx;
 };
 
@@ -138,23 +135,18 @@ type WithdrawalBatchCommon = {
 export type WithdrawalBatch =
   | ({
       status: 'PENDING';
-      id: bigint;
-      withdrawals: Withdrawal[];
     } & WithdrawalBatchCommon)
   | ({
       status: 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED';
-      withdrawals: Withdrawal[];
       closeWithdrawalBatchTx: L2Tx;
     } & WithdrawalBatchCommon)
   | ({
       status: 'CLOSED';
-      withdrawals: Withdrawal[];
       hash: string;
       closeWithdrawalBatchTx: L2Tx;
     } & WithdrawalBatchCommon)
   | ({
       status: 'BEING_EXPANDED';
-      withdrawals: Withdrawal[];
       hash: string;
       closeWithdrawalBatchTx: L2Tx;
       expansionTree: ExpansionMerkleTree;
@@ -162,7 +154,6 @@ export type WithdrawalBatch =
     } & WithdrawalBatchCommon)
   | ({
       status: 'EXPANDED';
-      withdrawals: Withdrawal[];
       hash: string;
       closeWithdrawalBatchTx: L2Tx;
       expansionTree: ExpansionMerkleTree;
@@ -220,7 +211,7 @@ export type BridgeEnvironment = {
     bridgeState: BridgeCovenantState,
     batchId: string
   ) => Promise<BridgeCovenantState>;
-  closePendingWithdrawalBatch: () => Promise<L2Tx>;
+  closePendingWithdrawalBatch: (id: bigint) => Promise<L2Tx>;
   createWithdrawalExpander: (
     bridgeState: BridgeCovenantState,
     hash: Sha256,
@@ -270,6 +261,7 @@ export async function applyChange(
       updateL1TxStatus(newState, change);
       await manageAggregation(env, newState);
       await manageVerification(env, newState);
+      await manageExpansion(env, state);
       break;
     }
     case 'l1BlockNumber': {
@@ -280,6 +272,8 @@ export async function applyChange(
       await initiateAggregation(env, newState);
       await manageAggregation(env, newState);
       await manageVerification(env, newState);
+      await manageExpansion(env, state);
+      await initiateWithdrawalsExpansion(env, newState);
       break;
     }
     case 'l2BlockNumber': {
@@ -302,12 +296,14 @@ export async function applyChange(
     }
     case 'closeBatch': {
       updateWithdrawalBatch(env, newState, change);
+      await initiateWithdrawalsExpansion(env, newState);
       break;
     }
     case 'l2tx': {
       updateL2TxStatus(newState, change);
       updateDeposits(newState);
       await manageVerification(env, newState);
+      await initiateWithdrawalsExpansion(env, newState);
       break;
     }
     default: {
@@ -708,8 +704,7 @@ async function closeWithdrawalBatch(
       state.withdrawalBatches[i] = {
         ...batch,
         status: 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED',
-        // TODO: make sure which batch we are closing, it might be closed by external tx
-        closeWithdrawalBatchTx: await env.closePendingWithdrawalBatch(),
+        closeWithdrawalBatchTx: await env.closePendingWithdrawalBatch(batch.id),
       };
     }
   }
@@ -723,16 +718,20 @@ async function updateWithdrawalBatch(
   if (change.type === 'closeBatch') {
     for (let i = 0; i < state.withdrawalBatches.length; i++) {
       const batch = state.withdrawalBatches[i];
+      console.log('batch.id === change.id', batch.id, change.id);
       if (batch.id === change.id) {
         assert(
           batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED' ||
             batch.status == 'PENDING'
         );
-        if (batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED') {
+        if (
+          batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED' &&
+          batch.closeWithdrawalBatchTx.status === 'SUCCEEDED'
+        ) {
           state.withdrawalBatches[i] = {
             ...batch,
             status: 'CLOSED',
-            hash: change.root,
+            hash: change.root.substring(2),
           };
         }
       }
@@ -772,9 +771,10 @@ async function initiateWithdrawalsExpansion(
         expansionTree.root
       );
 
+      console.log('batch.hash:', batch.hash, expectedWithdrawalState);
       const bridgeState = await env.createWithdrawalExpander(
         state.bridgeState,
-        Sha256(batch.hash),
+        Sha256(batch.hash.substring(2)), // TODO: clean this up!
         expectedWithdrawalState
       );
 
@@ -826,8 +826,8 @@ async function manageExpansion(env: BridgeEnvironment, state: OperatorState) {
   }
 }
 
-export function save(path: string, state: OperatorState) {
-  const jsonString = JSON.stringify(
+export function stringify(state: OperatorState): string {
+  return JSON.stringify(
     state,
     (key, value) => {
       if (typeof value === 'bigint') {
@@ -837,8 +837,10 @@ export function save(path: string, state: OperatorState) {
     },
     2
   );
+}
 
-  writeFileSync(path, jsonString, 'utf8');
+export function save(path: string, state: OperatorState) {
+  writeFileSync(path, stringify(state), 'utf8');
 }
 
 export function load(path: string): OperatorState {

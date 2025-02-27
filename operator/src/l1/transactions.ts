@@ -14,13 +14,11 @@ import {
   Observable,
   switchMap,
   takeWhile,
-  tap,
   timer,
 } from 'rxjs';
 import * as l1Api from './api';
 import { createL1Provider } from './deps/l1Provider';
 import * as env from './env';
-import { getFileOffChainDataProvider } from './deps/offchainDataProvider';
 import {
   EnhancedProvider,
   ExpansionMerkleTree,

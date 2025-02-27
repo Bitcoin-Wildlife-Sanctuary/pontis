@@ -273,7 +273,6 @@ export class WithdrawalMerkle {
     } else {
       const children = this.getHashChildrenFromTree(tree, hash)
       return WithdrawalExpanderCovenant.createNonLeafState(
-        node.level,
         children.leftChild.hash,
         children.rightChild.hash,
         children.leftChild.amt,

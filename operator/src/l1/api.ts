@@ -853,11 +853,13 @@ export async function expandLevelWithdrawals2(
   withdrawalsTree: ExpansionMerkleTree,
   expansionLevelTxs: L1Tx[]
 ): Promise<L1Tx[]> {
-  const expanderTxs = await Promise.all(
-    expansionLevelTxs.map((tx) =>
-      enhancedUtxoProvider.getRawTransaction(tx.hash).then(Transaction.fromHex)
+  const expanderTxs: Transaction[] = (
+    await Promise.all(
+      expansionLevelTxs.map((tx) =>
+        enhancedUtxoProvider.getRawTransaction(tx.hash)
+      )
     )
-  );
+  ).map(Transaction.fromHex);
 
   const operatorPubKey = await operatorSigner.getPublicKey();
   const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
@@ -875,6 +877,10 @@ export async function expandLevelWithdrawals2(
       ),
       utxo: expanderUtxos[i],
     };
+
+    if (traceableUtxo.state.type === 'LEAF') {
+      throw new Error('expander utxo is a leaf');
+    }
 
     if (
       traceableUtxo.state.leftAmt === 0n &&
@@ -1009,7 +1015,7 @@ export async function distributeLevelWithdrawals2(
       utxo: expanderUtxos[i],
     };
 
-    await withdrawFeatures.distributeWithdrawals(
+    await withdrawFeatures.distributeWithdrawals2(
       operatorSigner,
       l1Network,
       enhancedUtxoProvider,
