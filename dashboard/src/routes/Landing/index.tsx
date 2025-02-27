@@ -1,11 +1,11 @@
 import NiceCatImage from '../../assets/nice-cat.jpeg';
 import {Col, Divider, GridCol, GridRow, Icon, Row, Text} from '../../components';
-import {Container, ContentCard, ContentCardTitle, LogoImage, Table} from './styled';
+import {Container, ContentCard, LogoImage, SectionCard, SectionCardTitle, Table, TransactionsContainer} from './styled';
 
 const Landing: React.FC = () => {
   return (
-    <Container>
-      <Col $gap="large" className="container">
+    <Container $flex={1}>
+      <Col $gap="large" $flex={1} className="container">
         <GridRow className="g-small">
           <GridCol flex span={2}>
             <ContentCard>
@@ -72,68 +72,62 @@ const Landing: React.FC = () => {
           </GridCol>
         </GridRow>
 
-        <GridRow className="gy-large">
-          <GridCol lg={6} md={12}>
-            <Col $flex={1} $gap="large">
-              <ContentCard>
-                <ContentCardTitle>Pending</ContentCardTitle>
-                <Divider $marginBottom="small" />
+        <TransactionsContainer>
+          <SectionCard className="pending">
+            <SectionCardTitle>Pending</SectionCardTitle>
+            <Divider $marginBottom="small" />
 
-                <Table>
-                  <thead>
-                    <tr>
-                      <th>
-                        <Text.Subtitle $fontWeight={600}>RECIPIENT</Text.Subtitle>
-                      </th>
-                      <th>
-                        <Text.Subtitle $fontWeight={600}>AMOUNT</Text.Subtitle>
-                      </th>
-                      <th>
-                        <Text.Subtitle $fontWeight={600}>ORIGIN TRANSACTION</Text.Subtitle>
-                      </th>
-                    </tr>
-                  </thead>
+            <Table>
+              <thead>
+                <tr>
+                  <th>
+                    <Text.Subtitle $fontWeight={600}>RECIPIENT</Text.Subtitle>
+                  </th>
+                  <th>
+                    <Text.Subtitle $fontWeight={600}>AMOUNT</Text.Subtitle>
+                  </th>
+                  <th>
+                    <Text.Subtitle $fontWeight={600}>ORIGIN TRANSACTION</Text.Subtitle>
+                  </th>
+                </tr>
+              </thead>
 
-                  <tbody>
-                    {Array.from({length: 5}).map((_, index) => (
-                      <tr key={index.toString()}>
-                        <td>
-                          <a href="#">
-                            <Row $alignItems="center" $gap="xsmall">
-                              <Text.BodyStrong $color="inherit">0x02d8...493b</Text.BodyStrong>
+              <tbody>
+                {Array.from({length: 20}).map((_, index) => (
+                  <tr key={index.toString()}>
+                    <td>
+                      <a href="#">
+                        <Row $alignItems="center" $gap="xsmall">
+                          <Text.BodyStrong $color="inherit">0x02d8...493b</Text.BodyStrong>
 
-                              <Icon name="ExternalLink" color="inherit" size={18} />
-                            </Row>
-                          </a>
-                        </td>
+                          <Icon name="ExternalLink" color="inherit" size={18} />
+                        </Row>
+                      </a>
+                    </td>
 
-                        <td>
-                          <Text.BodyStrong>0.509</Text.BodyStrong>
-                        </td>
+                    <td>
+                      <Text.BodyStrong>0.509</Text.BodyStrong>
+                    </td>
 
-                        <td>
-                          <a href="#">
-                            <Row $alignItems="center" $gap="xsmall">
-                              <Text.BodyStrong $color="inherit">1a6d...a0dd</Text.BodyStrong>
+                    <td>
+                      <a href="#">
+                        <Row $alignItems="center" $gap="xsmall">
+                          <Text.BodyStrong $color="inherit">1a6d...a0dd</Text.BodyStrong>
 
-                              <Icon name="ExternalLink" color="inherit" size={18} />
-                            </Row>
-                          </a>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </Table>
-              </ContentCard>
+                          <Icon name="ExternalLink" color="inherit" size={18} />
+                        </Row>
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </SectionCard>
 
-              <ContentCard />
-            </Col>
-          </GridCol>
+          <SectionCard className="deposits" />
 
-          <GridCol lg={6} md={12}>
-            <ContentCard />
-          </GridCol>
-        </GridRow>
+          <SectionCard className="withdrawals" />
+        </TransactionsContainer>
       </Col>
     </Container>
   );

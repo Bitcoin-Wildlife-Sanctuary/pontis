@@ -12,6 +12,6 @@ export const Flex = styled.div<{
   display: flex;
   ${({theme, $gap}) => $gap && (typeof $gap === 'number' ? `gap: ${$gap}px;` : `gap: ${theme.spacings[$gap]}px;`)}
   ${({$flex}) => $flex && `flex: ${$flex};`}
-  justify-content: ${({$justify = 'initial'}) => $justify};
-  align-items: ${({$alignItems = 'initial'}) => $alignItems};
+  ${({$justify}) => $justify && `justify-content: ${$justify};`}
+  ${({$alignItems}) => $alignItems && `align-items: ${$alignItems};`}
 `;

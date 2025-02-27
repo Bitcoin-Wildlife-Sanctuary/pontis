@@ -27,8 +27,6 @@ export const ContentCard = styled(Flex)<{$withPadding?: boolean}>`
   display: flex;
   flex-direction: column;
   width: 100%;
-  /* TODO: remove min-height as its temporary */
-  min-height: 20px;
   background-color: ${({theme}) => theme.colors.elevated};
   border: 1px solid ${({theme}) => theme.colors.border};
   border-radius: 8px;
@@ -36,40 +34,53 @@ export const ContentCard = styled(Flex)<{$withPadding?: boolean}>`
   ${({theme, $withPadding}) => $withPadding && `padding: ${theme.spacings.small}px;`}
 `;
 
-export const ContentCardTitle = styled(Text.Title).attrs({$textAlign: 'center'})`
+export const TransactionsContainer = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  grid-auto-columns: auto auto;
+  grid-auto-rows: auto auto;
+  grid-auto-flow: row;
+  grid-template-areas:
+    'pending withdrawals'
+    'deposits withdrawals';
+
+  flex: 1;
+  max-height: 840px;
+  gap: ${({theme}) => theme.spacings.large}px;
+
+  @media (max-width: ${BREAKPOINTS.lg}px) {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr 1fr 1fr;
+    grid-template-areas:
+      'pending'
+      'deposits'
+      'withdrawals';
+
+    max-height: 1640px;
+  }
+
+  .pending {
+    grid-area: pending;
+  }
+
+  .deposits {
+    grid-area: deposits;
+  }
+
+  .withdrawals {
+    grid-area: withdrawals;
+  }
+`;
+
+export const SectionCard = styled(ContentCard)`
+  min-height: 360px;
+  overflow-y: scroll;
+`;
+
+export const SectionCardTitle = styled(Text.Title).attrs({$textAlign: 'center'})`
   display: inline-block;
   padding: ${({theme}) => theme.spacings.small}px;
-`;
-
-export const ChartCard = styled(ContentCard)`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: ${({theme}) => theme.spacings.small}px;
-`;
-
-export const GridCard = styled(ContentCard)`
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-
-  // We're using the gap to create the border, and the background color to color the gap
-  gap: 1px;
-  background-color: ${({theme}) => theme.colors.border};
-  overflow: hidden;
-`;
-
-export const GridCardItem = styled(ContentCard)`
-  display: flex;
-  flex-direction: column;
-  flex: 1 1 calc(50% - 2px);
-  align-items: center;
-  justify-content: space-between;
-  padding: ${({theme}) => `${theme.spacings.medium}px ${theme.spacings.xxsmall}px`};
-  gap: ${({theme}) => theme.spacings.small}px;
-  background-color: ${({theme}) => theme.colors.elevated};
-  border-radius: 0;
-  border: 0;
 `;
 
 export const Table = styled.table`

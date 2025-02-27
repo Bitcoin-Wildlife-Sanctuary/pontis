@@ -1,9 +1,11 @@
 import {Outlet} from 'react-router-dom';
 
+import {Container} from './styled';
+
 export const PageLayout: React.FC = () => {
   return (
-    <div className="container">
+    <Container className="container">
       <Outlet />
-    </div>
+    </Container>
   );
 };
