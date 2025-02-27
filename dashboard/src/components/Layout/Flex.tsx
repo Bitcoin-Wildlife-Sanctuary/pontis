@@ -4,7 +4,7 @@ import styled from 'styled-components';
 import {Theme} from '../../types';
 
 export const Flex = styled.div<{
-  $flex?: number;
+  $flex?: Property.Flex;
   $gap?: number | keyof Theme['spacings'];
   $justify?: Property.JustifyContent;
   $alignItems?: Property.AlignItems;

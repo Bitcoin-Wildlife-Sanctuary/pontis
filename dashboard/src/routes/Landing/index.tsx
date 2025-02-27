@@ -1,78 +1,74 @@
-import {Col, Divider, GridCol, GridRow, Icon, LineChart, Row, Text} from '../../components';
-import {ChartCard, Container, ContentCard, ContentCardTitle, GridCard, GridCardItem, Table} from './styled';
+import NiceCatImage from '../../assets/nice-cat.jpeg';
+import {Col, Divider, GridCol, GridRow, Icon, Row, Text} from '../../components';
+import {Container, ContentCard, ContentCardTitle, LogoImage, Table} from './styled';
 
 const Landing: React.FC = () => {
   return (
     <Container>
-      <Col $alignItems="center" $gap="medium">
-        <Text.HeadlineLarge as="h1">Pontis</Text.HeadlineLarge>
-        <Text.HeadlineSmall as="h2">OP_CAT enabled Bitcoin &lt;-&gt; Starknet Bridge</Text.HeadlineSmall>
-      </Col>
-
       <Col $gap="large" className="container">
-        <GridRow className="gy-large">
-          <GridCol className="d-flex" xl={4} lg={6}>
-            <ChartCard>
-              <LineChart
-                labels={['Mon', 'Tue', 'Wen', 'Thu', 'Fri', 'Sat', 'Sun']}
-                datasets={[
-                  {
-                    label: 'L1 -> L2',
-                    data: [12, 19, 3, 5, 2, 3, 5],
-                    borderColor: '#FF718B',
-                  },
-                  {
-                    label: 'L2 -> L1',
-                    data: [4, 9, 5, 3, 19, 2, 4],
-                    borderColor: '#4A3AFF',
-                  },
-                ]}
-              />
-            </ChartCard>
+        <GridRow className="g-small">
+          <GridCol flex span={2}>
+            <ContentCard>
+              <LogoImage src={NiceCatImage} alt="Nice Cat" />
+            </ContentCard>
           </GridCol>
 
-          <GridCol className="d-flex" xl={4} lg={6}>
-            <GridCard>
-              <GridCardItem>
-                <Text.Subtitle $textAlign="center">L1 Block Number</Text.Subtitle>
-                <Text.Title>406906</Text.Title>
-              </GridCardItem>
+          <GridCol flex span={2}>
+            <Col $gap="small" $flex={1}>
+              <ContentCard $withPadding $flex="1 1 max-content">
+                <Col $flex={1} $justify="center">
+                  <Row $gap="xsmall">
+                    <Text.Subtitle>Total:</Text.Subtitle>
+                    <Text.Subtitle $color="textStrong">.....</Text.Subtitle>
+                  </Row>
+                </Col>
+              </ContentCard>
 
-              <GridCardItem>
-                <Text.Subtitle $textAlign="center">L2 Block Number</Text.Subtitle>
-                <Text.Title>0</Text.Title>
-              </GridCardItem>
+              <ContentCard $withPadding $justify="center" $flex="1 1 max-content">
+                <Col $flex={1} $justify="center" $gap="small">
+                  <Row $gap="xsmall">
+                    <Text.Subtitle>L1 Block:</Text.Subtitle>
+                    <Text.Subtitle $color="textStrong">406906</Text.Subtitle>
+                  </Row>
 
-              <GridCardItem>
-                <Text.Subtitle $textAlign="center">Latest TX Status</Text.Subtitle>
-                <Text.Title>Unconfirmed</Text.Title>
-              </GridCardItem>
-
-              <GridCardItem>
-                <Text.Subtitle $textAlign="center">Latest TX Hash</Text.Subtitle>
-                <Text.Title>ab5a7...c5d91</Text.Title>
-              </GridCardItem>
-            </GridCard>
+                  <Row $gap="xsmall">
+                    <Text.Subtitle>L2 Block:</Text.Subtitle>
+                    <Text.Subtitle $color="textStrong">0</Text.Subtitle>
+                  </Row>
+                </Col>
+              </ContentCard>
+            </Col>
           </GridCol>
 
-          <GridCol className="d-flex" xl={4} lg={12}>
-            <GridCard>
-              <GridCardItem>
-                <Text.Subtitle $textAlign="center">Batches Root</Text.Subtitle>
-                <Text.Title>1b02a...d9d1d</Text.Title>
-              </GridCardItem>
+          <GridCol flex span={3}>
+            <ContentCard $withPadding $flex={1}>
+              <Col $flex={1} $justify="center" $gap="small">
+                <Row $gap="xsmall">
+                  <Text.Subtitle>Latest TX:</Text.Subtitle>
+                  <Text.Subtitle $color="textStrong">ab5a7...c5d91</Text.Subtitle>
+                </Row>
 
-              <GridCardItem>
-                <Text.Subtitle $textAlign="center">Deposit Aggregator SPK</Text.Subtitle>
-                <Text.Title>51204...3451</Text.Title>
-              </GridCardItem>
+                <Row $gap="xsmall">
+                  <Text.Subtitle>Batches Root:</Text.Subtitle>
+                  <Text.Subtitle $color="textStrong">1b02a...d9d1d</Text.Subtitle>
+                </Row>
 
-              <GridCardItem>
-                <Text.Subtitle $textAlign="center">Merkle Tree</Text.Subtitle>
-                <Text.Title $fontSize={16}>a293f678caf512f9...06fd6f415d090a30</Text.Title>
-                <Text.Title $fontSize={16}>f6a7fbf50bd65442...42d59774478acfcb</Text.Title>
-              </GridCardItem>
-            </GridCard>
+                <Row $gap="xsmall">
+                  <Text.Subtitle>Deposit SPK:</Text.Subtitle>
+                  <Text.Subtitle $color="textStrong">51204...3451</Text.Subtitle>
+                </Row>
+              </Col>
+            </ContentCard>
+          </GridCol>
+
+          <GridCol flex span={5}>
+            <Col $gap="small" $flex={1}>
+              <ContentCard $withPadding $flex={1} $justify="center">
+                <Text.Subtitle>Merkle Tree</Text.Subtitle>
+              </ContentCard>
+
+              <Col $flex={1} />
+            </Col>
           </GridCol>
         </GridRow>
 

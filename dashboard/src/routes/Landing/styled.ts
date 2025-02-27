@@ -1,6 +1,6 @@
 import styled from 'styled-components';
 
-import {Col, Text} from '../../components';
+import {Col, Flex, Text} from '../../components';
 import {BREAKPOINTS, PAGE_PADDINGS} from '../../theme';
 
 export const Container = styled(Col)`
@@ -17,7 +17,13 @@ export const Container = styled(Col)`
   })}
 `;
 
-export const ContentCard = styled.div`
+export const LogoImage = styled.img`
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+`;
+
+export const ContentCard = styled(Flex)<{$withPadding?: boolean}>`
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -26,6 +32,8 @@ export const ContentCard = styled.div`
   background-color: ${({theme}) => theme.colors.elevated};
   border: 1px solid ${({theme}) => theme.colors.border};
   border-radius: 8px;
+  overflow: hidden;
+  ${({theme, $withPadding}) => $withPadding && `padding: ${theme.spacings.small}px;`}
 `;
 
 export const ContentCardTitle = styled(Text.Title).attrs({$textAlign: 'center'})`

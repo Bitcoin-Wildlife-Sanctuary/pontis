@@ -9,6 +9,26 @@ export const GlobalStyle = createGlobalStyle`
     --bs-gutter-y: 0;
   }
 
+  .g-small,
+  .gy-small {
+    --bs-gutter-y: ${({theme}) => rem(theme.spacings.small)};
+  }
+
+  .g-medium,
+  .gx-medium {
+    --bs-gutter-x: ${({theme}) => rem(theme.spacings.medium)};
+  }
+
+  .g-medium,
+  .gy-medium {
+    --bs-gutter-y: ${({theme}) => rem(theme.spacings.medium)};
+  }
+
+  .g-small,
+  .gx-small {
+    --bs-gutter-x: ${({theme}) => rem(theme.spacings.small)};
+  }
+
   .g-large,
   .gy-large {
     --bs-gutter-y: ${({theme}) => rem(theme.spacings.large)};

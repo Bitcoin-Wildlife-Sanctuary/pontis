@@ -14,14 +14,28 @@ type GridColProps = {
   xl?: Column;
   xxl?: Column;
   auto?: boolean;
+  flex?: boolean;
 };
 
 export const GridCol = createAsAble<GridColProps>('div', (AsAble, props) => {
-  const {children, className, span = -1, sm = -1, md = -1, lg = -1, xl = -1, xxl = -1, auto, ...restProps} = props;
+  const {
+    children,
+    className,
+    span = -1,
+    sm = -1,
+    md = -1,
+    lg = -1,
+    xl = -1,
+    xxl = -1,
+    auto,
+    flex,
+    ...restProps
+  } = props;
 
   return (
     <AsAble
       className={cx(
+        {'d-flex': flex},
         {'col-auto': auto},
         {[`col-${span}`]: span !== -1},
         {[`col-sm-${sm}`]: sm !== -1},
