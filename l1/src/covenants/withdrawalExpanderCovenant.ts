@@ -21,18 +21,17 @@ import { Transaction } from '@scrypt-inc/bitcoinjs-lib'
 import * as tools from 'uint8array-tools'
 import { toXOnly } from '../lib/utils'
 import { CONTRACT_INDEXES, getChangeOutput } from './util'
+
 export type WithdrawalExpanderState = {
-  level: bigint
-
-  // level = 0, state = sha256(levelByteString + sha256(withdrawAddress + withdrawAmt))
-  withdrawAddressScript: ByteString
-  withdrawAmt: bigint
-
-  // level > 0, state = sha256(levelByteString + leftAmt + leftChildRootHash + rightAmt + rightChildRootHash)
-  leftChildRootHash: Sha256
-  rightChildRootHash: Sha256
-  leftAmt: bigint
-  rightAmt: bigint
+  type: 'LEAF',
+  withdrawAddressScript: ByteString,
+  withdrawAmt: bigint,
+} | {
+  type: 'INTERNAL',
+  leftAmt: bigint,
+  rightAmt: bigint,
+  leftChildRootHash: Sha256,
+  rightChildRootHash: Sha256,
 }
 
 export type WithdrawalExpanderState2 = {
@@ -66,7 +65,7 @@ export type TracedWithdrawalExpander = {
 }
 
 export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState> {
-  static readonly LOCKED_ASM_VERSION = '17af35fbc3686ed3254f7c275c239b9c'
+  static readonly LOCKED_ASM_VERSION = 'f27935691113b4c9141ee363b8dcf98d'
   static readonly MAX_LEVEL_FOR_DISTRIBUTE = 2n;
   
   constructor(
@@ -94,7 +93,6 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
     inputCtxs: Map<number, InputCtx>,
 
     isFirstExpanderOutput: boolean,
-    prevLevel: bigint,
 
     prevTx: ExpanderTransaction,
 
@@ -127,7 +125,6 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
 
           isFirstExpanderOutput,
 
-          prevLevel,
           prevTx,
 
           withdrawalAddresses,
@@ -159,6 +156,9 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
         if (!shPreimage) {
           throw new Error('Input context is not available')
         }
+        if (state.type === 'LEAF') {
+          throw new Error('leaf state cannot be expanded')
+        }
 
         return [
           shPreimage,
@@ -170,7 +170,6 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
 
           isFirstExpanderOutput,
 
-          state.level,
           prevTx,
 
           state.leftChildRootHash,
@@ -282,14 +281,13 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
   }
 
   static serializeState(state: WithdrawalExpanderState) {
-    if (state.level === 0n) {
+    if (state.type === 'LEAF') {
       return WithdrawalExpander.getLeafNodeHash(
         state.withdrawAddressScript,
         state.withdrawAmt 
       )
     } else {
-      return WithdrawalExpander.getNodeHash(
-        state.level,
+      return WithdrawalExpander.getBranchNodeHash(
         state.leftAmt,
         state.leftChildRootHash,
         state.rightAmt,
@@ -299,16 +297,13 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
   }
 
   static createNonLeafState(
-    level: bigint,
     leftChildRootHash: Sha256,
     rightChildRootHash: Sha256,
     leftAmt: bigint,
     rightAmt: bigint
   ): WithdrawalExpanderState {
     return {
-      level,
-      withdrawAddressScript: '',
-      withdrawAmt: BigInt(0),
+      type: 'INTERNAL',
       leftChildRootHash,
       rightChildRootHash,
       leftAmt,
@@ -321,25 +316,13 @@ export class WithdrawalExpanderCovenant extends Covenant<WithdrawalExpanderState
     withdrawAmt: bigint
   ): WithdrawalExpanderState {
     return {
-      level: 0n,
+      type: 'LEAF',
       withdrawAddressScript,
       withdrawAmt,
-      leftChildRootHash: createEmptySha256(),
-      rightChildRootHash: createEmptySha256(),
-      leftAmt: BigInt(0),
-      rightAmt: BigInt(0),
     }
   }
 
   static createEmptyState(): WithdrawalExpanderState {
-    return {
-      level: 0n,
-      withdrawAddressScript: '',
-      withdrawAmt: BigInt(0),
-      leftChildRootHash: createEmptySha256(),
-      rightChildRootHash: createEmptySha256(),
-      leftAmt: BigInt(0),
-      rightAmt: BigInt(0),
-    }
+    return this.createLeafState('', 0n)
   }
 }
