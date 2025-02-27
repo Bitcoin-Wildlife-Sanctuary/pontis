@@ -630,9 +630,10 @@ mod bridge_tests {
 
         let mut spy = spy_events();
 
-        start_cheat_caller_address_global(alice_address);
+        cheat_caller_address(btc.contract_address, alice_address, CheatSpan::TargetCalls(1));
         btc.approve(bridge.contract_address, 2000);
         for _ in 0..ProgresiveDepositHelpersImpl::TREE_MAX_SIZE + 1 {
+            cheat_caller_address(bridge.contract_address, alice_address, CheatSpan::TargetCalls(1));
             bridge.withdraw(words_from_hex("8080").span(), 1);
         };
 
