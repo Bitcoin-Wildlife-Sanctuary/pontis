@@ -1,5 +1,5 @@
-import {Col, Divider, Icon, Row, Text} from '../../../components';
-import {Container, DepositsTable, SectionTitle, TransactionCard} from './styled';
+import {Col, Divider, Icon, Row, Table, Text} from '../../../components';
+import {Container, SectionTitle, TransactionCard} from './styled';
 
 export const DepositCard: React.FC = () => {
   return (
@@ -38,51 +38,35 @@ export const DepositCard: React.FC = () => {
 
       <SectionTitle>Deposits</SectionTitle>
 
-      <DepositsTable>
-        <thead>
-          <tr>
-            <th>
-              <Text.CardTitle $fontWeight={600}>Recipient</Text.CardTitle>
-            </th>
-            <th>
-              <Text.CardTitle $fontWeight={600}>Amount</Text.CardTitle>
-            </th>
-            <th>
-              <Text.CardTitle $fontWeight={600}>Origin TX</Text.CardTitle>
-            </th>
+      <Table headings={['Recipient', 'Amount', 'Origin TX']}>
+        {Array.from({length: 3}).map((_, index) => (
+          <tr key={index.toString()}>
+            <td>
+              <a href="#">
+                <Row $alignItems="center" $gap="xsmall">
+                  <Text.BodyStrong $color="inherit">0x02d8...493b</Text.BodyStrong>
+
+                  <Icon name="ExternalLink" color="inherit" size={18} />
+                </Row>
+              </a>
+            </td>
+
+            <td>
+              <Text.BodyStrong>0.509</Text.BodyStrong>
+            </td>
+
+            <td>
+              <a href="#">
+                <Row $alignItems="center" $gap="xsmall">
+                  <Text.BodyStrong $color="inherit">1a6d...a0dd</Text.BodyStrong>
+
+                  <Icon name="ExternalLink" color="inherit" size={18} />
+                </Row>
+              </a>
+            </td>
           </tr>
-        </thead>
-
-        <tbody>
-          {Array.from({length: 3}).map((_, index) => (
-            <tr key={index.toString()}>
-              <td>
-                <a href="#">
-                  <Row $alignItems="center" $gap="xsmall">
-                    <Text.BodyStrong $color="inherit">0x02d8...493b</Text.BodyStrong>
-
-                    <Icon name="ExternalLink" color="inherit" size={18} />
-                  </Row>
-                </a>
-              </td>
-
-              <td>
-                <Text.BodyStrong>0.509</Text.BodyStrong>
-              </td>
-
-              <td>
-                <a href="#">
-                  <Row $alignItems="center" $gap="xsmall">
-                    <Text.BodyStrong $color="inherit">1a6d...a0dd</Text.BodyStrong>
-
-                    <Icon name="ExternalLink" color="inherit" size={18} />
-                  </Row>
-                </a>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </DepositsTable>
+        ))}
+      </Table>
 
       <Divider $marginTop="xxsmall" $marginBottom="xxsmall" />
 

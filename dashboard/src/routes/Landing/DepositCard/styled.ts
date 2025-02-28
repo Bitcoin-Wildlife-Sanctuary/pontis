@@ -24,18 +24,3 @@ export const TransactionCard = styled(Flex)`
   border: 1px solid ${({theme}) => theme.colors.border};
   border-radius: 4px;
 `;
-
-export const DepositsTable = styled.table`
-  width: 100%;
-  border-collapse: collapse;
-
-  tr {
-    border-bottom: 1px solid ${({theme}) => theme.colors.border};
-  }
-
-  th,
-  td {
-    padding: ${({theme}) => `${theme.spacings.xxsmall}px ${theme.spacings.xsmall}px`};
-    text-align: left;
-  }
-`;

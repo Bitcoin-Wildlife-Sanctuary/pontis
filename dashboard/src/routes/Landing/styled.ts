@@ -1,6 +1,6 @@
 import styled from 'styled-components';
 
-import {Col, Flex, Text} from '../../components';
+import {Col, Flex, Table as TableComponent, Text} from '../../components';
 import {BREAKPOINTS, PAGE_PADDINGS} from '../../theme';
 
 const HISTORY_CARD_MAX_HEIGHT = 540;
@@ -92,13 +92,7 @@ export const ScrollableContainer = styled(Col)`
   overflow-y: scroll;
 `;
 
-export const Table = styled.table`
-  border-collapse: collapse;
-
-  tr {
-    border-bottom: 1px solid ${({theme}) => theme.colors.border};
-  }
-
+export const Table = styled(TableComponent)`
   thead {
     background-color: ${({theme}) => theme.colors.elevated};
     position: sticky;
@@ -108,7 +102,6 @@ export const Table = styled.table`
   th,
   td {
     padding: ${({theme}) => `${theme.spacings.small}px ${theme.spacings.medium}px`};
-    text-align: left;
   }
 `;
 
