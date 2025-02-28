@@ -296,7 +296,7 @@ export async function applyChange(
     }
     case 'closeBatch': {
       updateWithdrawalBatch(env, newState, change);
-      await initiateWithdrawalsExpansion(env, newState);
+      // await initiateWithdrawalsExpansion(env, newState);
       break;
     }
     case 'l2tx': {
