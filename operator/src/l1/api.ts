@@ -837,3 +837,19 @@ export async function distributeLevelWithdrawals(
   }
   return broadcastRes.broadcastedTxids as L1TxHash[];
 }
+
+
+export async function getBridgeBalance(
+  operatorSigner: Signer,
+  latestBridgeTxid: L1TxHash, 
+  utxoProvider: UtxoProvider,
+  l1Network: SupportedNetwork
+): Promise<bigint> {
+  const addresses = await getContractAddresses(operatorSigner, l1Network);
+  const utxos = await utxoProvider.getUtxos(addresses.bridge);
+  const bridgeUtxo = utxos.find((utxo) => utxo.txId === latestBridgeTxid);
+  if (!bridgeUtxo) {
+    throw new Error('bridge utxo not found');
+  }
+  return BigInt(bridgeUtxo.satoshis);
+}
