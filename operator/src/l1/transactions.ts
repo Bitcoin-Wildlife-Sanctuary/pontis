@@ -7,6 +7,7 @@ import {
   DepositBatch,
   BridgeCovenantState,
   BatchId,
+  L1TxHash,
 } from '../state';
 import {
   distinctUntilKeyChanged,
@@ -24,6 +25,7 @@ import {
   ExpansionMerkleTree,
   WithdrawalExpanderState,
 } from 'l1';
+import { addressToScript } from './utils/contractUtil';
 import { Sha256 } from 'scrypt-ts';
 
 export function l1TransactionStatus(
@@ -165,5 +167,20 @@ export async function distributeWithdrawals(
     level,
     tree,
     expansionTxs
+  );
+}
+
+/// convert the btc address to the withdrawal expander address
+export function toWithdrawalExpanderAddress(btcAddress: string) {
+  return addressToScript(btcAddress, env.l1Network);
+}
+
+/// get the balance of the bridge contract
+export async function getBridgeBalance(latestBridgeTxHash: L1TxHash) {
+  return await l1Api.getBridgeBalance(
+    env.operatorSigner,
+    latestBridgeTxHash,
+    env.createUtxoProvider(),
+    env.l1Network
   );
 }

@@ -316,8 +316,7 @@ export class WithdrawalExpander extends SmartContract {
    */
   @method()
   static getLeafNodeHash(address: ByteString, amt: bigint): Sha256 {
-    // sha256(address) to avoid issue with dynamic address length
-    return sha256(sha256(address) + GeneralUtils.padAmt(amt))
+    return sha256(address + GeneralUtils.padAmt(amt))
   }
 
   /**
