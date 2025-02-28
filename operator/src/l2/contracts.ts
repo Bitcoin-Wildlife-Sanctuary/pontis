@@ -207,7 +207,7 @@ export async function withdraw(
   btc: Contract,
   bridge: Contract,
   sender: Account,
-  recipient: string,
+  recipient: string, // as hex
   amount: bigint
 ): Promise<L2Tx> {
   const { transaction_hash } = await sender.execute([

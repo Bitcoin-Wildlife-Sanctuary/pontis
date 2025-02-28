@@ -80,6 +80,7 @@ function contractEventsInRange(
   from: number,
   to: number
 ) {
+  console.log('contractEventsInRange', contractAddress, from, to);
   return new Observable<L2Event>((subscriber) => {
     async function getEvents() {
       const parseEvents = await eventParser(provider, contractAddress);

@@ -20,6 +20,7 @@ pub trait IBridge<TContractState> {
 #[starknet::contract]
 pub mod Bridge {
     use core::num::traits::zero::Zero;
+    use core::sha256::compute_sha256_u32_array;
     use openzeppelin_access::ownable::OwnableComponent;
     use starknet::storage::VecTrait;
     use starknet::ContractAddress;
@@ -222,14 +223,14 @@ pub mod Bridge {
         // calculated with print_zero_hashes below
         #[cairofmt::skip]
         const ZERO_HASHES: [[u32; 8]; 8] = [
-            [2360934693, 398989310, 2909078151, 3592150428, 1753234283, 4190519603, 3702210149, 3047492793],
-            [2184362320, 432503059, 1724234310, 567490483, 1050108742, 4271099403, 3742527856, 3302940544],
-            [1879265113, 1540735599, 585668410, 358575924, 2435338388, 117911002, 417806259, 617113548],
-            [2077920177, 2809277470, 3243505368, 1950208205, 2722065081, 864545533, 468673240, 215629236],
-            [394238821, 3728830357, 3427370926, 914184081, 1793518583, 4210030031, 3879276231, 3409966346],
-            [2026343462, 931643422, 2956465880, 2959742596, 3083393749, 1931568333, 1654112884, 3652093134],
-            [3433841257, 436157381, 278228785, 3714401486, 3044545020, 3281646087, 3139343623, 3473843373],
-            [651600968, 3099546193, 2356314180, 511403259, 2588112061, 2742955426, 1134377328, 138145314]
+            [2941612277, 2709588858, 4153192267, 3339347471, 234167874, 3136888141, 3853660813, 3773316604], 
+            [4252268135, 3156982997, 1058175766, 3982171689, 2165452295, 1412192036, 676370435, 3246908486], 
+            [118982229, 1164891333, 433494718, 2210494425, 989293199, 3757041399, 2351707735, 3044148480],
+            [3132511574, 1535310176, 1940885095, 311013768, 3506796797, 1597562327, 1683926785, 2365022860],
+            [3874630278, 1618857047, 2837960875, 3102865115, 2694842550, 3865935458, 2704783161, 2089796958],
+            [1342209253, 336170425, 4130094296, 1198558124, 3471065097, 1609315156, 2623184362, 848957000],
+            [3363877118, 1484151529, 2503273299, 680864377, 987407226, 2588493262, 3422490052, 169888085],
+            [494208055, 180117351, 3987495022, 4240216843, 1810711745, 1677977769, 3712207368, 137579714],
         ];
 
         fn get_element(self: @ContractState, i: u64) -> WithdrawalsTreeNode {
@@ -255,10 +256,15 @@ pub mod Bridge {
         }
 
         fn hash256_withdrawal(recipient: L1Address, amount: u32) -> WithdrawalsTreeNode {
-            let mut b: WordArray = recipient.into();
-            b.append_word(amount, 4);
+            assert!(amount <= 0x7fffffff, "amount to big");
 
-            let hash = double_sha256_word_array(b);
+            let mut b: WordArray = recipient.into();
+            b.append_u64_le(amount.into());
+
+            let (input, last_input_word, last_input_num_bytes) = b.into().into_components();
+            let hash = DigestTrait::new(
+                compute_sha256_u32_array(input, last_input_word, last_input_num_bytes),
+            );
 
             WithdrawalsTreeNode { hash, amount }
         }
@@ -268,15 +274,22 @@ pub mod Bridge {
         ) -> WithdrawalsTreeNode {
             let mut b: WordArray = Default::default();
 
-            b.append_word(*left.amount, 4);
+            b.append_u64_le((*left.amount).into());
             b.append_span(left.hash.value.span());
 
-            b.append_word(*right.amount, 4);
+            b.append_u64_le((*right.amount).into());
             b.append_span(right.hash.value.span());
 
-            let hash = double_sha256_word_array(b);
+            let (input, last_input_word, last_input_num_bytes) = b.into().into_components();
+
+            let hash = DigestTrait::new(
+                compute_sha256_u32_array(input, last_input_word, last_input_num_bytes),
+            );
 
             let amount = *left.amount + *right.amount;
+
+            assert!(amount <= 0x7fffffff, "amount to big");
+
             WithdrawalsTreeNode { hash, amount }
         }
 
@@ -427,6 +440,8 @@ mod withdrawals_tests {
         ProgresiveHelpersTrait, ProgresiveDepositHelpersImpl, DepositHelpersImpl,
         WithdrawalsTreeNode,
     };
+    use crate::utils::word_array::{WordArray, WordArrayTrait};
+    use crate::utils::hex::{to_hex, from_hex};
 
     // use this to fill the ZERO_HASHES array
     #[test]
@@ -502,6 +517,22 @@ mod withdrawals_tests {
         for i in 49..64_u32 {
             test_data(i);
         }
+    }
+
+    #[test]
+    #[ignore]
+    fn test_print_hashes() {
+        let l1_address = from_hex(
+            "03bfac5406925f9fa00194aa5fd093f60775d90475dcf88c24359eddd385b398a8",
+        );
+
+        let l1_address: WordArray = Into::<ByteArray, WordArray>::into(l1_address);
+
+        let leaf = ProgresiveHelpersTrait::hash256_withdrawal(l1_address.span(), 10);
+        let node = ProgresiveHelpersTrait::hash256_inner_nodes(@leaf, @leaf);
+
+        println!("leaf hash: {:?}", to_hex(@Into::<_, ByteArray>::into(leaf.hash)));
+        println!("node hash: {:?}", to_hex(@Into::<_, ByteArray>::into(node.hash)));
     }
 }
 
@@ -645,7 +676,7 @@ mod bridge_tests {
                         Event::CloseBatchEvent(
                             CloseBatchEvent {
                                 id: 0,
-                                root: 84792998160067379875286462401390359032051381270615771028281096759204008635079_u256
+                                root: 0x6f812e8a435a8aeb38affa6514bbfdd5410c2833f0f4f90222590c2ae707632_u256
                                     .into(),
                             },
                         ),

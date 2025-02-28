@@ -305,6 +305,19 @@ impl WordSpanIntoArray of Into<WordSpan, WordArray> {
     }
 }
 
+impl ByteArrayIntoWordArray of Into<ByteArray, WordArray> {
+    fn into(self: ByteArray) -> WordArray {
+        let mut r: WordArray = Default::default();
+        let mut i = 0;
+        let len = self.len();
+        while i != len {
+            r.append_u8(self[i]);
+            i += 1;
+        };
+        r
+    }
+}
+
 impl WordSpanDefault of Default<WordSpan> {
     fn default() -> WordSpan {
         Default::<WordArray>::default().span()

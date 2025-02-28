@@ -718,15 +718,12 @@ async function updateWithdrawalBatch(
   if (change.type === 'closeBatch') {
     for (let i = 0; i < state.withdrawalBatches.length; i++) {
       const batch = state.withdrawalBatches[i];
-      console.log('batch.id === change.id', batch.id, change.id);
       if (batch.id === change.id) {
         assert(
-          batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED' ||
-            batch.status == 'PENDING'
+          batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED'
         );
         if (
-          batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED' &&
-          batch.closeWithdrawalBatchTx.status === 'SUCCEEDED'
+          batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED'
         ) {
           state.withdrawalBatches[i] = {
             ...batch,
@@ -772,6 +769,8 @@ async function initiateWithdrawalsExpansion(
       );
 
       console.log('batch.hash:', batch.hash, expectedWithdrawalState);
+      console.dir(expansionTree, { depth: null });
+
       const bridgeState = await env.createWithdrawalExpander(
         state.bridgeState,
         Sha256(batch.hash.substring(2)), // TODO: clean this up!

@@ -71,9 +71,9 @@ async function sandboxOperator() {
     // constants.TRANSACTION_VERSION.V3
   );
 
-  const btcAddress = `0x7071546bd5561c25948f3307c160409a23493608d0afdda4dbfbe597a7d45fc`;
+  const btcAddress = '0x3bf13a2032fa2fe8652266e93fd5acf213d6ddd05509b185ee4edf0c4000d5d';
   const bridgeAddress =
-    '0xc23926ac357faf16ce9a043f547228e99a3e89510d893fa0a7b2c9351865ab';
+    '0x4e6bd07bed93a0bf10d0ead96d9b2f227877fe3d79f46bd74324f37be237029';
 
   const bridge = await contractFromAddress(provider, bridgeAddress);
   const btc = await contractFromAddress(provider, btcAddress);
