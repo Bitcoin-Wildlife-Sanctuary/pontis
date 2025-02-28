@@ -719,12 +719,8 @@ async function updateWithdrawalBatch(
     for (let i = 0; i < state.withdrawalBatches.length; i++) {
       const batch = state.withdrawalBatches[i];
       if (batch.id === change.id) {
-        assert(
-          batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED'
-        );
-        if (
-          batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED'
-        ) {
+        assert(batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED');
+        if (batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED') {
           state.withdrawalBatches[i] = {
             ...batch,
             status: 'CLOSED',

@@ -72,7 +72,8 @@ async function withdrawFromAlice() {
     devnet.alice.privateKey
   );
 
-  const btcAddress = '0x3bf13a2032fa2fe8652266e93fd5acf213d6ddd05509b185ee4edf0c4000d5d';
+  const btcAddress =
+    '0x3bf13a2032fa2fe8652266e93fd5acf213d6ddd05509b185ee4edf0c4000d5d';
   const bridgeAddress =
     '0x4e6bd07bed93a0bf10d0ead96d9b2f227877fe3d79f46bd74324f37be237029';
 
@@ -83,9 +84,7 @@ async function withdrawFromAlice() {
   const recipient =
     '03bfac5406925f9fa00194aa5fd093f60775d90475dcf88c24359eddd385b398a8';
 
-  console.log(
-    await withdraw(provider, btc, bridge, alice, recipient, 10n)
-  );
+  console.log(await withdraw(provider, btc, bridge, alice, recipient, 10n));
 }
 
 async function deposit() {

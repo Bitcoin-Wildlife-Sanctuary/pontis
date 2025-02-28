@@ -71,7 +71,8 @@ async function sandboxOperator() {
     // constants.TRANSACTION_VERSION.V3
   );
 
-  const btcAddress = '0x3bf13a2032fa2fe8652266e93fd5acf213d6ddd05509b185ee4edf0c4000d5d';
+  const btcAddress =
+    '0x3bf13a2032fa2fe8652266e93fd5acf213d6ddd05509b185ee4edf0c4000d5d';
   const bridgeAddress =
     '0x4e6bd07bed93a0bf10d0ead96d9b2f227877fe3d79f46bd74324f37be237029';
 
