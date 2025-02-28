@@ -1,4 +1,4 @@
-import {Icon, Row, Text} from '../../../components';
+import {ExplorerLink, Text} from '../../../components';
 import {Deposit} from '../../../types';
 import {shortenHex} from '../../../utils/format';
 
@@ -11,13 +11,9 @@ export const PendingTableRow: React.FC<PendingTableRowProps> = ({deposit}) => {
   return (
     <tr>
       <td>
-        <a href="#">
-          <Row $alignItems="center" $gap="xsmall">
-            <Text.BodyStrong $color="inherit">{shortenHex(deposit.recipient)}</Text.BodyStrong>
-
-            <Icon name="ExternalLink" color="inherit" size={18} />
-          </Row>
-        </a>
+        <ExplorerLink network="l2" address={deposit.recipient}>
+          <Text.BodyStrong $color="inherit">{shortenHex(deposit.recipient)}</Text.BodyStrong>
+        </ExplorerLink>
       </td>
 
       <td>
@@ -25,13 +21,9 @@ export const PendingTableRow: React.FC<PendingTableRowProps> = ({deposit}) => {
       </td>
 
       <td>
-        <a href="#">
-          <Row $alignItems="center" $gap="xsmall">
-            <Text.BodyStrong $color="inherit">{shortenHex(deposit.origin.hash)}</Text.BodyStrong>
-
-            <Icon name="ExternalLink" color="inherit" size={18} />
-          </Row>
-        </a>
+        <ExplorerLink tx={deposit.origin}>
+          <Text.BodyStrong $color="inherit">{shortenHex(deposit.origin.hash)}</Text.BodyStrong>
+        </ExplorerLink>
       </td>
     </tr>
   );

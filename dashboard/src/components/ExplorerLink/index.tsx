@@ -1,39 +1,42 @@
 import {useMemo} from 'react';
 
-import {Theme} from '../../types';
+import {L1Tx, L2Tx, Theme} from '../../types';
 import {Icon} from '../Icon';
 import {Row} from '../Layout';
 
 type ExplorerLinkProps = {
   children: React.ReactNode;
-  network: 'l1' | 'l2';
-  type: 'tx' | 'address';
-  value: string;
   iconGap?: number | keyof Theme['spacings'];
   iconSize?: number;
-};
+} & (
+  | {
+      tx?: Omit<L1Tx | L2Tx, 'status'>;
+    }
+  | {
+      network: 'l1' | 'l2';
+      address: string;
+    }
+);
 
-export const ExplorerLink: React.FC<ExplorerLinkProps> = ({
-  children,
-  network,
-  type,
-  value,
-  iconGap = 'xsmall',
-  iconSize = 18,
-}) => {
+export const ExplorerLink: React.FC<ExplorerLinkProps> = ({children, iconGap = 'xsmall', iconSize = 18, ...props}) => {
+  const tx = 'tx' in props ? props.tx : undefined;
+  const network = 'network' in props ? props.network : undefined;
+  const address = 'address' in props ? props.address : undefined;
+
   const href = useMemo(() => {
-    const baseUrl = network === 'l1' ? 'https://btcscan.org' : 'https://starkscan.co';
+    const l1BaseUrl = 'https://btcscan.org';
+    const l2BaseUrl = 'https://starkscan.co';
 
-    if (type === 'tx') {
-      return `${baseUrl}/tx/${value}`;
+    if (tx) {
+      return `${tx.type === 'l1tx' ? l1BaseUrl : l2BaseUrl}/tx/${tx.hash}`;
     }
 
-    if (type === 'address' && network === 'l1') {
-      return `${baseUrl}/address/${value}`;
+    if (network === 'l1') {
+      return `${l1BaseUrl}/address/${address}`;
     }
 
-    return `${baseUrl}/contract/${value}`;
-  }, [network, type, value]);
+    return `${l2BaseUrl}/contract/${address}`;
+  }, [tx, network, address]);
 
   return (
     <a href={href} target="_blank" rel="noreferrer">

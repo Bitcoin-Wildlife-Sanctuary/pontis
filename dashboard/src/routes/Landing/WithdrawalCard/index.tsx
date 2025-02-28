@@ -1,4 +1,4 @@
-import {Col, Divider, Icon, Row, Table, Text} from '../../../components';
+import {Col, Divider, ExplorerLink, Row, Table, Text} from '../../../components';
 import {WithdrawalBatch} from '../../../types';
 import {shortenHex, showTxStatus, showWithdrawalStatus} from '../../../utils/format';
 import {Container, SectionTitle} from './styled';
@@ -29,7 +29,9 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
           {closeTx && (
             <Row $gap="small">
               <Text.CardValue>{showTxStatus(closeTx.status)}</Text.CardValue>
-              <Text.CardValue>{shortenHex(closeTx.hash)}</Text.CardValue>
+              <ExplorerLink tx={closeTx}>
+                <Text.CardValue $color="inherit">{shortenHex(closeTx.hash)}</Text.CardValue>
+              </ExplorerLink>
             </Row>
           )}
         </Col>
@@ -43,13 +45,9 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
         {withdrawal.withdrawals.map((batchWithdrawal) => (
           <tr key={batchWithdrawal.origin}>
             <td>
-              <a href="#">
-                <Row $alignItems="center" $gap="xsmall">
-                  <Text.BodyStrong $color="inherit">{shortenHex(batchWithdrawal.recipient)}</Text.BodyStrong>
-
-                  <Icon name="ExternalLink" color="inherit" size={18} />
-                </Row>
-              </a>
+              <ExplorerLink network="l1" address={batchWithdrawal.recipient}>
+                <Text.BodyStrong $color="inherit">{shortenHex(batchWithdrawal.recipient)}</Text.BodyStrong>
+              </ExplorerLink>
             </td>
 
             <td>
@@ -57,13 +55,9 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
             </td>
 
             <td>
-              <a href="#">
-                <Row $alignItems="center" $gap="xsmall">
-                  <Text.BodyStrong $color="inherit">{shortenHex(batchWithdrawal.origin)}</Text.BodyStrong>
-
-                  <Icon name="ExternalLink" color="inherit" size={18} />
-                </Row>
-              </a>
+              <ExplorerLink tx={{type: 'l2tx', hash: batchWithdrawal.origin}}>
+                <Text.BodyStrong $color="inherit">{shortenHex(batchWithdrawal.origin)}</Text.BodyStrong>
+              </ExplorerLink>
             </td>
           </tr>
         ))}

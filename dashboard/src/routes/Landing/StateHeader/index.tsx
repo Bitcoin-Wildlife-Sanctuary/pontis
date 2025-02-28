@@ -1,5 +1,5 @@
 import NiceCatImage from '../../../assets/nice-cat.jpeg';
-import {Col, GridCol, GridRow, Row, Text} from '../../../components';
+import {Col, ExplorerLink, GridCol, GridRow, Row, Text} from '../../../components';
 import {useOperatorState} from '../../../hooks';
 import {shortenHex} from '../../../utils/format';
 import {ContentCard} from '../styled';
@@ -48,7 +48,9 @@ export const StateHeader: React.FC = () => {
           <Col $flex={1} $justify="center" $gap="small">
             <Row $gap="xsmall">
               <Text.Subtitle>Latest TX:</Text.Subtitle>
-              <Text.Subtitle $color="textStrong">{shortenHex(state?.bridgeState.latestTx.hash)}</Text.Subtitle>
+              <ExplorerLink tx={state?.bridgeState.latestTx}>
+                <Text.Subtitle $color="inherit">{shortenHex(state?.bridgeState.latestTx.hash)}</Text.Subtitle>
+              </ExplorerLink>
             </Row>
 
             <Row $gap="xsmall">
