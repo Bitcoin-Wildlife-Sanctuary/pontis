@@ -67,7 +67,7 @@ export type SHPreimage = {
    */
   hashTapLeaf: ByteString
   /**
-   * (1): the key version. 
+   * (1): the key version.
    * a constant value 0x00 representing the current version of public keys in the tapscript signature opcode execution.
    * ref: https://github.com/bitcoin/bips/blob/master/bip-0342.mediawiki#common-signature-message-extension
    */
@@ -140,6 +140,7 @@ export class SigHashUtils extends SmartContractLib {
     assert(e == shPreimage._e + eLastByte, 'invalid value of _e')
     const s =
       SigHashUtils.Gx + shPreimage._e + int2ByteString(shPreimage.eSuffix + 1n)
+    //assert(this.checkSig(Sig(s), SigHashUtils.Gx)) TODO (currently done outside)
     return Sig(s)
   }
 }

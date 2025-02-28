@@ -2,23 +2,17 @@ import {
   distinctUntilChanged,
   from,
   map,
-  interval,
   Observable,
   switchMap,
   scan,
   timer,
   filter,
-  retryWhen,
-  tap,
-  delay,
   retry,
 } from 'rxjs';
 import { BlockNumberEvent, Deposit, Deposits } from '../state';
 import * as l1Api from './api';
 import * as env from './env';
 import { createL1Provider } from './deps/l1Provider';
-import { getFileOffChainDataProvider } from './deps/offchainDataProvider';
-import { pointCompress } from '@bitcoinerlab/secp256k1';
 
 const POLL_INTERVAL = 5000;
 

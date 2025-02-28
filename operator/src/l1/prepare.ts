@@ -18,6 +18,7 @@ export async function importAddressesIntoNode() {
   console.log('depositAggregatorAddr', addresses.depositAggregator);
   console.log('withdrawExpanderAddr', addresses.withdrawExpander);
   console.log('operatorAddr', addresses.operator);
+  console.log('operatorPublicKey', await env.operatorSigner.getPublicKey());
 
   if (!env.useRpc) {
     return;
