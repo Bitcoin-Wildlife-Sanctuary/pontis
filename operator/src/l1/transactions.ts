@@ -190,16 +190,12 @@ export async function expandWithdrawal(batch: WithdrawalBatch): Promise<{
 }
 
 /// convert the btc address to the withdrawal expander address
-export function toWithdrawalExpanderAddress(
-  btcAddress: string,
-) {
+export function toWithdrawalExpanderAddress(btcAddress: string) {
   return addressToScript(btcAddress, env.l1Network);
 }
 
 /// get the balance of the bridge contract
-export async function getBridgeBalance(
-  latestBridgeTxHash: L1TxHash,
-) {
+export async function getBridgeBalance(latestBridgeTxHash: L1TxHash) {
   return await l1Api.getBridgeBalance(
     env.operatorSigner,
     latestBridgeTxHash,

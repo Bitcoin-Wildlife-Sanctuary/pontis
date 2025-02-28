@@ -838,10 +838,9 @@ export async function distributeLevelWithdrawals(
   return broadcastRes.broadcastedTxids as L1TxHash[];
 }
 
-
 export async function getBridgeBalance(
   operatorSigner: Signer,
-  latestBridgeTxid: L1TxHash, 
+  latestBridgeTxid: L1TxHash,
   utxoProvider: UtxoProvider,
   l1Network: SupportedNetwork
 ): Promise<bigint> {

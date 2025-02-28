@@ -9,8 +9,8 @@ import {
   WithdrawalExpander,
 } from 'l1';
 import { PubKey } from 'scrypt-ts';
-import {address as addressUtils} from '@scrypt-inc/bitcoinjs-lib'
-import {toHex} from 'uint8array-tools'
+import { address as addressUtils } from '@scrypt-inc/bitcoinjs-lib';
+import { toHex } from 'uint8array-tools';
 
 import depositAggregatorArtifact from 'l1/artifacts/contracts/depositAggregator.json';
 import bridgeArtifact from 'l1/artifacts/contracts/bridge.json';
@@ -58,10 +58,11 @@ export async function loadContractArtifacts() {
   WithdrawalExpander.loadArtifact(withdrawExpanderArtifact);
 }
 
-
-export function addressToScript(
-  btcAddress: string,
-  network: SupportedNetwork
-) {
-  return toHex(addressUtils.toOutputScript(btcAddress, utils.supportedNetworkToBtcNetwork(network)));
+export function addressToScript(btcAddress: string, network: SupportedNetwork) {
+  return toHex(
+    addressUtils.toOutputScript(
+      btcAddress,
+      utils.supportedNetworkToBtcNetwork(network)
+    )
+  );
 }
