@@ -3,6 +3,8 @@ import styled from 'styled-components';
 import {Col, Flex, Text} from '../../components';
 import {BREAKPOINTS, PAGE_PADDINGS} from '../../theme';
 
+const HISTORY_CARD_MAX_HEIGHT = 540;
+
 export const Container = styled(Col)`
   ${Object.entries(BREAKPOINTS).map(([key, breakpoint]) => {
     const padding = PAGE_PADDINGS[key as keyof typeof BREAKPOINTS];
@@ -34,7 +36,8 @@ export const ContentCard = styled(Flex)<{$withPadding?: boolean}>`
   ${({theme, $withPadding}) => $withPadding && `padding: ${theme.spacings.small}px;`}
 `;
 
-export const TransactionsContainer = styled.div`
+// eslint-disable-next-line import/no-unused-modules
+export const HistoryContainer = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
@@ -46,7 +49,6 @@ export const TransactionsContainer = styled.div`
     'deposits withdrawals';
 
   flex: 1;
-  max-height: 840px;
   gap: ${({theme}) => theme.spacings.large}px;
 
   @media (max-width: ${BREAKPOINTS.lg}px) {
@@ -56,20 +58,21 @@ export const TransactionsContainer = styled.div`
       'pending'
       'deposits'
       'withdrawals';
-
-    max-height: 1640px;
   }
 
   .pending {
     grid-area: pending;
+    max-height: ${HISTORY_CARD_MAX_HEIGHT}px;
   }
 
   .deposits {
     grid-area: deposits;
+    max-height: ${HISTORY_CARD_MAX_HEIGHT}px;
   }
 
   .withdrawals {
     grid-area: withdrawals;
+    max-height: ${({theme}) => HISTORY_CARD_MAX_HEIGHT * 2 + theme.spacings.large}px;
   }
 `;
 
@@ -84,7 +87,7 @@ export const SectionCardTitle = styled(Text.Title).attrs({$textAlign: 'center'})
   border-bottom: 1px solid ${({theme}) => theme.colors.border};
 `;
 
-export const TableContainer = styled(Col)`
+export const ScrollableContainer = styled(Col)`
   height: 100%;
   overflow-y: scroll;
 `;
@@ -107,4 +110,10 @@ export const Table = styled.table`
     padding: ${({theme}) => `${theme.spacings.small}px ${theme.spacings.medium}px`};
     text-align: left;
   }
+`;
+
+export const DepositsContainer = styled(Col)`
+  padding: ${({theme}) => theme.spacings.small}px;
+  padding-top: 0;
+  gap: ${({theme}) => theme.spacings.small}px;
 `;

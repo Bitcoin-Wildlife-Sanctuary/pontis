@@ -43,3 +43,15 @@ export const BodyStrong = createTextVariant({
   $fontSize: 16,
   $fontWeight: 600,
 });
+
+export const CardTitle = createTextVariant({
+  $color: 'textLight',
+  $fontSize: 14,
+  $fontWeight: 700,
+});
+
+export const CardValue = createTextVariant({
+  $color: 'textStrong',
+  $fontSize: 15,
+  $fontWeight: 700,
+});

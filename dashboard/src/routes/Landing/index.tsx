@@ -1,14 +1,16 @@
 import NiceCatImage from '../../assets/nice-cat.jpeg';
 import {Col, GridCol, GridRow, Icon, Row, Text} from '../../components';
+import {DepositCard} from './DepositCard';
 import {
   Container,
   ContentCard,
+  DepositsContainer,
+  HistoryContainer,
   LogoImage,
+  ScrollableContainer,
   SectionCard,
   SectionCardTitle,
   Table,
-  TableContainer,
-  TransactionsContainer,
 } from './styled';
 
 const Landing: React.FC = () => {
@@ -81,11 +83,11 @@ const Landing: React.FC = () => {
           </GridCol>
         </GridRow>
 
-        <TransactionsContainer>
+        <HistoryContainer>
           <SectionCard className="pending">
             <SectionCardTitle>Pending</SectionCardTitle>
 
-            <TableContainer>
+            <ScrollableContainer>
               <Table>
                 <thead>
                   <tr>
@@ -131,13 +133,23 @@ const Landing: React.FC = () => {
                   ))}
                 </tbody>
               </Table>
-            </TableContainer>
+            </ScrollableContainer>
           </SectionCard>
 
-          <SectionCard className="deposits" />
+          <SectionCard className="deposits">
+            <SectionCardTitle>Deposits</SectionCardTitle>
+
+            <ScrollableContainer>
+              <DepositsContainer>
+                {Array.from({length: 2}).map((_, index) => (
+                  <DepositCard key={index.toString()} />
+                ))}
+              </DepositsContainer>
+            </ScrollableContainer>
+          </SectionCard>
 
           <SectionCard className="withdrawals" />
-        </TransactionsContainer>
+        </HistoryContainer>
       </Col>
     </Container>
   );
