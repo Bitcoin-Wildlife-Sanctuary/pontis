@@ -78,9 +78,9 @@ export class GeneralUtils extends SmartContractLib {
   }
 
   /**
-   * Get the contract output. 
+   * Get the contract output.
    * output=satoshis[8 bytes] + spkLength[1 byte] + spk[34 bytes]
-   * 
+   *
    * @param amt - The amount of the output.
    * @param spk - The script pubkey of the output.
    * @returns The contract output.

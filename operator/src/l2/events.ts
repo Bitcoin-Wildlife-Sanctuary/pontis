@@ -12,8 +12,7 @@ import {
   EVENT,
 } from 'starknet-types-07/dist/types/api/components';
 import { BlockNumberEvent, L1Address, L2TxHash } from '../state';
-import { BinaryLike } from 'crypto';
-import { fromDigest } from './contracts';
+import { fromDigest, wordSpanToHex } from './contracts';
 
 const POLL_INTERVAL = 5000;
 const CHUNK_SIZE = 10;
@@ -81,6 +80,7 @@ function contractEventsInRange(
   from: number,
   to: number
 ) {
+  console.log('contractEventsInRange', contractAddress, from, to);
   return new Observable<L2Event>((subscriber) => {
     async function getEvents() {
       const parseEvents = await eventParser(provider, contractAddress);
@@ -92,7 +92,6 @@ function contractEventsInRange(
             address: contractAddress,
             from_block: { block_number: from },
             to_block: { block_number: to },
-            // you can include `keys: [<event key(s)>]` here.
             chunk_size: CHUNK_SIZE,
             continuation_token: continuationToken,
           });
@@ -116,7 +115,7 @@ function contractEventsInRange(
                 type: 'withdrawal',
                 id: BigInt(id.toString()),
                 amount: BigInt(amount.toString()),
-                recipient: recipient as any,
+                recipient: wordSpanToHex(recipient as any),
                 origin,
                 blockNumber,
               });
@@ -158,7 +157,7 @@ export function contractEvents(
 ): Observable<L2Event> {
   return currentBlockRange(provider, initialBlockNumber).pipe(
     switchMap(([previous, current]) =>
-      previous < current
+      previous <= current
         ? from(
             contractEventsInRange(provider, contractAddress, previous, current)
           )

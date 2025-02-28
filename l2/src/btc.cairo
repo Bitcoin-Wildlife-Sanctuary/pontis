@@ -2,7 +2,7 @@ use core::starknet::ContractAddress;
 
 #[starknet::interface]
 pub trait IBTC<TState> {
-    fn burn(ref self: TState, address: ContractAddress, value: u256);
+    fn burn(ref self: TState, owner: ContractAddress, value: u256);
     fn mint(ref self: TState, recipient: ContractAddress, amount: u256);
 
     fn name(self: @TState) -> ByteArray;
@@ -64,8 +64,10 @@ mod BTC {
     #[abi(per_item)]
     impl ExternalImpl of ExternalTrait {
         #[external(v0)]
-        fn burn(ref self: ContractState, address: ContractAddress, value: u256) {
-            self.erc20.burn(address, value);
+        fn burn(ref self: ContractState, owner: ContractAddress, value: u256) {
+            let caller = starknet::get_caller_address();
+            self.erc20._spend_allowance(owner, caller, value);
+            self.erc20.burn(owner, value);
         }
 
         #[external(v0)]
