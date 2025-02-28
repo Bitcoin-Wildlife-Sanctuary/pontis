@@ -7,6 +7,7 @@ import {
   DepositBatch,
   BridgeCovenantState,
   BatchId,
+  L1TxHash,
 } from '../state';
 import {
   distinctUntilKeyChanged,
@@ -22,6 +23,7 @@ import { createL1Provider } from './deps/l1Provider';
 import * as env from './env';
 import { getFileOffChainDataProvider } from './deps/offchainDataProvider';
 import { EnhancedProvider } from 'l1';
+import { addressToScript } from './utils/contractUtil';
 
 export function l1TransactionStatus(
   // add whatever parameters you need
@@ -185,4 +187,19 @@ export async function expandWithdrawal(batch: WithdrawalBatch): Promise<{
     };
   }
   throw new Error('no reach here');
+}
+
+/// convert the btc address to the withdrawal expander address
+export function toWithdrawalExpanderAddress(btcAddress: string) {
+  return addressToScript(btcAddress, env.l1Network);
+}
+
+/// get the balance of the bridge contract
+export async function getBridgeBalance(latestBridgeTxHash: L1TxHash) {
+  return await l1Api.getBridgeBalance(
+    env.operatorSigner,
+    latestBridgeTxHash,
+    env.createUtxoProvider(),
+    env.l1Network
+  );
 }
