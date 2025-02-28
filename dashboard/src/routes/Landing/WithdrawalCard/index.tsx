@@ -1,26 +1,37 @@
 import {Col, Divider, Icon, Row, Table, Text} from '../../../components';
+import {WithdrawalBatch} from '../../../types';
+import {shortenHex, showTxStatus, showWithdrawalStatus} from '../../../utils/format';
 import {Container, SectionTitle} from './styled';
 
-export const WithdrawalCard: React.FC = () => {
+type WithdrawalCardProps = {
+  withdrawal: WithdrawalBatch;
+};
+
+export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
+  const hash = 'hash' in withdrawal ? withdrawal.hash : undefined;
+  const closeTx = 'closeWithdrawalBatchTx' in withdrawal ? withdrawal.closeWithdrawalBatchTx : undefined;
+
   return (
     <Container>
       <Row $gap="xxlarge">
         <Col $gap="xxsmall" $justify="center">
           <Text.CardTitle>Status:</Text.CardTitle>
           <Text.CardTitle>ID:</Text.CardTitle>
-          <Text.CardTitle>Hash:</Text.CardTitle>
-          <Text.CardTitle>Close TX:</Text.CardTitle>
+          {hash && <Text.CardTitle>Hash:</Text.CardTitle>}
+          {closeTx && <Text.CardTitle>Close TX:</Text.CardTitle>}
         </Col>
 
         <Col $gap="xxsmall" $justify="center">
-          <Text.CardValue>Closed</Text.CardValue>
-          <Text.CardValue>0</Text.CardValue>
-          <Text.CardValue>0xf9f259cc10...f0005eb18</Text.CardValue>
+          <Text.CardValue>{showWithdrawalStatus(withdrawal.status)}</Text.CardValue>
+          <Text.CardValue>{withdrawal.id.toString()}</Text.CardValue>
+          {hash && <Text.CardValue>{shortenHex(hash, 10)}</Text.CardValue>}
 
-          <Row $gap="small">
-            <Text.CardValue>Succeeded</Text.CardValue>
-            <Text.CardValue>0x8f80f1eb350...9ce925af1</Text.CardValue>
-          </Row>
+          {closeTx && (
+            <Row $gap="small">
+              <Text.CardValue>{showTxStatus(closeTx.status)}</Text.CardValue>
+              <Text.CardValue>{shortenHex(closeTx.hash)}</Text.CardValue>
+            </Row>
+          )}
         </Col>
       </Row>
 
@@ -29,12 +40,12 @@ export const WithdrawalCard: React.FC = () => {
       <SectionTitle>Withdrawals</SectionTitle>
 
       <Table headings={['Recipient', 'Amount', 'Origin TX']}>
-        {Array.from({length: 3}).map((_, index) => (
-          <tr key={index.toString()}>
+        {withdrawal.withdrawals.map((batchWithdrawal) => (
+          <tr key={batchWithdrawal.origin}>
             <td>
               <a href="#">
                 <Row $alignItems="center" $gap="xsmall">
-                  <Text.BodyStrong $color="inherit">03bfac...5b398a8</Text.BodyStrong>
+                  <Text.BodyStrong $color="inherit">{shortenHex(batchWithdrawal.recipient)}</Text.BodyStrong>
 
                   <Icon name="ExternalLink" color="inherit" size={18} />
                 </Row>
@@ -42,13 +53,13 @@ export const WithdrawalCard: React.FC = () => {
             </td>
 
             <td>
-              <Text.BodyStrong title="0.00000000000000001">1e-17</Text.BodyStrong>
+              <Text.BodyStrong>{batchWithdrawal.amount.toString().replace('n', '')}</Text.BodyStrong>
             </td>
 
             <td>
               <a href="#">
                 <Row $alignItems="center" $gap="xsmall">
-                  <Text.BodyStrong $color="inherit">0x388c2...b1f1687</Text.BodyStrong>
+                  <Text.BodyStrong $color="inherit">{shortenHex(batchWithdrawal.origin)}</Text.BodyStrong>
 
                   <Icon name="ExternalLink" color="inherit" size={18} />
                 </Row>

@@ -1,12 +1,12 @@
-import NiceCatImage from '../../assets/nice-cat.jpeg';
-import {Col, GridCol, GridRow, Icon, Row, Text} from '../../components';
+import {Col} from '../../components';
+import {useOperatorState} from '../../hooks';
 import {DepositCard} from './DepositCard';
+import {PendingTableRow} from './PendingTableRow';
+import {StateHeader} from './StateHeader';
 import {
   Container,
-  ContentCard,
   HistoryContainer,
   HistorySectionContainer,
-  LogoImage,
   ScrollableContainer,
   SectionCard,
   SectionCardTitle,
@@ -15,74 +15,12 @@ import {
 import {WithdrawalCard} from './WithdrawalCard';
 
 const Landing: React.FC = () => {
+  const {data: state, isLoading} = useOperatorState();
+
   return (
     <Container $flex={1}>
       <Col $gap="large" $flex={1} className="container">
-        <GridRow className="g-small">
-          <GridCol flex span={2}>
-            <ContentCard>
-              <LogoImage src={NiceCatImage} alt="Nice Cat" />
-            </ContentCard>
-          </GridCol>
-
-          <GridCol flex span={2}>
-            <Col $gap="small" $flex={1}>
-              <ContentCard $withPadding $flex="1 1 max-content">
-                <Col $flex={1} $justify="center">
-                  <Row $gap="xsmall">
-                    <Text.Subtitle>Total:</Text.Subtitle>
-                    <Text.Subtitle $color="textStrong">.....</Text.Subtitle>
-                  </Row>
-                </Col>
-              </ContentCard>
-
-              <ContentCard $withPadding $justify="center" $flex="1 1 max-content">
-                <Col $flex={1} $justify="center" $gap="small">
-                  <Row $gap="xsmall">
-                    <Text.Subtitle>L1 Block:</Text.Subtitle>
-                    <Text.Subtitle $color="textStrong">406906</Text.Subtitle>
-                  </Row>
-
-                  <Row $gap="xsmall">
-                    <Text.Subtitle>L2 Block:</Text.Subtitle>
-                    <Text.Subtitle $color="textStrong">0</Text.Subtitle>
-                  </Row>
-                </Col>
-              </ContentCard>
-            </Col>
-          </GridCol>
-
-          <GridCol flex span={3}>
-            <ContentCard $withPadding $flex={1}>
-              <Col $flex={1} $justify="center" $gap="small">
-                <Row $gap="xsmall">
-                  <Text.Subtitle>Latest TX:</Text.Subtitle>
-                  <Text.Subtitle $color="textStrong">ab5a7...c5d91</Text.Subtitle>
-                </Row>
-
-                <Row $gap="xsmall">
-                  <Text.Subtitle>Batches Root:</Text.Subtitle>
-                  <Text.Subtitle $color="textStrong">1b02a...d9d1d</Text.Subtitle>
-                </Row>
-
-                <Row $gap="xsmall">
-                  <Text.Subtitle>Deposit SPK:</Text.Subtitle>
-                  <Text.Subtitle $color="textStrong">51204...3451</Text.Subtitle>
-                </Row>
-              </Col>
-            </ContentCard>
-          </GridCol>
-
-          <GridCol flex span={5}>
-            <Col $gap="small" $flex={1}>
-              <ContentCard $withPadding $flex={1} $justify="center">
-                <Text.Subtitle>Merkle Tree</Text.Subtitle>
-              </ContentCard>
-
-              <Col $flex={1} />
-            </Col>
-          </GridCol>
-        </GridRow>
+        <StateHeader />
 
         <HistoryContainer>
           <SectionCard className="pending">
@@ -90,32 +28,8 @@ const Landing: React.FC = () => {
 
             <ScrollableContainer>
               <Table headings={['RECIPIENT', 'AMOUNT', 'ORIGIN TRANSACTION']}>
-                {Array.from({length: 20}).map((_, index) => (
-                  <tr key={index.toString()}>
-                    <td>
-                      <a href="#">
-                        <Row $alignItems="center" $gap="xsmall">
-                          <Text.BodyStrong $color="inherit">0x02d8...493b</Text.BodyStrong>
-
-                          <Icon name="ExternalLink" color="inherit" size={18} />
-                        </Row>
-                      </a>
-                    </td>
-
-                    <td>
-                      <Text.BodyStrong>0.509</Text.BodyStrong>
-                    </td>
-
-                    <td>
-                      <a href="#">
-                        <Row $alignItems="center" $gap="xsmall">
-                          <Text.BodyStrong $color="inherit">1a6d...a0dd</Text.BodyStrong>
-
-                          <Icon name="ExternalLink" color="inherit" size={18} />
-                        </Row>
-                      </a>
-                    </td>
-                  </tr>
+                {state?.pendingDeposits?.map((deposit) => (
+                  <PendingTableRow key={deposit.origin.hash} deposit={deposit} />
                 ))}
               </Table>
             </ScrollableContainer>
@@ -126,8 +40,9 @@ const Landing: React.FC = () => {
 
             <ScrollableContainer>
               <HistorySectionContainer>
-                {Array.from({length: 2}).map((_, index) => (
-                  <DepositCard key={index.toString()} />
+                {state?.depositBatches?.map((depositBatch, index) => (
+                  // depositBatch doesn't always have a unique identifier, so using the index as the key
+                  <DepositCard key={index.toString()} deposit={depositBatch} />
                 ))}
               </HistorySectionContainer>
             </ScrollableContainer>
@@ -138,8 +53,8 @@ const Landing: React.FC = () => {
 
             <ScrollableContainer>
               <HistorySectionContainer>
-                {Array.from({length: 2}).map((_, index) => (
-                  <WithdrawalCard key={index.toString()} />
+                {state?.withdrawalBatches?.map((withdrawalBatch) => (
+                  <WithdrawalCard key={withdrawalBatch.id.toString()} withdrawal={withdrawalBatch} />
                 ))}
               </HistorySectionContainer>
             </ScrollableContainer>

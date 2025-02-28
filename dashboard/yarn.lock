@@ -835,6 +835,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@tanstack/query-core@npm:5.66.4":
+  version: 5.66.4
+  resolution: "@tanstack/query-core@npm:5.66.4"
+  checksum: 10c0/ef0ebf572e0109791e53e9a7c2790a93cbfe1c6f3fb462793c621c0f2d44c0b38f78f22a32526e124790f69a017ae3254877281f418ffef06d83f4edb82df51a
+  languageName: node
+  linkType: hard
+
+"@tanstack/react-query@npm:^5.66.10":
+  version: 5.66.10
+  resolution: "@tanstack/react-query@npm:5.66.10"
+  dependencies:
+    "@tanstack/query-core": "npm:5.66.4"
+  peerDependencies:
+    react: ^18 || ^19
+  checksum: 10c0/b750940ab5996a91f0dd3027c631ea8fb7085131e71e0d75717616d3d847aaa55f60753f145d2fe59a50ff84fe7a177b23a22289723d3f67fea31b31cca4d702
+  languageName: node
+  linkType: hard
+
 "@testing-library/dom@npm:^8.0.0":
   version: 8.20.1
   resolution: "@testing-library/dom@npm:8.20.1"
@@ -1833,6 +1851,7 @@ __metadata:
   resolution: "dashboard@workspace:."
   dependencies:
     "@csstools/normalize.css": "npm:^12.0.0"
+    "@tanstack/react-query": "npm:^5.66.10"
     "@testing-library/jest-dom": "npm:^5.14.1"
     "@testing-library/react": "npm:^12.0.0"
     "@testing-library/user-event": "npm:^13.2.1"

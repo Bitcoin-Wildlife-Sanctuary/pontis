@@ -1,36 +1,53 @@
 import {Col, Divider, Icon, Row, Table, Text} from '../../../components';
+import {DepositBatch} from '../../../types';
+import {shortenHex, showDepositStatus, showTxStatus} from '../../../utils/format';
 import {Container, SectionTitle, TransactionCard} from './styled';
 
-export const DepositCard: React.FC = () => {
+type DepositCardProps = {
+  deposit: DepositBatch;
+};
+
+export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
+  const batchId = 'batchId' in deposit ? deposit.batchId : undefined;
+  const finalizeBatchTx = 'finalizeBatchTx' in deposit ? deposit.finalizeBatchTx : undefined;
+  const depositTx = 'depositTx' in deposit ? deposit.depositTx : undefined;
+  const verifyTx = 'verifyTx' in deposit ? deposit.verifyTx : undefined;
+
   return (
     <Container>
       <Row $gap="xxlarge">
         <Col $gap="xxsmall" $justify="center">
           <Text.CardTitle>Status:</Text.CardTitle>
-          <Text.CardTitle>Batch ID:</Text.CardTitle>
-          <Text.CardTitle>Finalize Batch TX:</Text.CardTitle>
-          <Text.CardTitle>Deposit TX:</Text.CardTitle>
-          <Text.CardTitle>Verify TX:</Text.CardTitle>
+          {batchId && <Text.CardTitle>Batch ID:</Text.CardTitle>}
+          {finalizeBatchTx && <Text.CardTitle>Finalize Batch TX:</Text.CardTitle>}
+          {depositTx && <Text.CardTitle>Deposit TX:</Text.CardTitle>}
+          {verifyTx && <Text.CardTitle>Verify TX:</Text.CardTitle>}
         </Col>
 
         <Col $gap="xxsmall" $justify="center">
-          <Text.CardValue>Completed</Text.CardValue>
-          <Text.CardValue>35749c91c...f53b564b055</Text.CardValue>
+          <Text.CardValue>{showDepositStatus(deposit.status)}</Text.CardValue>
+          {batchId && <Text.CardValue>{shortenHex(batchId, 8)}</Text.CardValue>}
 
-          <Row $gap="small">
-            <Text.CardValue>Mined</Text.CardValue>
-            <Text.CardValue>35749c91c...f53b564b055</Text.CardValue>
-          </Row>
+          {finalizeBatchTx && (
+            <Row $gap="small">
+              <Text.CardValue>{showTxStatus(finalizeBatchTx.status)}</Text.CardValue>
+              <Text.CardValue>{shortenHex(finalizeBatchTx.hash)}</Text.CardValue>
+            </Row>
+          )}
 
-          <Row $gap="small">
-            <Text.CardValue>Succeeded</Text.CardValue>
-            <Text.CardValue>0x35749c91c...f53b564b055</Text.CardValue>
-          </Row>
+          {depositTx && (
+            <Row $gap="small">
+              <Text.CardValue>{showTxStatus(depositTx.status)}</Text.CardValue>
+              <Text.CardValue>{shortenHex(depositTx.hash)}</Text.CardValue>
+            </Row>
+          )}
 
-          <Row $gap="small">
-            <Text.CardValue>Mined</Text.CardValue>
-            <Text.CardValue>35749c91c...f53b564b055</Text.CardValue>
-          </Row>
+          {verifyTx && (
+            <Row $gap="small">
+              <Text.CardValue>{showTxStatus(verifyTx.status)}</Text.CardValue>
+              <Text.CardValue>{shortenHex(verifyTx.hash)}</Text.CardValue>
+            </Row>
+          )}
         </Col>
       </Row>
 
@@ -39,12 +56,12 @@ export const DepositCard: React.FC = () => {
       <SectionTitle>Deposits</SectionTitle>
 
       <Table headings={['Recipient', 'Amount', 'Origin TX']}>
-        {Array.from({length: 3}).map((_, index) => (
-          <tr key={index.toString()}>
+        {deposit.deposits.map((batchDeposit) => (
+          <tr key={batchDeposit.origin.hash}>
             <td>
               <a href="#">
                 <Row $alignItems="center" $gap="xsmall">
-                  <Text.BodyStrong $color="inherit">0x02d8...493b</Text.BodyStrong>
+                  <Text.BodyStrong $color="inherit">{shortenHex(batchDeposit.recipient)}</Text.BodyStrong>
 
                   <Icon name="ExternalLink" color="inherit" size={18} />
                 </Row>
@@ -52,13 +69,13 @@ export const DepositCard: React.FC = () => {
             </td>
 
             <td>
-              <Text.BodyStrong>0.509</Text.BodyStrong>
+              <Text.BodyStrong>{batchDeposit.amount.toString()}</Text.BodyStrong>
             </td>
 
             <td>
               <a href="#">
                 <Row $alignItems="center" $gap="xsmall">
-                  <Text.BodyStrong $color="inherit">1a6d...a0dd</Text.BodyStrong>
+                  <Text.BodyStrong $color="inherit">{shortenHex(batchDeposit.origin.hash)}</Text.BodyStrong>
 
                   <Icon name="ExternalLink" color="inherit" size={18} />
                 </Row>
@@ -73,67 +90,41 @@ export const DepositCard: React.FC = () => {
       <SectionTitle>Aggregation Transactions</SectionTitle>
 
       <Row $alignItems="center">
-        <Col $gap="xxsmall">
-          <TransactionCard $gap={4}>
-            <Row $gap="xlarge" $justify="space-between">
-              <Text.CardTitle>Amount:</Text.CardTitle>
-              <Text.CardValue>509</Text.CardValue>
-            </Row>
+        {deposit.aggregationTxs.map((aggregationTxLevels, levelIdx) => (
+          <>
+            {levelIdx % 2 === 1 && <Icon name="DoubleArrowRight" color="border" width={33} height={87} />}
 
-            <Row $gap="xlarge" $justify="space-between">
-              <Text.CardTitle>Address:</Text.CardTitle>
-              <Text.CardValue>02d889...5493b</Text.CardValue>
-            </Row>
+            <Col key={levelIdx.toString()} $gap="xxsmall">
+              {aggregationTxLevels.map((aggregationTx) => (
+                <TransactionCard key={aggregationTx.tx.hash} $gap={4}>
+                  {aggregationTx.type === 'LEAF' && (
+                    <>
+                      <Row $gap="xlarge" $justify="space-between">
+                        <Text.CardTitle>Amount:</Text.CardTitle>
+                        <Text.CardValue>{aggregationTx.depositAmt.toString()}</Text.CardValue>
+                      </Row>
 
-            <Row $gap="xlarge" $justify="space-between">
-              <Text.CardTitle>Status:</Text.CardTitle>
-              <Text.CardValue>Mined</Text.CardValue>
-            </Row>
+                      <Row $gap="xlarge" $justify="space-between">
+                        <Text.CardTitle>Address:</Text.CardTitle>
+                        <Text.CardValue>{shortenHex(aggregationTx.depositAddress)}</Text.CardValue>
+                      </Row>
+                    </>
+                  )}
 
-            <Row $gap="xlarge" $justify="space-between">
-              <Text.CardTitle>TX Hash:</Text.CardTitle>
-              <Text.CardValue>955901...de66e</Text.CardValue>
-            </Row>
-          </TransactionCard>
+                  <Row $gap="xlarge" $justify="space-between">
+                    <Text.CardTitle>Status:</Text.CardTitle>
+                    <Text.CardValue>{showTxStatus(aggregationTx.tx.status)}</Text.CardValue>
+                  </Row>
 
-          <TransactionCard $gap={4}>
-            <Row $gap="xlarge" $justify="space-between">
-              <Text.CardTitle>Amount:</Text.CardTitle>
-              <Text.CardValue>509</Text.CardValue>
-            </Row>
-
-            <Row $gap="xlarge" $justify="space-between">
-              <Text.CardTitle>Address:</Text.CardTitle>
-              <Text.CardValue>02d889...5493b</Text.CardValue>
-            </Row>
-
-            <Row $gap="xlarge" $justify="space-between">
-              <Text.CardTitle>Status:</Text.CardTitle>
-              <Text.CardValue>Mined</Text.CardValue>
-            </Row>
-
-            <Row $gap="xlarge" $justify="space-between">
-              <Text.CardTitle>TX Hash:</Text.CardTitle>
-              <Text.CardValue>955901...de66e</Text.CardValue>
-            </Row>
-          </TransactionCard>
-        </Col>
-
-        <Icon name="DoubleArrowRight" color="border" width={33} height={87} />
-
-        <Col>
-          <TransactionCard $gap={4}>
-            <Row $gap="xlarge" $justify="space-between">
-              <Text.CardTitle>Status:</Text.CardTitle>
-              <Text.CardValue>Mined</Text.CardValue>
-            </Row>
-
-            <Row $gap="xlarge" $justify="space-between">
-              <Text.CardTitle>TX Hash:</Text.CardTitle>
-              <Text.CardValue>955901...de66e</Text.CardValue>
-            </Row>
-          </TransactionCard>
-        </Col>
+                  <Row $gap="xlarge" $justify="space-between">
+                    <Text.CardTitle>TX Hash:</Text.CardTitle>
+                    <Text.CardValue>{shortenHex(aggregationTx.tx.hash)}</Text.CardValue>
+                  </Row>
+                </TransactionCard>
+              ))}
+            </Col>
+          </>
+        ))}
       </Row>
     </Container>
   );

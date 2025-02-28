@@ -19,12 +19,6 @@ export const Container = styled(Col)`
   })}
 `;
 
-export const LogoImage = styled.img`
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-`;
-
 export const ContentCard = styled(Flex)<{$withPadding?: boolean}>`
   display: flex;
   flex-direction: column;
