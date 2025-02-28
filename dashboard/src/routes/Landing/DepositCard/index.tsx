@@ -8,11 +8,29 @@ export const DepositCard: React.FC = () => {
         <Col $gap="xxsmall" $justify="center">
           <Text.CardTitle>Status:</Text.CardTitle>
           <Text.CardTitle>Batch ID:</Text.CardTitle>
+          <Text.CardTitle>Finalize Batch TX:</Text.CardTitle>
+          <Text.CardTitle>Deposit TX:</Text.CardTitle>
+          <Text.CardTitle>Verify TX:</Text.CardTitle>
         </Col>
 
         <Col $gap="xxsmall" $justify="center">
           <Text.CardValue>Completed</Text.CardValue>
           <Text.CardValue>35749c91c...f53b564b055</Text.CardValue>
+
+          <Row $gap="small">
+            <Text.CardValue>Mined</Text.CardValue>
+            <Text.CardValue>35749c91c...f53b564b055</Text.CardValue>
+          </Row>
+
+          <Row $gap="small">
+            <Text.CardValue>Succeeded</Text.CardValue>
+            <Text.CardValue>0x35749c91c...f53b564b055</Text.CardValue>
+          </Row>
+
+          <Row $gap="small">
+            <Text.CardValue>Mined</Text.CardValue>
+            <Text.CardValue>35749c91c...f53b564b055</Text.CardValue>
+          </Row>
         </Col>
       </Row>
 
@@ -133,28 +151,6 @@ export const DepositCard: React.FC = () => {
           </TransactionCard>
         </Col>
       </Row>
-
-      <Divider $marginTop="xxsmall" $marginBottom="xxsmall" />
-
-      <Col $gap={4}>
-        <Row $gap="small">
-          <Text.CardTitle>Finalize Batch TX:</Text.CardTitle>
-          <Text.CardValue>Mined</Text.CardValue>
-          <Text.CardValue>35749c91c...f53b564b055</Text.CardValue>
-        </Row>
-
-        <Row $gap="small">
-          <Text.CardTitle>Deposit TX:</Text.CardTitle>
-          <Text.CardValue>Succeeded</Text.CardValue>
-          <Text.CardValue>0x35749c91c...f53b564b055</Text.CardValue>
-        </Row>
-
-        <Row $gap="small">
-          <Text.CardTitle>Verify TX:</Text.CardTitle>
-          <Text.CardValue>Mined</Text.CardValue>
-          <Text.CardValue>35749c91c...f53b564b055</Text.CardValue>
-        </Row>
-      </Col>
     </Container>
   );
 };
