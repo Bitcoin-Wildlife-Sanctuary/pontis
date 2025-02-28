@@ -8,6 +8,10 @@ export const StyledTable = styled.table`
     border-bottom: 1px solid ${({theme}) => theme.colors.border};
   }
 
+  tr:last-child {
+    border-bottom: none;
+  }
+
   th,
   td {
     padding: ${({theme}) => `${theme.spacings.xxsmall}px ${theme.spacings.xsmall}px`};

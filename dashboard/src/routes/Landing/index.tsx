@@ -4,14 +4,15 @@ import {DepositCard} from './DepositCard';
 import {
   Container,
   ContentCard,
-  DepositsContainer,
   HistoryContainer,
+  HistorySectionContainer,
   LogoImage,
   ScrollableContainer,
   SectionCard,
   SectionCardTitle,
   Table,
 } from './styled';
+import {WithdrawalCard} from './WithdrawalCard';
 
 const Landing: React.FC = () => {
   return (
@@ -124,15 +125,25 @@ const Landing: React.FC = () => {
             <SectionCardTitle>Deposits</SectionCardTitle>
 
             <ScrollableContainer>
-              <DepositsContainer>
+              <HistorySectionContainer>
                 {Array.from({length: 2}).map((_, index) => (
                   <DepositCard key={index.toString()} />
                 ))}
-              </DepositsContainer>
+              </HistorySectionContainer>
             </ScrollableContainer>
           </SectionCard>
 
-          <SectionCard className="withdrawals" />
+          <SectionCard className="withdrawals">
+            <SectionCardTitle>Withdrawals</SectionCardTitle>
+
+            <ScrollableContainer>
+              <HistorySectionContainer>
+                {Array.from({length: 2}).map((_, index) => (
+                  <WithdrawalCard key={index.toString()} />
+                ))}
+              </HistorySectionContainer>
+            </ScrollableContainer>
+          </SectionCard>
         </HistoryContainer>
       </Col>
     </Container>

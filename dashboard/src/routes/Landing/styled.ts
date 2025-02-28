@@ -76,6 +76,12 @@ export const HistoryContainer = styled.div`
   }
 `;
 
+export const HistorySectionContainer = styled(Col)`
+  padding: ${({theme}) => theme.spacings.small}px;
+  padding-top: 0;
+  gap: ${({theme}) => theme.spacings.small}px;
+`;
+
 export const SectionCard = styled(ContentCard)`
   min-height: 360px;
 `;
@@ -103,10 +109,4 @@ export const Table = styled(TableComponent)`
   td {
     padding: ${({theme}) => `${theme.spacings.small}px ${theme.spacings.medium}px`};
   }
-`;
-
-export const DepositsContainer = styled(Col)`
-  padding: ${({theme}) => theme.spacings.small}px;
-  padding-top: 0;
-  gap: ${({theme}) => theme.spacings.small}px;
 `;
