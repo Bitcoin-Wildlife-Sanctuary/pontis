@@ -3,15 +3,7 @@ import {useOperatorState} from '../../hooks';
 import {DepositCard} from './DepositCard';
 import {PendingTableRow} from './PendingTableRow';
 import {StateHeader} from './StateHeader';
-import {
-  Container,
-  HistoryContainer,
-  HistorySectionContainer,
-  ScrollableContainer,
-  SectionCard,
-  SectionCardTitle,
-  Table,
-} from './styled';
+import {Container, HistoryContainer, HistorySectionContainer, SectionCard, SectionCardTitle, Table} from './styled';
 import {WithdrawalCard} from './WithdrawalCard';
 
 const Landing: React.FC = () => {
@@ -26,38 +18,32 @@ const Landing: React.FC = () => {
           <SectionCard className="pending">
             <SectionCardTitle>Pending</SectionCardTitle>
 
-            <ScrollableContainer>
-              <Table headings={['RECIPIENT', 'AMOUNT', 'ORIGIN TRANSACTION']}>
-                {state?.pendingDeposits?.map((deposit) => (
-                  <PendingTableRow key={deposit.origin.hash} deposit={deposit} />
-                ))}
-              </Table>
-            </ScrollableContainer>
+            <Table headings={['RECIPIENT', 'AMOUNT', 'ORIGIN TRANSACTION']}>
+              {state?.pendingDeposits?.map((deposit) => (
+                <PendingTableRow key={deposit.origin.hash} deposit={deposit} />
+              ))}
+            </Table>
           </SectionCard>
 
           <SectionCard className="deposits">
             <SectionCardTitle>Deposits</SectionCardTitle>
 
-            <ScrollableContainer>
-              <HistorySectionContainer>
-                {state?.depositBatches?.map((depositBatch, index) => (
-                  // depositBatch doesn't always have a unique identifier, so using the index as the key
-                  <DepositCard key={index.toString()} deposit={depositBatch} />
-                ))}
-              </HistorySectionContainer>
-            </ScrollableContainer>
+            <HistorySectionContainer>
+              {state?.depositBatches?.map((depositBatch, index) => (
+                // depositBatch doesn't always have a unique identifier, so using the index as the key
+                <DepositCard key={index.toString()} deposit={depositBatch} />
+              ))}
+            </HistorySectionContainer>
           </SectionCard>
 
           <SectionCard className="withdrawals">
             <SectionCardTitle>Withdrawals</SectionCardTitle>
 
-            <ScrollableContainer>
-              <HistorySectionContainer>
-                {state?.withdrawalBatches?.map((withdrawalBatch) => (
-                  <WithdrawalCard key={withdrawalBatch.id.toString()} withdrawal={withdrawalBatch} />
-                ))}
-              </HistorySectionContainer>
-            </ScrollableContainer>
+            <HistorySectionContainer>
+              {state?.withdrawalBatches?.map((withdrawalBatch) => (
+                <WithdrawalCard key={withdrawalBatch.id.toString()} withdrawal={withdrawalBatch} />
+              ))}
+            </HistorySectionContainer>
           </SectionCard>
         </HistoryContainer>
       </Col>

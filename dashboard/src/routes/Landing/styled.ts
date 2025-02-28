@@ -3,8 +3,6 @@ import styled from 'styled-components';
 import {Col, Flex, Table as TableComponent, Text} from '../../components';
 import {BREAKPOINTS, PAGE_PADDINGS} from '../../theme';
 
-const HISTORY_CARD_MAX_HEIGHT = 540;
-
 export const Container = styled(Col)`
   ${Object.entries(BREAKPOINTS).map(([key, breakpoint]) => {
     const padding = PAGE_PADDINGS[key as keyof typeof BREAKPOINTS];
@@ -34,7 +32,7 @@ export const ContentCard = styled(Flex)<{$withPadding?: boolean}>`
 export const HistoryContainer = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr;
+  grid-template-rows: auto 1fr;
   grid-auto-columns: auto auto;
   grid-auto-rows: auto auto;
   grid-auto-flow: row;
@@ -56,17 +54,14 @@ export const HistoryContainer = styled.div`
 
   .pending {
     grid-area: pending;
-    max-height: ${HISTORY_CARD_MAX_HEIGHT}px;
   }
 
   .deposits {
     grid-area: deposits;
-    max-height: ${HISTORY_CARD_MAX_HEIGHT}px;
   }
 
   .withdrawals {
     grid-area: withdrawals;
-    max-height: ${({theme}) => HISTORY_CARD_MAX_HEIGHT * 2 + theme.spacings.large}px;
   }
 `;
 
@@ -77,7 +72,7 @@ export const HistorySectionContainer = styled(Col)`
 `;
 
 export const SectionCard = styled(ContentCard)`
-  min-height: 360px;
+  min-height: 240px;
 `;
 
 export const SectionCardTitle = styled(Text.Title).attrs({$textAlign: 'center'})`
@@ -85,11 +80,6 @@ export const SectionCardTitle = styled(Text.Title).attrs({$textAlign: 'center'})
   padding: ${({theme}) => theme.spacings.small}px;
   margin-bottom: ${({theme}) => theme.spacings.small}px;
   border-bottom: 1px solid ${({theme}) => theme.colors.border};
-`;
-
-export const ScrollableContainer = styled(Col)`
-  height: 100%;
-  overflow-y: scroll;
 `;
 
 export const Table = styled(TableComponent)`
