@@ -1,5 +1,11 @@
 import styled from 'styled-components';
 
+export const Container = styled.div`
+  width: 100%;
+  max-width: 100%;
+  overflow: auto;
+`;
+
 export const StyledTable = styled.table`
   width: 100%;
   border-collapse: collapse;
@@ -16,5 +22,10 @@ export const StyledTable = styled.table`
   td {
     padding: ${({theme}) => `${theme.spacings.xxsmall}px ${theme.spacings.xsmall}px`};
     text-align: left;
+  }
+
+  td {
+    word-break: break-all;
+    overflow-wrap: break-word;
   }
 `;

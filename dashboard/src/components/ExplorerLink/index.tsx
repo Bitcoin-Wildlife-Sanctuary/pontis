@@ -2,9 +2,8 @@ import {useMemo} from 'react';
 
 import {L1Tx, L2Tx, Theme} from '../../types';
 import {getStatusType} from '../../utils/format';
-import {Icon} from '../Icon';
 import {Row} from '../Layout';
-import {TransactionStatus} from '../TransactionStatus';
+import {StyledIcon, StyledTransactionStatus} from './styled';
 
 type ExplorerLinkProps = {
   children: React.ReactNode;
@@ -43,11 +42,11 @@ export const ExplorerLink: React.FC<ExplorerLinkProps> = ({children, iconGap = '
   return (
     <a href={href} target="_blank" rel="noreferrer">
       <Row $alignItems="center" $gap={iconGap}>
-        {tx && tx.status ? <TransactionStatus $status={getStatusType(tx.status)} /> : null}
+        {tx && tx.status ? <StyledTransactionStatus $status={getStatusType(tx.status)} /> : null}
 
         {children}
 
-        <Icon name="ExternalLink" color="inherit" size={iconSize} />
+        <StyledIcon name="ExternalLink" color="inherit" size={iconSize} />
       </Row>
     </a>
   );

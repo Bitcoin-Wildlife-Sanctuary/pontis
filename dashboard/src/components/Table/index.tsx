@@ -1,5 +1,5 @@
 import {Text} from '../Text';
-import {StyledTable} from './styled';
+import {Container, StyledTable} from './styled';
 
 type TableProps = React.ComponentProps<typeof StyledTable> & {
   children: React.ReactNode;
@@ -8,18 +8,20 @@ type TableProps = React.ComponentProps<typeof StyledTable> & {
 
 export const Table: React.FC<TableProps> = ({children, headings, ...props}) => {
   return (
-    <StyledTable {...props}>
-      <thead>
-        <tr>
-          {headings.map((heading, index) => (
-            <th key={`${heading}-${index}`}>
-              <Text.CardTitle $fontWeight={600}>{heading}</Text.CardTitle>
-            </th>
-          ))}
-        </tr>
-      </thead>
+    <Container>
+      <StyledTable {...props}>
+        <thead>
+          <tr>
+            {headings.map((heading, index) => (
+              <th key={`${heading}-${index}`}>
+                <Text.CardTitle $fontWeight={600}>{heading}</Text.CardTitle>
+              </th>
+            ))}
+          </tr>
+        </thead>
 
-      <tbody>{children}</tbody>
-    </StyledTable>
+        <tbody>{children}</tbody>
+      </StyledTable>
+    </Container>
   );
 };

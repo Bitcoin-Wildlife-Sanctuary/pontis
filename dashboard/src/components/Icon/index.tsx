@@ -6,7 +6,7 @@ import {Theme} from '../../types';
 
 type IconNames = keyof typeof Icons;
 
-type IconProps = {
+type IconProps = React.SVGProps<SVGSVGElement> & {
   name: IconNames;
   color?: keyof Theme['colors'] | Globals;
   size?: number;
@@ -14,7 +14,7 @@ type IconProps = {
   height?: number;
 };
 
-export const Icon: React.FC<IconProps> = ({name, color = 'text', size, width, height}) => {
+export const Icon: React.FC<IconProps> = ({name, color = 'text', size, width, height, ...props}) => {
   const theme = useTheme();
 
   const IconComponent = Icons[name];
@@ -22,6 +22,7 @@ export const Icon: React.FC<IconProps> = ({name, color = 'text', size, width, he
   return (
     <IconComponent
       color={theme.colors[color as keyof Theme['colors']] ?? color}
+      {...props}
       width={size ?? width}
       height={size ?? height}
     />

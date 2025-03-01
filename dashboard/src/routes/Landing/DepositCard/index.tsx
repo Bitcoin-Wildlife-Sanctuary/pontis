@@ -1,3 +1,4 @@
+import cx from 'classnames';
 import {Fragment} from 'react';
 
 import {Col, Divider, ExplorerLink, Icon, Row, Table, Text} from '../../../components';
@@ -14,6 +15,49 @@ export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
   const finalizeBatchTx = 'finalizeBatchTx' in deposit ? deposit.finalizeBatchTx : undefined;
   const depositTx = 'depositTx' in deposit ? deposit.depositTx : undefined;
   const verifyTx = 'verifyTx' in deposit ? deposit.verifyTx : undefined;
+
+  const horizontalClassName = 'd-none d-md-flex d-lg-none d-xxl-flex';
+  const verticalClassName = 'd-flex d-md-none d-lg-flex d-xxl-none';
+
+  const renderedAggregationTxs = deposit.aggregationTxs.map((aggregationTxLevels, levelIdx) => (
+    <Fragment key={levelIdx.toString()}>
+      {levelIdx % 2 === 1 && (
+        <>
+          <Icon className={horizontalClassName} name="DoubleArrowRight" color="border" width={33} height={87} />
+          <Icon className={cx(verticalClassName, 'align-self-center')} name="ArrowDown" color="border" width={32} />
+        </>
+      )}
+
+      <Col $gap="xxsmall">
+        {aggregationTxLevels.map((aggregationTx) => (
+          <TransactionCard key={aggregationTx.tx.hash} $gap={4}>
+            {aggregationTx.type === 'LEAF' && (
+              <>
+                <Row $gap="xlarge" $justify="space-between">
+                  <Text.CardTitle>Amount:</Text.CardTitle>
+                  <Text.CardValue>{aggregationTx.depositAmt.toString()}</Text.CardValue>
+                </Row>
+
+                <Row $gap="xlarge" $justify="space-between">
+                  <Text.CardTitle>Address:</Text.CardTitle>
+                  <ExplorerLink network="l1" address={aggregationTx.depositAddress}>
+                    <Text.CardValue $color="inherit">{shortenHex(aggregationTx.depositAddress)}</Text.CardValue>
+                  </ExplorerLink>
+                </Row>
+              </>
+            )}
+
+            <Row $gap="xlarge" $justify="space-between" $alignItems="center">
+              <Text.CardTitle>TX Hash:</Text.CardTitle>
+              <ExplorerLink tx={aggregationTx.tx}>
+                <Text.CardValue $color="inherit">{shortenHex(aggregationTx.tx.hash)}</Text.CardValue>
+              </ExplorerLink>
+            </Row>
+          </TransactionCard>
+        ))}
+      </Col>
+    </Fragment>
+  ));
 
   return (
     <Container>
@@ -80,41 +124,10 @@ export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
 
       <SectionTitle>Aggregation Transactions</SectionTitle>
 
-      <Row $alignItems="center">
-        {deposit.aggregationTxs.map((aggregationTxLevels, levelIdx) => (
-          <Fragment key={levelIdx.toString()}>
-            {levelIdx % 2 === 1 && <Icon name="DoubleArrowRight" color="border" width={33} height={87} />}
+      <Col className="d-flex d-md-none d-lg-flex d-xxl-none">{renderedAggregationTxs}</Col>
 
-            <Col $gap="xxsmall">
-              {aggregationTxLevels.map((aggregationTx) => (
-                <TransactionCard key={aggregationTx.tx.hash} $gap={4}>
-                  {aggregationTx.type === 'LEAF' && (
-                    <>
-                      <Row $gap="xlarge" $justify="space-between">
-                        <Text.CardTitle>Amount:</Text.CardTitle>
-                        <Text.CardValue>{aggregationTx.depositAmt.toString()}</Text.CardValue>
-                      </Row>
-
-                      <Row $gap="xlarge" $justify="space-between">
-                        <Text.CardTitle>Address:</Text.CardTitle>
-                        <ExplorerLink network="l1" address={aggregationTx.depositAddress}>
-                          <Text.CardValue $color="inherit">{shortenHex(aggregationTx.depositAddress)}</Text.CardValue>
-                        </ExplorerLink>
-                      </Row>
-                    </>
-                  )}
-
-                  <Row $gap="xlarge" $justify="space-between" $alignItems="center">
-                    <Text.CardTitle>TX Hash:</Text.CardTitle>
-                    <ExplorerLink tx={aggregationTx.tx}>
-                      <Text.CardValue $color="inherit">{shortenHex(aggregationTx.tx.hash)}</Text.CardValue>
-                    </ExplorerLink>
-                  </Row>
-                </TransactionCard>
-              ))}
-            </Col>
-          </Fragment>
-        ))}
+      <Row $alignItems="center" className="d-none d-md-flex d-lg-none d-xxl-flex">
+        {renderedAggregationTxs}
       </Row>
     </Container>
   );
