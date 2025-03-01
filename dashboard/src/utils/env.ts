@@ -1,1 +1,1 @@
-export const EXAMPLE = import.meta.env.VITE_EXAMPLE;
+export const OPERATOR_API_URL = import.meta.env.VITE_OPERATOR_API_URL;

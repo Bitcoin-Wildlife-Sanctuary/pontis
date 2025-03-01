@@ -1,17 +1,20 @@
 import {Col} from '../../components';
 import {useOperatorState} from '../../hooks';
 import {DepositCard} from './DepositCard';
+import {NetworkError} from './NetworkError';
 import {PendingTableRow} from './PendingTableRow';
 import {StateHeader} from './StateHeader';
 import {Container, HistoryContainer, HistorySectionContainer, SectionCard, SectionCardTitle, Table} from './styled';
 import {WithdrawalCard} from './WithdrawalCard';
 
 const Landing: React.FC = () => {
-  const {data: state, isLoading} = useOperatorState();
+  const {data: state, isLoading, error} = useOperatorState();
 
   return (
     <Container $flex={1}>
       <Col $gap="large" $flex={1} className="container">
+        {!isLoading && error && <NetworkError />}
+
         <StateHeader />
 
         <HistoryContainer>

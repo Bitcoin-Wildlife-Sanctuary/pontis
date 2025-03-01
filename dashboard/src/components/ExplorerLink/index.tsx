@@ -36,7 +36,11 @@ export const ExplorerLink: React.FC<ExplorerLinkProps> = ({children, iconGap = '
       return `${l1BaseUrl}/address/${address}`;
     }
 
-    return `${l2BaseUrl}/contract/${address}`;
+    if (network === 'l2') {
+      return `${l2BaseUrl}/contract/${address}`;
+    }
+
+    return '';
   }, [tx, network, address]);
 
   return (
@@ -46,7 +50,7 @@ export const ExplorerLink: React.FC<ExplorerLinkProps> = ({children, iconGap = '
 
         {children}
 
-        <StyledIcon name="ExternalLink" color="inherit" size={iconSize} />
+        {href && <StyledIcon name="ExternalLink" color="inherit" size={iconSize} />}
       </Row>
     </a>
   );
