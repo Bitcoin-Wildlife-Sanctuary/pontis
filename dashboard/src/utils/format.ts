@@ -1,4 +1,4 @@
-import {DepositStatus, TxStatus, WithdrawalStatus} from '../types';
+import {DepositStatus, StatusType, TxStatus, WithdrawalStatus} from '../types';
 
 // eslint-disable-next-line import/no-unused-modules
 export const shortenHex = (hex?: string, partLength = 6, separator = '...'): string => {
@@ -73,5 +73,40 @@ export const showWithdrawalStatus = (txStatus?: WithdrawalStatus): string => {
     default:
       txStatus satisfies undefined;
       return 'Unknown';
+  }
+};
+
+// eslint-disable-next-line import/no-unused-modules
+export const getStatusType = (status?: TxStatus | DepositStatus | WithdrawalStatus): StatusType => {
+  switch (status) {
+    case 'DROPPED':
+    case 'ERROR':
+    case 'REJECTED':
+    case 'REVERTED':
+      return 'error';
+
+    case 'PENDING':
+    case 'UNCONFIRMED':
+    case 'BEING_AGGREGATED':
+    case 'SUBMITTED_TO_L2':
+    case 'SUBMITTED_FOR_VERIFICATION':
+    case 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED':
+    case 'SUBMITTED_FOR_EXPANSION':
+    case 'BEING_EXPANDED':
+      return 'pending';
+
+    case 'MINED':
+    case 'SUCCEEDED':
+    case 'AGGREGATED':
+    case 'FINALIZED':
+    case 'DEPOSITED':
+    case 'COMPLETED':
+    case 'CLOSED':
+    case 'EXPANDED':
+      return 'success';
+
+    default:
+      status satisfies undefined;
+      return 'pending';
   }
 };

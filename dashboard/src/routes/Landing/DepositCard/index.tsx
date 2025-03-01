@@ -1,6 +1,8 @@
+import {Fragment} from 'react';
+
 import {Col, Divider, ExplorerLink, Icon, Row, Table, Text} from '../../../components';
 import {DepositBatch} from '../../../types';
-import {shortenHex, showDepositStatus, showTxStatus} from '../../../utils/format';
+import {shortenHex, showDepositStatus} from '../../../utils/format';
 import {Container, SectionTitle, TransactionCard} from './styled';
 
 type DepositCardProps = {
@@ -29,30 +31,21 @@ export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
           {batchId && <Text.CardValue>{shortenHex(batchId, 8)}</Text.CardValue>}
 
           {finalizeBatchTx && (
-            <Row $gap="small">
-              <Text.CardValue>{showTxStatus(finalizeBatchTx.status)}</Text.CardValue>
-              <ExplorerLink tx={finalizeBatchTx}>
-                <Text.CardValue $color="inherit">{shortenHex(finalizeBatchTx.hash)}</Text.CardValue>
-              </ExplorerLink>
-            </Row>
+            <ExplorerLink tx={finalizeBatchTx}>
+              <Text.CardValue $color="inherit">{shortenHex(finalizeBatchTx.hash)}</Text.CardValue>
+            </ExplorerLink>
           )}
 
           {depositTx && (
-            <Row $gap="small">
-              <Text.CardValue>{showTxStatus(depositTx.status)}</Text.CardValue>
-              <ExplorerLink tx={depositTx}>
-                <Text.CardValue $color="inherit">{shortenHex(depositTx.hash)}</Text.CardValue>
-              </ExplorerLink>
-            </Row>
+            <ExplorerLink tx={depositTx}>
+              <Text.CardValue $color="inherit">{shortenHex(depositTx.hash)}</Text.CardValue>
+            </ExplorerLink>
           )}
 
           {verifyTx && (
-            <Row $gap="small">
-              <Text.CardValue>{showTxStatus(verifyTx.status)}</Text.CardValue>
-              <ExplorerLink tx={verifyTx}>
-                <Text.CardValue $color="inherit">{shortenHex(verifyTx.hash)}</Text.CardValue>
-              </ExplorerLink>
-            </Row>
+            <ExplorerLink tx={verifyTx}>
+              <Text.CardValue $color="inherit">{shortenHex(verifyTx.hash)}</Text.CardValue>
+            </ExplorerLink>
           )}
         </Col>
       </Row>
@@ -89,10 +82,10 @@ export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
 
       <Row $alignItems="center">
         {deposit.aggregationTxs.map((aggregationTxLevels, levelIdx) => (
-          <>
+          <Fragment key={levelIdx.toString()}>
             {levelIdx % 2 === 1 && <Icon name="DoubleArrowRight" color="border" width={33} height={87} />}
 
-            <Col key={levelIdx.toString()} $gap="xxsmall">
+            <Col $gap="xxsmall">
               {aggregationTxLevels.map((aggregationTx) => (
                 <TransactionCard key={aggregationTx.tx.hash} $gap={4}>
                   {aggregationTx.type === 'LEAF' && (
@@ -111,12 +104,7 @@ export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
                     </>
                   )}
 
-                  <Row $gap="xlarge" $justify="space-between">
-                    <Text.CardTitle>Status:</Text.CardTitle>
-                    <Text.CardValue>{showTxStatus(aggregationTx.tx.status)}</Text.CardValue>
-                  </Row>
-
-                  <Row $gap="xlarge" $justify="space-between">
+                  <Row $gap="xlarge" $justify="space-between" $alignItems="center">
                     <Text.CardTitle>TX Hash:</Text.CardTitle>
                     <ExplorerLink tx={aggregationTx.tx}>
                       <Text.CardValue $color="inherit">{shortenHex(aggregationTx.tx.hash)}</Text.CardValue>
@@ -125,7 +113,7 @@ export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
                 </TransactionCard>
               ))}
             </Col>
-          </>
+          </Fragment>
         ))}
       </Row>
     </Container>

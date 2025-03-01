@@ -45,7 +45,7 @@ export const HistoryContainer = styled.div`
 
   @media (max-width: ${BREAKPOINTS.lg}px) {
     grid-template-columns: 1fr;
-    grid-template-rows: 1fr 1fr 1fr;
+    grid-template-rows: auto auto auto;
     grid-template-areas:
       'pending'
       'deposits'

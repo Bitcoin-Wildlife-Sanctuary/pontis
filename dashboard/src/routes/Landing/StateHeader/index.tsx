@@ -10,13 +10,13 @@ export const StateHeader: React.FC = () => {
 
   return (
     <GridRow className="g-small">
-      <GridCol flex span={2}>
+      <GridCol flex lg={2} md={6} sm={12}>
         <ContentCard>
           <LogoImage src={NiceCatImage} alt="Nice Cat" />
         </ContentCard>
       </GridCol>
 
-      <GridCol flex span={2}>
+      <GridCol flex lg={2} md={6} sm={12}>
         <Col $gap="small" $flex={1}>
           <ContentCard $withPadding $flex="1 1 max-content">
             <Col $flex={1} $justify="center">
@@ -43,7 +43,7 @@ export const StateHeader: React.FC = () => {
         </Col>
       </GridCol>
 
-      <GridCol flex span={3}>
+      <GridCol flex lg={3} md={6} sm={12}>
         <ContentCard $withPadding $flex={1}>
           <Col $flex={1} $justify="center" $gap="small">
             <Row $gap="xsmall">
@@ -66,7 +66,7 @@ export const StateHeader: React.FC = () => {
         </ContentCard>
       </GridCol>
 
-      <GridCol flex span={5}>
+      <GridCol flex lg={5} md={6} sm={12}>
         <Col $gap="small" $flex={1}>
           <ContentCard $withPadding $flex={1} $justify="center">
             <Text.Subtitle>Merkle Tree</Text.Subtitle>

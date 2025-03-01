@@ -6,3 +6,4 @@ export {default as LineChart} from './LineChart';
 export {PageLayout} from './PageLayout';
 export {Table} from './Table';
 export {Text} from './Text';
+export {TransactionStatus} from './TransactionStatus';

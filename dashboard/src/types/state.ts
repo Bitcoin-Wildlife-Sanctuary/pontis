@@ -9,3 +9,5 @@ export type TxStatus = L1TxStatus['status'] | L2TxStatus['status'];
 export type DepositStatus = DepositBatch['status'];
 
 export type WithdrawalStatus = WithdrawalBatch['status'];
+
+export type StatusType = 'error' | 'pending' | 'success';

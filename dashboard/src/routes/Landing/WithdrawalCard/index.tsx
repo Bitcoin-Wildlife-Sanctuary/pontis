@@ -1,6 +1,6 @@
 import {Col, Divider, ExplorerLink, Row, Table, Text} from '../../../components';
 import {WithdrawalBatch} from '../../../types';
-import {shortenHex, showTxStatus, showWithdrawalStatus} from '../../../utils/format';
+import {shortenHex, showWithdrawalStatus} from '../../../utils/format';
 import {Container, SectionTitle} from './styled';
 
 type WithdrawalCardProps = {
@@ -27,12 +27,9 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
           {hash && <Text.CardValue>{shortenHex(hash, 10)}</Text.CardValue>}
 
           {closeTx && (
-            <Row $gap="small">
-              <Text.CardValue>{showTxStatus(closeTx.status)}</Text.CardValue>
-              <ExplorerLink tx={closeTx}>
-                <Text.CardValue $color="inherit">{shortenHex(closeTx.hash)}</Text.CardValue>
-              </ExplorerLink>
-            </Row>
+            <ExplorerLink tx={closeTx}>
+              <Text.CardValue $color="inherit">{shortenHex(closeTx.hash)}</Text.CardValue>
+            </ExplorerLink>
           )}
         </Col>
       </Row>
