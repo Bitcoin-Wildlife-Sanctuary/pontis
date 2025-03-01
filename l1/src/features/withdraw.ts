@@ -138,6 +138,8 @@ export async function expandWithdrawal2(
   const changeAddress = await signer.getAddress()
 
   // TODO: how to enforce this?
+  // we can just enforce this in operator
+  // because without this enforcement, the withdrawal batch can be processed fine but wasting some gas fees.
   // if (expanderUtxo.state.level <= WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE) {
   //   throw new Error(`withdrawal expander level should be greater than ${WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE}`)
   // }
