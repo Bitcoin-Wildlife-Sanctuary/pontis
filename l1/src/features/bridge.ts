@@ -16,7 +16,7 @@ import {
 import { ExtPsbt } from '../lib/extPsbt'
 import { CONTRACT_INDEXES, getScriptPubKeys } from '../covenants/util'
 import { pickLargeFeeUtxo } from './utils/pick'
-import { getDummyUtxo, supportedNetworkToBtcNetwork } from '../lib/utils'
+import { getDummyUtxo, isSha256String, supportedNetworkToBtcNetwork } from '../lib/utils'
 import { inputToPrevout, outputToUtxo, reverseTxId } from '../lib/txTools'
 import * as tools from 'uint8array-tools'
 import {
@@ -378,9 +378,15 @@ export async function createWithdrawalExpander2(
   
   feeRate: number
 ) {
+
+  if (!isSha256String(withdrawalMerkleRoot)) {
+    throw new Error('invalid withdrawal merkle root format')
+  }
+
   const changeAddress = await signer.getAddress()
 
   // TODO: Does this check makes any sense?
+  // this check the withdrawal addresses are valid, if the addresses are invalid, the distribution of withdrawals will fail
   // withdrawals.forEach((withdrawal) =>
   //   WithdrawalMerkle.checkWithdrawalValid(withdrawal)
   // )

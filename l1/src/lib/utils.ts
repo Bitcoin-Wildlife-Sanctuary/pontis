@@ -434,3 +434,11 @@ export function btcToSatoshis(btc: number): bigint {
   }
   return BigInt(sat)
 }
+
+export function isHexString(str: string): boolean {
+  return /[0-9a-fA-F]+$/.test(str)
+}
+
+export function isSha256String(str: string): boolean {
+  return isHexString(str) && str.length === 32 * 2
+}
