@@ -1,6 +1,8 @@
+'use client';
+
 import {createGlobalStyle} from 'styled-components';
 
-import {rem} from '../utils/units';
+import {rem} from '@/utils/units';
 
 export const GlobalStyle = createGlobalStyle`
   :root,

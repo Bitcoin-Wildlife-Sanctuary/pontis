@@ -1,3 +1,5 @@
+'use client';
+
 import type {Globals, Property} from 'csstype';
 import styled from 'styled-components';
 

@@ -1,38 +1,36 @@
-# Dashboard
+This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-This is a dashboard for the [Pontis](https://github.com/Bitcoin-Wildlife-Sanctuary/pontis) project.
-It is built using [React](https://react.dev/), [TypeScript](https://www.typescriptlang.org/), and [Vite](https://vitejs.dev/).
+## Getting Started
 
-## Development
-
-Copy the `.env.example` file to `.env` and fill in the required values.
-
-Install the dependencies by running:
+First, run the development server:
 
 ```bash
-yarn install
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
 ```
 
-To serve the operator state, run:
+Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-```bash
-yarn serve path/to/operator/state.json
-```
+You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-To start the development server, run:
+This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
-```bash
-yarn start
-```
+## Learn More
 
-## Deployment
+To learn more about Next.js, take a look at the following resources:
 
-Fill in the required values in the `.env` file.
+- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
+- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
 
-To build the project, run:
+You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
-```bash
-yarn build
-```
+## Deploy on Vercel
 
-You can then serve the `dist` directory using any static file server.
+The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+
+Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

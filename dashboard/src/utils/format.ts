@@ -1,4 +1,4 @@
-import {DepositStatus, StatusType, TxStatus, WithdrawalStatus} from '../types';
+import {DepositStatus, StatusType, TxStatus, WithdrawalStatus} from '@/types';
 
 // eslint-disable-next-line import/no-unused-modules
 export const shortenHex = (hex?: string, partLength = 6, separator = '...'): string => {

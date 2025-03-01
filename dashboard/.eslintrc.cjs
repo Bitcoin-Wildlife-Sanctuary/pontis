@@ -1,13 +1,14 @@
 /* eslint-env node */
 
+// eslint-disable-next-line @typescript-eslint/no-var-requires
 const {node: restrictedImports} = require('@uniswap/eslint-config/restrictedImports');
 require('@uniswap/eslint-config/load');
 
 /**
- * @type {import("eslint").Linter.Config}
+ * @type {import("eslint").Linter.BaseConfig}
  */
 module.exports = {
-  extends: ['@uniswap/eslint-config/react'],
+  extends: ['next/core-web-vitals', 'next/typescript', '@uniswap/eslint-config/node'],
   plugins: [],
 
   overrides: [
@@ -15,6 +16,7 @@ module.exports = {
       files: ['**/*'],
       rules: {
         'prettier/prettier': ['error', {semi: true}],
+        'import/no-unused-modules': 'off',
       },
     },
     {

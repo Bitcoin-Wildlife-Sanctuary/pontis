@@ -1,13 +1,11 @@
-import NiceCatImage from '../../../assets/nice-cat.jpeg';
-import {Col, ExplorerLink, GridCol, GridRow, Row, Text} from '../../../components';
-import {useOperatorState} from '../../../hooks';
-import {shortenHex} from '../../../utils/format';
+import NiceCatImage from '@/assets/nice-cat.jpeg';
+import {Col, ExplorerLink, GridCol, GridRow, Row, Text} from '@/components';
+import {shortenHex} from '@/utils/format';
+
 import {ContentCard} from '../styled';
 import {LogoImage} from './styled';
 
-export const StateHeader: React.FC = () => {
-  const {data: state} = useOperatorState();
-
+export const StateHeader: React.FC<{state: any}> = ({state}) => {
   return (
     <GridRow className="g-small">
       <GridCol flex lg={2} md={6} sm={12}>

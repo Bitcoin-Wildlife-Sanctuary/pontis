@@ -1,3 +1,5 @@
+'use client';
+
 import styled from 'styled-components';
 
 import {Flex, Text} from '../../../components';
@@ -15,4 +17,12 @@ export const Container = styled(Flex)`
 export const SectionTitle = styled(Text.CardValue)`
   display: block;
   margin-bottom: ${({theme}) => theme.spacings.xsmall}px;
+`;
+
+export const TransactionCard = styled(Flex)`
+  flex-direction: column;
+  padding: ${({theme}) => theme.spacings.xxsmall}px;
+  background-color: ${({theme}) => theme.colors.elevated};
+  border: 1px solid ${({theme}) => theme.colors.border};
+  border-radius: 4px;
 `;

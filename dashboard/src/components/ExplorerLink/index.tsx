@@ -1,7 +1,8 @@
 import {useMemo} from 'react';
 
-import {L1Tx, L2Tx, Theme} from '../../types';
-import {getStatusType} from '../../utils/format';
+import {L1Tx, L2Tx, Theme} from '@/types';
+import {getStatusType} from '@/utils/format';
+
 import {Row} from '../Layout';
 import {StyledIcon, StyledTransactionStatus} from './styled';
 

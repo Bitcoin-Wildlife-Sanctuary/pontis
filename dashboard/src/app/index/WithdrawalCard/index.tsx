@@ -1,6 +1,7 @@
-import {Col, Divider, ExplorerLink, Row, Table, Text} from '../../../components';
-import {WithdrawalBatch} from '../../../types';
-import {shortenHex, showWithdrawalStatus} from '../../../utils/format';
+import {Col, Divider, ExplorerLink, Row, Table, Text} from '@/components';
+import {WithdrawalBatch} from '@/types';
+import {shortenHex, showWithdrawalStatus} from '@/utils/format';
+
 import {Container, SectionTitle} from './styled';
 
 type WithdrawalCardProps = {

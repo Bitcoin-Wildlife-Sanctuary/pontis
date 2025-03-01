@@ -1,3 +1,5 @@
+'use client';
+
 import {useState} from 'react';
 import {ThemeProvider as SCThemeProvider} from 'styled-components';
 
@@ -60,8 +62,8 @@ const transitions = {
 
 const misc = {
   fonts: {
-    Inter: 'Inter, sans-serif',
-    default: 'Inter, sans-serif',
+    Inter: 'var(--font-inter)',
+    default: 'var(--font-inter)',
   },
   transitions,
   spacings,
@@ -77,8 +79,8 @@ export function getTheme(theme: 'dark') {
   };
 }
 
-export const ThemeProvider: React.FC<React.PropsWithChildren> = ({children}) => {
+export function ThemeProvider({children}: React.PropsWithChildren) {
   const [theme] = useState(() => getTheme('dark'));
 
   return <SCThemeProvider theme={theme}>{children}</SCThemeProvider>;
-};
+}

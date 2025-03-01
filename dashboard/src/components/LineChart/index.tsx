@@ -1,3 +1,5 @@
+'use client';
+
 import Chart, {type ChartDataset, type ChartOptions} from 'chart.js/auto';
 import {memo, useEffect, useRef} from 'react';
 import {useTheme} from 'styled-components';

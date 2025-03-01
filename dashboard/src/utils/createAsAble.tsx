@@ -1,3 +1,4 @@
+import type {JSX} from 'react';
 import {createElement, forwardRef} from 'react';
 
 type AsType = keyof JSX.IntrinsicElements | React.JSXElementConstructor<any>;

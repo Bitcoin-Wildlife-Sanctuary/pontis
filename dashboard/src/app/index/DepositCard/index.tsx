@@ -1,9 +1,10 @@
 import cx from 'classnames';
 import {Fragment} from 'react';
 
-import {Col, Divider, ExplorerLink, Icon, Row, Table, Text} from '../../../components';
-import {DepositBatch} from '../../../types';
-import {shortenHex, showDepositStatus} from '../../../utils/format';
+import {Col, Divider, ExplorerLink, Icon, Row, Table, Text} from '@/components';
+import {DepositBatch} from '@/types';
+import {shortenHex, showDepositStatus} from '@/utils/format';
+
 import {Container, SectionTitle, TransactionCard} from './styled';
 
 type DepositCardProps = {

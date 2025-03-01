@@ -1,6 +1,6 @@
-import {ExplorerLink, Text} from '../../../components';
-import {Deposit} from '../../../types';
-import {shortenHex} from '../../../utils/format';
+import {ExplorerLink, Text} from '@/components';
+import {Deposit} from '@/types';
+import {shortenHex} from '@/utils/format';
 
 type PendingTableRowProps = {
   deposit: Deposit;

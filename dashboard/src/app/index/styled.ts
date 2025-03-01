@@ -1,3 +1,5 @@
+'use client';
+
 import styled from 'styled-components';
 
 import {Col, Flex, Table as TableComponent, Text} from '../../components';

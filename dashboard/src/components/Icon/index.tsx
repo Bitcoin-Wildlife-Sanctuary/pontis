@@ -1,8 +1,10 @@
+'use client';
+
 import {Globals} from 'csstype';
 import {useTheme} from 'styled-components';
 
-import * as Icons from '../../assets/icons';
-import {Theme} from '../../types';
+import * as Icons from '@/assets/icons';
+import {Theme} from '@/types';
 
 type IconNames = keyof typeof Icons;
 
