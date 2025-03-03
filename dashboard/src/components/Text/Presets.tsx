@@ -1,13 +1,15 @@
 'use client';
 
-import styled from 'styled-components';
+import {createElement} from 'react';
 
 import {type TextWrapperProps, TextWrapper} from './TextWrapper';
 
-const createTextVariant = (props: TextWrapperProps) => {
-  const Variant = styled(TextWrapper)``;
-  Variant.defaultProps = props;
-  return Variant;
+const createTextVariant = (variantProps: TextWrapperProps) => {
+  const TextVariant = (props: React.ComponentProps<typeof TextWrapper>) => {
+    return createElement(TextWrapper, {...variantProps, ...props}, props.children);
+  };
+
+  return TextVariant;
 };
 
 export const HeadlineLarge = createTextVariant({

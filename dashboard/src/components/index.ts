@@ -6,3 +6,4 @@ export {default as LineChart} from './LineChart';
 export {Table} from './Table';
 export {Text} from './Text';
 export {TransactionStatus} from './TransactionStatus';
+export {TreeView} from './TreeView';

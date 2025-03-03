@@ -315,6 +315,30 @@
         "hash": "0x8f80f1eb350b3faf0be9bb3819068766d72e1812c25ea415155c69ce925af1",
         "status": "SUCCEEDED"
       },
+      "expansionTxs": [
+        [
+          {
+            "blockNumber": 404244,
+            "status": "MINED",
+            "type": "l1tx",
+            "hash": "dca56526b8684d329b0330463c650258208418a319a55d1ef3e792b33791569c"
+          },
+          {
+            "blockNumber": 404244,
+            "status": "MINED",
+            "type": "l1tx",
+            "hash": "dca56526b868dd329b4330463c650258208418a319a55d1ef3e792b33791569c"
+          }
+        ],
+        [
+          {
+            "blockNumber": 404244,
+            "status": "MINED",
+            "type": "l1tx",
+            "hash": "dca54526b868dd329b0330463c650258208418a319a55d1ef3e792b33791569c"
+          }
+        ]
+      ],
       "hash": "0xf9f259cc10c8412825da20298895432c586533e7a7c5a8e0fcc4b6af0005eb18"
     }
   ],

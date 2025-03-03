@@ -9,7 +9,15 @@ import {OperatorState} from '@/types';
 import {DepositCard} from './DepositCard';
 import {PendingTableRow} from './PendingTableRow';
 import {StateHeader} from './StateHeader';
-import {Container, HistoryContainer, HistorySectionContainer, SectionCard, SectionCardTitle, Table} from './styled';
+import {
+  Container,
+  ContentCard,
+  HistoryContainer,
+  HistorySectionContainer,
+  SectionCard,
+  SectionCardTitle,
+  Table,
+} from './styled';
 import {WithdrawalCard} from './WithdrawalCard';
 
 export default function Page({initialState}: {initialState: OperatorState}) {
@@ -21,22 +29,22 @@ export default function Page({initialState}: {initialState: OperatorState}) {
         <StateHeader state={state} />
 
         <HistoryContainer>
-          <SectionCard className="pending">
-            <SectionCardTitle>Pending</SectionCardTitle>
-
-            <Table headings={['RECIPIENT', 'AMOUNT', 'ORIGIN TRANSACTION']}>
-              {state.pendingDeposits?.map((deposit) => (
-                <Fragment key={deposit.origin.hash}>
-                  <PendingTableRow deposit={deposit} />
-                </Fragment>
-              ))}
-            </Table>
-          </SectionCard>
-
           <SectionCard className="deposits">
             <SectionCardTitle>Deposits</SectionCardTitle>
 
             <HistorySectionContainer>
+              <ContentCard $surface>
+                <SectionCardTitle>Pending</SectionCardTitle>
+
+                <Table headings={['Recipient', 'Amount', 'Origin TX']}>
+                  {state.pendingDeposits?.map((deposit) => (
+                    <Fragment key={deposit.origin.hash}>
+                      <PendingTableRow deposit={deposit} />
+                    </Fragment>
+                  ))}
+                </Table>
+              </ContentCard>
+
               {state.depositBatches?.map((depositBatch, index) => (
                 // depositBatch doesn't always have a unique identifier, so using the index as the key
                 <DepositCard key={index.toString()} deposit={depositBatch} />

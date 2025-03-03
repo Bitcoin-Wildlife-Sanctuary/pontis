@@ -1,8 +1,10 @@
-import {Col, Divider, ExplorerLink, Row, Table, Text} from '@/components';
+import {Fragment} from 'react';
+
+import {Col, Divider, ExplorerLink, Row, Table, Text, TreeView} from '@/components';
 import {WithdrawalBatch} from '@/types';
 import {shortenHex, showWithdrawalStatus} from '@/utils/format';
 
-import {Container, SectionTitle} from './styled';
+import {Container, SectionTitle, TransactionCard} from './styled';
 
 type WithdrawalCardProps = {
   withdrawal: WithdrawalBatch;
@@ -11,33 +13,28 @@ type WithdrawalCardProps = {
 export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
   const hash = 'hash' in withdrawal ? withdrawal.hash : undefined;
   const closeTx = 'closeWithdrawalBatchTx' in withdrawal ? withdrawal.closeWithdrawalBatchTx : undefined;
+  const withdrawBatchTx = 'withdrawBatchTx' in withdrawal ? withdrawal.withdrawBatchTx : undefined;
+  const expansionTxs = 'expansionTxs' in withdrawal ? withdrawal.expansionTxs : undefined;
 
   return (
     <Container>
-      <Row $gap="xxlarge">
-        <Col $gap="xxsmall" $justify="center">
-          <Text.CardTitle>Status:</Text.CardTitle>
-          <Text.CardTitle>ID:</Text.CardTitle>
-          {hash && <Text.CardTitle>Hash:</Text.CardTitle>}
-          {closeTx && <Text.CardTitle>Close TX:</Text.CardTitle>}
+      <Row $justify="space-between" $gap="none">
+        <Col $gap="xxsmall">
+          <Row $gap="xxsmall">
+            <SectionTitle $marginBottom="none">ID:</SectionTitle>
+            <SectionTitle $marginBottom="none">{withdrawal.id.toString()}</SectionTitle>
+          </Row>
+
+          <Row $gap="xxsmall">
+            <SectionTitle>Hash:</SectionTitle>
+            <SectionTitle>{shortenHex(hash, 10)}</SectionTitle>
+          </Row>
         </Col>
 
-        <Col $gap="xxsmall" $justify="center">
-          <Text.CardValue>{showWithdrawalStatus(withdrawal.status)}</Text.CardValue>
-          <Text.CardValue>{withdrawal.id.toString()}</Text.CardValue>
-          {hash && <Text.CardValue>{shortenHex(hash, 10)}</Text.CardValue>}
-
-          {closeTx && (
-            <ExplorerLink tx={closeTx}>
-              <Text.CardValue $color="inherit">{shortenHex(closeTx.hash)}</Text.CardValue>
-            </ExplorerLink>
-          )}
+        <Col>
+          <SectionTitle>{showWithdrawalStatus(withdrawal.status)}</SectionTitle>
         </Col>
       </Row>
-
-      <Divider $marginTop="xxsmall" $marginBottom="xxsmall" />
-
-      <SectionTitle>Withdrawals</SectionTitle>
 
       <Table headings={['Recipient', 'Amount', 'Origin TX']}>
         {withdrawal.withdrawals.map((batchWithdrawal) => (
@@ -60,6 +57,53 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
           </tr>
         ))}
       </Table>
+
+      <Divider $marginTop="xxsmall" $marginBottom="xxsmall" />
+
+      <SectionTitle>Transaction Informations</SectionTitle>
+
+      <Col $gap="xsmall">
+        <Row $gap="xxlarge">
+          <Col $gap="xxsmall" $justify="center">
+            {closeTx && <Text.CardTitle>Close:</Text.CardTitle>}
+            {withdrawBatchTx && <Text.CardTitle>Withdraw Batch:</Text.CardTitle>}
+          </Col>
+
+          <Col $gap="xxsmall" $justify="center">
+            {closeTx && (
+              <ExplorerLink tx={closeTx}>
+                <Text.CardValue $color="inherit">{shortenHex(closeTx.hash)}</Text.CardValue>
+              </ExplorerLink>
+            )}
+
+            {withdrawBatchTx && (
+              <ExplorerLink tx={withdrawBatchTx}>
+                <Text.CardValue $color="inherit">{shortenHex(withdrawBatchTx.hash)}</Text.CardValue>
+              </ExplorerLink>
+            )}
+          </Col>
+        </Row>
+
+        {expansionTxs && expansionTxs.length > 0 && (
+          <TreeView>
+            {expansionTxs.map((expansionTxLevels, levelIdx) => (
+              <Fragment key={levelIdx.toString()}>
+                {levelIdx % 2 === 1 && <TreeView.Separator />}
+
+                <Col $gap="xxsmall">
+                  {expansionTxLevels.map((expansionTx) => (
+                    <TransactionCard key={expansionTx.hash} $gap={4}>
+                      <ExplorerLink tx={expansionTx}>
+                        <Text.CardValue $color="inherit">{shortenHex(expansionTx.hash)}</Text.CardValue>
+                      </ExplorerLink>
+                    </TransactionCard>
+                  ))}
+                </Col>
+              </Fragment>
+            ))}
+          </TreeView>
+        )}
+      </Col>
     </Container>
   );
 };

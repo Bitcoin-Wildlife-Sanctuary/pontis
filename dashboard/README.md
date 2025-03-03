@@ -30,7 +30,7 @@ yarn install
 To start the development server, run:
 
 ```bash
-yarn start
+yarn dev
 ```
 
 ## Deployment
