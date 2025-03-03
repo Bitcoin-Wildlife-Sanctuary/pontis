@@ -36,13 +36,15 @@ export default function Page({initialState}: {initialState: OperatorState}) {
               <ContentCard $surface>
                 <SectionCardTitle>Pending</SectionCardTitle>
 
-                <Table headings={['Recipient', 'Amount', 'Origin TX']}>
-                  {state.pendingDeposits?.map((deposit) => (
-                    <Fragment key={deposit.origin.hash}>
-                      <PendingTableRow deposit={deposit} />
-                    </Fragment>
-                  ))}
-                </Table>
+                <Col $padding="small">
+                  <Table headings={['Recipient', 'Amount', 'Origin TX']}>
+                    {state.pendingDeposits?.map((deposit) => (
+                      <Fragment key={deposit.origin.hash}>
+                        <PendingTableRow deposit={deposit} />
+                      </Fragment>
+                    ))}
+                  </Table>
+                </Col>
               </ContentCard>
 
               {state.depositBatches?.map((depositBatch, index) => (

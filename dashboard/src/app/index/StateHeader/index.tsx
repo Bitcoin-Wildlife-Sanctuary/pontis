@@ -16,7 +16,7 @@ export const StateHeader: React.FC<{state: any}> = ({state}) => {
 
       <GridCol flex lg={2} md={6} sm={12}>
         <Col $gap="small" $flex={1}>
-          <ContentCard $withPadding $flex="1 1 max-content">
+          <ContentCard $padding="small" $flex="1 1 max-content">
             <Col $flex={1} $justify="center">
               <Row $gap="xsmall">
                 <Text.Subtitle>Total:</Text.Subtitle>
@@ -25,7 +25,7 @@ export const StateHeader: React.FC<{state: any}> = ({state}) => {
             </Col>
           </ContentCard>
 
-          <ContentCard $withPadding $justify="center" $flex="1 1 max-content">
+          <ContentCard $padding="small" $justify="center" $flex="1 1 max-content">
             <Col $flex={1} $justify="center" $gap="small">
               <Row $gap="xsmall">
                 <Text.Subtitle>L1 Block:</Text.Subtitle>
@@ -42,7 +42,7 @@ export const StateHeader: React.FC<{state: any}> = ({state}) => {
       </GridCol>
 
       <GridCol flex lg={3} md={6} sm={12}>
-        <ContentCard $withPadding $flex={1}>
+        <ContentCard $padding="small" $flex={1}>
           <Col $flex={1} $justify="center" $gap="small">
             <Row $gap="xsmall">
               <Text.Subtitle>Latest TX:</Text.Subtitle>
@@ -66,7 +66,7 @@ export const StateHeader: React.FC<{state: any}> = ({state}) => {
 
       <GridCol flex lg={5} md={6} sm={12}>
         <Col $gap="small" $flex={1}>
-          <ContentCard $withPadding $flex={1} $justify="center">
+          <ContentCard $padding="small" $flex={1} $justify="center">
             <Text.Subtitle>Merkle Tree</Text.Subtitle>
           </ContentCard>
 

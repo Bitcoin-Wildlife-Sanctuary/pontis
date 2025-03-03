@@ -4,7 +4,7 @@ import {Col, Divider, ExplorerLink, Row, Table, Text, TreeView} from '@/componen
 import {WithdrawalBatch} from '@/types';
 import {shortenHex, showWithdrawalStatus} from '@/utils/format';
 
-import {Container, SectionTitle, TransactionCard} from './styled';
+import {Container, SectionTitle, SectionTitleContainer, TransactionCard} from './styled';
 
 type WithdrawalCardProps = {
   withdrawal: WithdrawalBatch;
@@ -18,11 +18,11 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
 
   return (
     <Container>
-      <Row $justify="space-between" $gap="none">
+      <SectionTitleContainer as={Row} $justify="space-between" $gap="none">
         <Col $gap="xxsmall">
           <Row $gap="xxsmall">
-            <SectionTitle $marginBottom="none">ID:</SectionTitle>
-            <SectionTitle $marginBottom="none">{withdrawal.id.toString()}</SectionTitle>
+            <SectionTitle>Batch:</SectionTitle>
+            <SectionTitle>{withdrawal.id.toString()}</SectionTitle>
           </Row>
 
           <Row $gap="xxsmall">
@@ -31,78 +31,80 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
           </Row>
         </Col>
 
-        <Col>
-          <SectionTitle>{showWithdrawalStatus(withdrawal.status)}</SectionTitle>
+        <SectionTitle>{showWithdrawalStatus(withdrawal.status)}</SectionTitle>
+      </SectionTitleContainer>
+
+      <Col $padding="small">
+        <Table headings={['Recipient', 'Amount', 'Origin TX']}>
+          {withdrawal.withdrawals.map((batchWithdrawal) => (
+            <tr key={batchWithdrawal.origin}>
+              <td>
+                <ExplorerLink network="l1" address={batchWithdrawal.recipient}>
+                  <Text.BodyStrong $color="inherit">{shortenHex(batchWithdrawal.recipient)}</Text.BodyStrong>
+                </ExplorerLink>
+              </td>
+
+              <td>
+                <Text.BodyStrong>{batchWithdrawal.amount.toString().replace('n', '')}</Text.BodyStrong>
+              </td>
+
+              <td>
+                <ExplorerLink tx={{type: 'l2tx', hash: batchWithdrawal.origin}}>
+                  <Text.BodyStrong $color="inherit">{shortenHex(batchWithdrawal.origin)}</Text.BodyStrong>
+                </ExplorerLink>
+              </td>
+            </tr>
+          ))}
+        </Table>
+      </Col>
+
+      <Divider />
+
+      <Col $padding="small" $gap="small">
+        <SectionTitle>Transaction Informations</SectionTitle>
+
+        <Col $gap="xsmall">
+          <Row $gap="xxlarge">
+            <Col $gap="xxsmall" $justify="center">
+              {closeTx && <Text.CardTitle>Close:</Text.CardTitle>}
+              {withdrawBatchTx && <Text.CardTitle>Withdraw Batch:</Text.CardTitle>}
+            </Col>
+
+            <Col $gap="xxsmall" $justify="center">
+              {closeTx && (
+                <ExplorerLink tx={closeTx}>
+                  <Text.CardValue $color="inherit">{shortenHex(closeTx.hash)}</Text.CardValue>
+                </ExplorerLink>
+              )}
+
+              {withdrawBatchTx && (
+                <ExplorerLink tx={withdrawBatchTx}>
+                  <Text.CardValue $color="inherit">{shortenHex(withdrawBatchTx.hash)}</Text.CardValue>
+                </ExplorerLink>
+              )}
+            </Col>
+          </Row>
+
+          {expansionTxs && expansionTxs.length > 0 && (
+            <TreeView>
+              {expansionTxs.map((expansionTxLevels, levelIdx) => (
+                <Fragment key={levelIdx.toString()}>
+                  {levelIdx % 2 === 1 && <TreeView.Separator />}
+
+                  <Col $gap="xxsmall">
+                    {expansionTxLevels.map((expansionTx) => (
+                      <TransactionCard key={expansionTx.hash} $gap={4}>
+                        <ExplorerLink tx={expansionTx}>
+                          <Text.CardValue $color="inherit">{shortenHex(expansionTx.hash)}</Text.CardValue>
+                        </ExplorerLink>
+                      </TransactionCard>
+                    ))}
+                  </Col>
+                </Fragment>
+              ))}
+            </TreeView>
+          )}
         </Col>
-      </Row>
-
-      <Table headings={['Recipient', 'Amount', 'Origin TX']}>
-        {withdrawal.withdrawals.map((batchWithdrawal) => (
-          <tr key={batchWithdrawal.origin}>
-            <td>
-              <ExplorerLink network="l1" address={batchWithdrawal.recipient}>
-                <Text.BodyStrong $color="inherit">{shortenHex(batchWithdrawal.recipient)}</Text.BodyStrong>
-              </ExplorerLink>
-            </td>
-
-            <td>
-              <Text.BodyStrong>{batchWithdrawal.amount.toString().replace('n', '')}</Text.BodyStrong>
-            </td>
-
-            <td>
-              <ExplorerLink tx={{type: 'l2tx', hash: batchWithdrawal.origin}}>
-                <Text.BodyStrong $color="inherit">{shortenHex(batchWithdrawal.origin)}</Text.BodyStrong>
-              </ExplorerLink>
-            </td>
-          </tr>
-        ))}
-      </Table>
-
-      <Divider $marginTop="xxsmall" $marginBottom="xxsmall" />
-
-      <SectionTitle>Transaction Informations</SectionTitle>
-
-      <Col $gap="xsmall">
-        <Row $gap="xxlarge">
-          <Col $gap="xxsmall" $justify="center">
-            {closeTx && <Text.CardTitle>Close:</Text.CardTitle>}
-            {withdrawBatchTx && <Text.CardTitle>Withdraw Batch:</Text.CardTitle>}
-          </Col>
-
-          <Col $gap="xxsmall" $justify="center">
-            {closeTx && (
-              <ExplorerLink tx={closeTx}>
-                <Text.CardValue $color="inherit">{shortenHex(closeTx.hash)}</Text.CardValue>
-              </ExplorerLink>
-            )}
-
-            {withdrawBatchTx && (
-              <ExplorerLink tx={withdrawBatchTx}>
-                <Text.CardValue $color="inherit">{shortenHex(withdrawBatchTx.hash)}</Text.CardValue>
-              </ExplorerLink>
-            )}
-          </Col>
-        </Row>
-
-        {expansionTxs && expansionTxs.length > 0 && (
-          <TreeView>
-            {expansionTxs.map((expansionTxLevels, levelIdx) => (
-              <Fragment key={levelIdx.toString()}>
-                {levelIdx % 2 === 1 && <TreeView.Separator />}
-
-                <Col $gap="xxsmall">
-                  {expansionTxLevels.map((expansionTx) => (
-                    <TransactionCard key={expansionTx.hash} $gap={4}>
-                      <ExplorerLink tx={expansionTx}>
-                        <Text.CardValue $color="inherit">{shortenHex(expansionTx.hash)}</Text.CardValue>
-                      </ExplorerLink>
-                    </TransactionCard>
-                  ))}
-                </Col>
-              </Fragment>
-            ))}
-          </TreeView>
-        )}
       </Col>
     </Container>
   );

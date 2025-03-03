@@ -4,7 +4,7 @@ import {Col, Divider, ExplorerLink, Row, Table, Text, TreeView} from '@/componen
 import {DepositBatch} from '@/types';
 import {shortenHex, showDepositStatus} from '@/utils/format';
 
-import {Container, SectionTitle, TransactionCard} from './styled';
+import {Container, SectionTitle, SectionTitleContainer, TransactionCard} from './styled';
 
 type DepositCardProps = {
   deposit: DepositBatch;
@@ -18,7 +18,7 @@ export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
 
   return (
     <Container>
-      <Row $justify="space-between">
+      <SectionTitleContainer as={Row} $justify="space-between">
         <Row $gap="xxsmall">
           <SectionTitle>Batch:</SectionTitle>
           <SectionTitle>{batchId && shortenHex(batchId, 8)}</SectionTitle>
@@ -27,100 +27,104 @@ export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
         <Col>
           <SectionTitle>{showDepositStatus(deposit.status)}</SectionTitle>
         </Col>
-      </Row>
+      </SectionTitleContainer>
 
-      <Table headings={['Recipient', 'Amount', 'Origin TX']}>
-        {deposit.deposits.map((batchDeposit) => (
-          <tr key={batchDeposit.origin.hash}>
-            <td>
-              <ExplorerLink network="l2" address={batchDeposit.recipient}>
-                <Text.BodyStrong $color="inherit">{shortenHex(batchDeposit.recipient)}</Text.BodyStrong>
-              </ExplorerLink>
-            </td>
+      <Col $padding="small">
+        <Table headings={['Recipient', 'Amount', 'Origin TX']}>
+          {deposit.deposits.map((batchDeposit) => (
+            <tr key={batchDeposit.origin.hash}>
+              <td>
+                <ExplorerLink network="l2" address={batchDeposit.recipient}>
+                  <Text.BodyStrong $color="inherit">{shortenHex(batchDeposit.recipient)}</Text.BodyStrong>
+                </ExplorerLink>
+              </td>
 
-            <td>
-              <Text.BodyStrong>{batchDeposit.amount.toString()}</Text.BodyStrong>
-            </td>
+              <td>
+                <Text.BodyStrong>{batchDeposit.amount.toString()}</Text.BodyStrong>
+              </td>
 
-            <td>
-              <ExplorerLink tx={batchDeposit.origin}>
-                <Text.BodyStrong $color="inherit">{shortenHex(batchDeposit.origin.hash)}</Text.BodyStrong>
-              </ExplorerLink>
-            </td>
-          </tr>
-        ))}
-      </Table>
+              <td>
+                <ExplorerLink tx={batchDeposit.origin}>
+                  <Text.BodyStrong $color="inherit">{shortenHex(batchDeposit.origin.hash)}</Text.BodyStrong>
+                </ExplorerLink>
+              </td>
+            </tr>
+          ))}
+        </Table>
+      </Col>
 
-      <Divider $marginTop="xxsmall" $marginBottom="xxsmall" />
+      <Divider />
 
-      <SectionTitle>Transaction Informations</SectionTitle>
+      <Col $padding="small" $gap="small">
+        <SectionTitle>Transaction Informations</SectionTitle>
 
-      <Col $gap="xsmall">
-        <Row $gap="xxlarge">
-          <Col $gap="xxsmall" $justify="center">
-            {finalizeBatchTx && <Text.CardTitle>Finalize:</Text.CardTitle>}
-            {depositTx && <Text.CardTitle>Deposit:</Text.CardTitle>}
-            {verifyTx && <Text.CardTitle>Verify:</Text.CardTitle>}
-          </Col>
+        <Col $gap="xsmall">
+          {deposit.aggregationTxs.length > 0 && (
+            <TreeView>
+              {deposit.aggregationTxs.map((aggregationTxLevels, levelIdx) => (
+                <Fragment key={levelIdx.toString()}>
+                  {levelIdx % 2 === 1 && <TreeView.Separator />}
 
-          <Col $gap="xxsmall" $justify="center">
-            {finalizeBatchTx && (
-              <ExplorerLink tx={finalizeBatchTx}>
-                <Text.CardValue $color="inherit">{shortenHex(finalizeBatchTx.hash)}</Text.CardValue>
-              </ExplorerLink>
-            )}
-
-            {depositTx && (
-              <ExplorerLink tx={depositTx}>
-                <Text.CardValue $color="inherit">{shortenHex(depositTx.hash)}</Text.CardValue>
-              </ExplorerLink>
-            )}
-
-            {verifyTx && (
-              <ExplorerLink tx={verifyTx}>
-                <Text.CardValue $color="inherit">{shortenHex(verifyTx.hash)}</Text.CardValue>
-              </ExplorerLink>
-            )}
-          </Col>
-        </Row>
-
-        {deposit.aggregationTxs.length > 0 && (
-          <TreeView>
-            {deposit.aggregationTxs.map((aggregationTxLevels, levelIdx) => (
-              <Fragment key={levelIdx.toString()}>
-                {levelIdx % 2 === 1 && <TreeView.Separator />}
-
-                <Col $gap="xxsmall">
-                  {aggregationTxLevels.map((aggregationTx) => (
-                    <TransactionCard key={aggregationTx.tx.hash} $gap={4}>
-                      <Row $justify="space-between" $alignItems="center" $gap="xsmall">
-                        {aggregationTx.type === 'LEAF' && (
-                          <Col>
-                            <Text.CardValue>{aggregationTx.depositAmt.toString()}</Text.CardValue>
-                          </Col>
-                        )}
-
-                        <Col $alignItems="flex-end">
+                  <Col $gap="xxsmall">
+                    {aggregationTxLevels.map((aggregationTx) => (
+                      <TransactionCard key={aggregationTx.tx.hash} $gap={4}>
+                        <Row $justify="space-between" $alignItems="center" $gap="xsmall">
                           {aggregationTx.type === 'LEAF' && (
-                            <ExplorerLink network="l1" address={aggregationTx.depositAddress}>
-                              <Text.CardValue $color="inherit">
-                                {shortenHex(aggregationTx.depositAddress)}
-                              </Text.CardValue>
-                            </ExplorerLink>
+                            <Col>
+                              <Text.CardValue>{aggregationTx.depositAmt.toString()}</Text.CardValue>
+                            </Col>
                           )}
 
-                          <ExplorerLink tx={aggregationTx.tx}>
-                            <Text.CardValue $color="inherit">{shortenHex(aggregationTx.tx.hash)}</Text.CardValue>
-                          </ExplorerLink>
-                        </Col>
-                      </Row>
-                    </TransactionCard>
-                  ))}
-                </Col>
-              </Fragment>
-            ))}
-          </TreeView>
-        )}
+                          <Col $alignItems="flex-end">
+                            {aggregationTx.type === 'LEAF' && (
+                              <ExplorerLink network="l1" address={aggregationTx.depositAddress}>
+                                <Text.CardValue $color="inherit">
+                                  {shortenHex(aggregationTx.depositAddress)}
+                                </Text.CardValue>
+                              </ExplorerLink>
+                            )}
+
+                            <ExplorerLink tx={aggregationTx.tx}>
+                              <Text.CardValue $color="inherit">{shortenHex(aggregationTx.tx.hash)}</Text.CardValue>
+                            </ExplorerLink>
+                          </Col>
+                        </Row>
+                      </TransactionCard>
+                    ))}
+                  </Col>
+                </Fragment>
+              ))}
+            </TreeView>
+          )}
+
+          <Row $gap="xxlarge">
+            <Col $gap="xxsmall" $justify="center">
+              {finalizeBatchTx && <Text.CardTitle>Finalize:</Text.CardTitle>}
+              {depositTx && <Text.CardTitle>Deposit:</Text.CardTitle>}
+              {verifyTx && <Text.CardTitle>Verify:</Text.CardTitle>}
+            </Col>
+
+            <Col $gap="xxsmall" $justify="center">
+              {finalizeBatchTx && (
+                <ExplorerLink tx={finalizeBatchTx}>
+                  <Text.CardValue $color="inherit">{shortenHex(finalizeBatchTx.hash)}</Text.CardValue>
+                </ExplorerLink>
+              )}
+
+              {depositTx && (
+                <ExplorerLink tx={depositTx}>
+                  <Text.CardValue $color="inherit">{shortenHex(depositTx.hash)}</Text.CardValue>
+                </ExplorerLink>
+              )}
+
+              {verifyTx && (
+                <ExplorerLink tx={verifyTx}>
+                  <Text.CardValue $color="inherit">{shortenHex(verifyTx.hash)}</Text.CardValue>
+                </ExplorerLink>
+              )}
+            </Col>
+          </Row>
+        </Col>
       </Col>
     </Container>
   );

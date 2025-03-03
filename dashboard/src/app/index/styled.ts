@@ -19,7 +19,7 @@ export const Container = styled(Col)`
   })}
 `;
 
-export const ContentCard = styled(Flex)<{$withPadding?: boolean; $surface?: boolean}>`
+export const ContentCard = styled(Flex)<{$surface?: boolean}>`
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -27,7 +27,6 @@ export const ContentCard = styled(Flex)<{$withPadding?: boolean; $surface?: bool
   border: 1px solid ${({theme}) => theme.colors.border};
   border-radius: 8px;
   overflow: hidden;
-  ${({theme, $withPadding}) => $withPadding && `padding: ${theme.spacings.small}px;`}
 `;
 
 // eslint-disable-next-line import/no-unused-modules

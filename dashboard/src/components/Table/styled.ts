@@ -16,8 +16,8 @@ export const StyledTable = styled.table`
     border-bottom: 1px solid ${({theme}) => theme.colors.border};
   }
 
-  tr:last-child {
-    border-bottom: none;
+  tbody tr:last-child {
+    border-bottom: 0;
   }
 
   th,
