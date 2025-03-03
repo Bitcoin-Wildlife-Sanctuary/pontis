@@ -35,6 +35,7 @@
     "@uniswap/eslint-config": "^1.2.0",
     "eslint": "^8.55.0",
     "eslint-config-next": "15.2.0",
+    "operator": "file:../operator",
     "prettier": "^3.5.2",
     "typescript": "^5.7.3"
   },

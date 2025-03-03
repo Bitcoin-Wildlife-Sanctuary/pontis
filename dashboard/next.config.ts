@@ -6,10 +6,6 @@ const nextConfig: NextConfig = {
       ssr: true,
     },
   },
-  typescript: {
-    // TODO: Remove this when the issue is fixed
-    ignoreBuildErrors: true,
-  },
 };
 
 export default nextConfig;

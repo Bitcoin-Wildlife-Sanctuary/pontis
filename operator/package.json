@@ -1,6 +1,21 @@
 {
   "name": "operator",
   "version": "0.0.1",
+  "main": "./build/src/state.js",
+  "module": "./build/src/state.js",
+  "types": "./build/src/state.d.ts",
+  "exports": {
+    ".": {
+      "require": "./build/src/state.js",
+      "import": "./build/src/state.js",
+      "types": "./build/src/state.d.ts"
+    },
+    "./src/*": {
+      "require": "./build/src/*.js",
+      "import": "./build/src/*.js",
+      "types": "./build/src/*.d.ts"
+    }
+  },
   "scripts": {
     "lint": "gts lint",
     "clean": "gts clean",

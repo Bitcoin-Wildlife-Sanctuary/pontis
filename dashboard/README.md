@@ -5,6 +5,20 @@ It is built using [NextJS](https://nextjs.org/), [React](https://react.dev/), [T
 
 ## Development
 
+### Prepare L1 package
+
+- CD into the `l1` directory
+- Run `npm install`
+- Run `npm run build`
+
+### Prepare Operator package
+
+- CD into the `operator` directory
+- Run `npm install`
+- Run `npm run compile`
+
+### Run Dashboard
+
 Create an `.env` file in the root directory of the project and fill in the required values from the `.env.example` file.
 
 Install the dependencies by running:
@@ -36,8 +50,9 @@ To start the production server, run:
 yarn start
 ```
 
-# Deployment to Cloud Services (Vercel, Netlify, AWS Amplify etc.)
+## Deployment to Cloud Services (Vercel, Netlify, AWS Amplify etc.)
 
 - Set up the deployment environment variables in the cloud service provider's dashboard.
 - Either deploy the project manually or set up automatic deployments from git branches.
 - If the project is not recognized as a NextJS project, you may need to set up the build command and the output directory manually.
+- Setup build scripts to include the L1 and Operator packages in the build process.
