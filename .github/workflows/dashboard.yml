@@ -1,15 +1,17 @@
-name: Client
+name: Dashboard
 
 on:
   workflow_dispatch:
   push:
+    paths: [dashboard/**]
     branches:
       - main
   pull_request:
+    paths: [dashboard/**]
 permissions: read-all
 
 jobs:
-  lint:
+  check:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -32,8 +34,8 @@ jobs:
         run: yarn ts:check
         working-directory: dashboard
 
-      - name: Lint Check
-        run: yarn lint:check
+      - name: Lint
+        run: yarn lint
         working-directory: dashboard
 
       - name: Build the project

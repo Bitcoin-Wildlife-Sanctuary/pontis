@@ -7,7 +7,11 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "format:check": "prettier -c \"src/**/*.ts\"",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "ts:check": "tsc --noEmit",
+    "check": "yarn format:check && yarn ts:check"
   },
   "dependencies": {
     "@csstools/normalize.css": "^12.1.1",
