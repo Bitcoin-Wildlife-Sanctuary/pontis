@@ -520,7 +520,7 @@ mod withdrawals_tests {
     }
 
     #[test]
-    // #[ignore]
+    #[ignore]
     fn test_print_hashes() {
         let l1_address = from_hex(
             "03bfac5406925f9fa00194aa5fd093f60775d90475dcf88c24359eddd385b398a8",
@@ -531,7 +531,6 @@ mod withdrawals_tests {
         let leaf = ProgresiveHelpersTrait::hash256_withdrawal(l1_address.span(), 10);
         let node = ProgresiveHelpersTrait::hash256_inner_nodes(@leaf, @leaf);
         let node2 = ProgresiveHelpersTrait::hash256_inner_nodes(@node, @node);
-
 
         println!("leaf hash: {:?}", to_hex(@Into::<_, ByteArray>::into(leaf.hash)));
         println!("node hash: {:?}", to_hex(@Into::<_, ByteArray>::into(node.hash)));
