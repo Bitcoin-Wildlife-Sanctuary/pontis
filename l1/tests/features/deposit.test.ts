@@ -50,6 +50,7 @@ describe('Test the feature of deposit', async () => {
     operatorPubKey = PubKey(await testOperatorSigner.getPublicKey())
     console.log('operatorPubKey', operatorPubKey)
     console.log('operatorAddress', await testOperatorSigner.getAddress())
+    console.log('operatorExpanderAddress', await testOperatorSigner.getAddress())
 
     loadArtifacts()
     scriptSPKs = getScriptPubKeys(operatorPubKey)

@@ -76,9 +76,11 @@ export class EnhancedProvider implements UtxoProvider, ChainProvider {
     for (let i = 0; i < this.pendingBroadcastTxs.length; i++) {
       const tx = this.pendingBroadcastTxs[i]
       try {
+        console.log("broadcasting:", tx.getId())
         await this.chainProvider.broadcast(tx.toHex())
         broadcastedTxids.push(tx.getId())
       } catch (error) {
+        console.error("broadcast failed:", tx.getId(), error);
         failedBroadcastTxids = this.pendingBroadcastTxs.slice(i).map(v => v.getId())
         failedBroadcastTxError = error as Error
         break

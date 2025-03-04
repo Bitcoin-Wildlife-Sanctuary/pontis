@@ -60,9 +60,9 @@ export class DepositAggregator extends SmartContract {
 
   /**
    * Aggregates two aggregator utxos into one.
-   * 
+   *
    * tx: aggregatorInput0 + aggregatorInput1 + feeInput => stateOutput + aggregatorOutput + changeOutput(optional)
-   * 
+   *
    * @param shPreimage - The sighash preimage of the currently executing transaction.
    * @param sigOperator - The signature of the bridge operator.
    * @param level - The level of the aggregation; zero is the first level, which is the leaf level
@@ -74,7 +74,8 @@ export class DepositAggregator extends SmartContract {
    * @param ancestorTx3 - The previous transaction of second input of prevTx1
    * @param feePrevout - The prevout of the fee input
    * @param isFirstInput - Indicates whether this method is called from the first or second input.
-   * 
+   * @param depositData0 - Actual deposit data of the first deposit; used when aggregating leaves.
+   * @param depositData1 - Actual deposit data of the second deposit; used when aggregating leaves.
    */
   @method()
   public aggregate(
@@ -292,7 +293,7 @@ export class DepositAggregator extends SmartContract {
   }
 
   /**
-   * Hash the deposit data. 
+   * Hash the deposit data.
    * For depositData, we store the plain data, not hashed.
    * @param depositAddress - The L2 address of the deposit.
    * @param depositAmt - The amount of the deposit.

@@ -16,7 +16,7 @@ pub struct WordArray {
 }
 
 /// Span of a [WordArray]
-#[derive(Copy, Drop, Debug, PartialEq)]
+#[derive(Copy, Drop, Debug, PartialEq, Serde)]
 pub struct WordSpan {
     input: Span<u32>,
     last_input_word: u32,
@@ -304,6 +304,26 @@ impl WordSpanIntoArray of Into<WordSpan, WordArray> {
         }
     }
 }
+
+impl ByteArrayIntoWordArray of Into<ByteArray, WordArray> {
+    fn into(self: ByteArray) -> WordArray {
+        let mut r: WordArray = Default::default();
+        let mut i = 0;
+        let len = self.len();
+        while i != len {
+            r.append_u8(self[i]);
+            i += 1;
+        };
+        r
+    }
+}
+
+impl WordSpanDefault of Default<WordSpan> {
+    fn default() -> WordSpan {
+        Default::<WordArray>::default().span()
+    }
+}
+
 
 #[cfg(target: 'test')]
 pub mod hex {

@@ -366,6 +366,101 @@ export async function createWithdrawalExpander(
   }
 }
 
+export async function createWithdrawalExpander2(
+  signer: Signer,
+  network: SupportedNetwork,
+  utxoProvider: UtxoProvider,
+  chainProvider: ChainProvider,
+  bridgeUtxo: TraceableBridgeUtxo,
+
+  withdrawalMerkleRoot: Sha256,
+  outputWithdrawalState: WithdrawalExpanderState,
+  
+  feeRate: number
+) {
+  const changeAddress = await signer.getAddress()
+
+  // TODO: Does this check makes any sense?
+  // withdrawals.forEach((withdrawal) =>
+  //   WithdrawalMerkle.checkWithdrawalValid(withdrawal)
+  // )
+
+  const sumAmt = outputWithdrawalState.type === 'LEAF' ?
+    outputWithdrawalState.withdrawAmt :
+    outputWithdrawalState.leftAmt +  outputWithdrawalState.rightAmt;
+
+  console.log("sumAmt > bridgeUtxo.utxo.satoshis", sumAmt, bridgeUtxo.utxo.satoshis)
+
+  if (sumAmt > bridgeUtxo.utxo.satoshis) {
+    throw new Error('withdrawal amt is greater than bridge utxo satoshis')
+  }
+
+  const tracedBridge = await BridgeCovenant.backtrace(bridgeUtxo, chainProvider)
+  const outputBridgeCovenant = new BridgeCovenant(
+    tracedBridge.covenant.operator,
+    tracedBridge.covenant.expanderSPK,
+    tracedBridge.covenant.state
+  )
+  
+  const outputWithdrawalExpanderCovenant = new WithdrawalExpanderCovenant(
+    tracedBridge.covenant.operator,
+    outputWithdrawalState
+  )
+
+  const est = estimateCreateWithdrawalTxVSize(
+    network,
+    bridgeUtxo,
+    tracedBridge,
+    outputBridgeCovenant,
+    outputWithdrawalExpanderCovenant,
+    withdrawalMerkleRoot,
+    sumAmt,
+    changeAddress,
+    feeRate
+  )
+  const total = feeRate * est.vSize
+  const utxos = await utxoProvider.getUtxos(changeAddress, {
+    total: Number(total),
+  })
+  if (utxos.length === 0) {
+    throw new Error(`Insufficient satoshis input amount: no utxos found`)
+  }
+  const feeUtxo = pickLargeFeeUtxo(utxos)
+  if (feeUtxo.satoshis < total) {
+    throw new Error(
+      `Insufficient satoshis input amount: fee utxo(${feeUtxo.satoshis}) < total(${total})`
+    )
+  }
+
+  const createWithdrawalTx = buildCreateWithdrawalTx(
+    network,
+    feeUtxo,
+    bridgeUtxo,
+    tracedBridge,
+    outputBridgeCovenant,
+    outputWithdrawalExpanderCovenant,
+    withdrawalMerkleRoot,
+    sumAmt,
+    changeAddress,
+    feeRate
+  )
+  
+  const signedPsbt = await signer.signPsbt(createWithdrawalTx.toHex(), createWithdrawalTx.psbtOptions())
+  const txPsbt = createWithdrawalTx.combine(ExtPsbt.fromHex(signedPsbt))
+  await txPsbt.finalizeAllInputsAsync()
+  const tx = txPsbt.extractTransaction()
+  await chainProvider.broadcast(tx.toHex())
+  markSpent(utxoProvider, tx)
+  return {
+    psbt: txPsbt,
+    txid: tx.getId(),
+    bridgeState: outputBridgeCovenant.state,
+    withdrawalState: outputWithdrawalExpanderCovenant.state,
+    bridgeUtxo: outputToUtxo(tx, CONTRACT_INDEXES.outputIndex.bridge) as UTXO,
+    withdrawalUtxo: outputToUtxo(tx, CONTRACT_INDEXES.outputIndex.withdrawalExpander.inBridgeTx) as UTXO,
+  }
+}
+
 function estimateCreateWithdrawalTxVSize(
   network: SupportedNetwork,
   bridgeUtxo: TraceableBridgeUtxo,

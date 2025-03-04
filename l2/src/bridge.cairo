@@ -1,8 +1,8 @@
 use starknet::ContractAddress;
 use crate::utils::hash::Digest;
+use crate::utils::word_array::WordSpan;
 
-// TODO: Add the correct type for L1Address
-type L1Address = u256;
+type L1Address = WordSpan;
 
 #[derive(Drop, Serde)]
 struct Deposit {
@@ -13,13 +13,14 @@ struct Deposit {
 #[starknet::interface]
 pub trait IBridge<TContractState> {
     fn deposit(ref self: TContractState, txid: Digest, deposits: Span<Deposit>);
-    fn withdraw(ref self: TContractState, recipient: L1Address, amount: u256);
-    fn close_withdrawal_batch(ref self: TContractState);
+    fn withdraw(ref self: TContractState, recipient: L1Address, amount: u32);
+    fn close_withdrawal_batch(ref self: TContractState, id: u128);
 }
 
 #[starknet::contract]
 pub mod Bridge {
     use core::num::traits::zero::Zero;
+    use core::sha256::compute_sha256_u32_array;
     use openzeppelin_access::ownable::OwnableComponent;
     use starknet::storage::VecTrait;
     use starknet::ContractAddress;
@@ -45,13 +46,20 @@ pub mod Bridge {
     // Internal
     impl OwnableInternalImpl = OwnableComponent::InternalImpl<ContractState>;
 
+
+    #[derive(Copy, Drop, Debug, starknet::Store)]
+    pub struct WithdrawalsTreeNode {
+        pub hash: Digest,
+        pub amount: u32,
+    }
+
     // Branch of a merkle tree of withdrawal requests. Uses algo described here:
     // https://github.com/ethereum/research/blob/a4a600f2869feed5bfaab24b13ca1692069ef312/beacon_chain_impl/progressive_merkle_tree.py
     // https://www.youtube.com/watch?v=nZ8cquX5kew&ab_channel=FormalMethodsEurope
     #[phantom]
     #[starknet::storage_node]
     struct WithdrawalsBatch {
-        branch: Vec<Digest>,
+        branch: Vec<WithdrawalsTreeNode>,
         size: u16,
         id: u128,
     }
@@ -67,14 +75,14 @@ pub mod Bridge {
     #[derive(Drop, starknet::Event)]
     pub struct DepositEvent {
         pub id: Digest,
-        pub total: u256,
+        pub total: u32,
     }
 
     #[derive(Drop, starknet::Event)]
     pub struct WithdrawEvent {
         pub id: u128,
         pub recipient: L1Address,
-        pub amount: u256,
+        pub amount: u32,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -110,17 +118,17 @@ pub mod Bridge {
             let mut deposits_ = deposits;
             let mut leafs: Array<Digest> = array![];
             while let Option::Some(Deposit { recipient, amount }) = deposits_.pop_front() {
-                leafs.append(HelpersTrait::hash256_deposit(*recipient, *amount));
+                leafs.append(DepositHelpersTrait::hash256_deposit(*recipient, *amount));
             };
 
-            let root = HelpersTrait::merkle_root_with_levels(leafs.span());
+            let root = DepositHelpersTrait::merkle_root(leafs.span());
             let btc = self.btc.read();
-            let mut total = 0_u256;
+            let mut total = 0_u32;
             let mut deposits_ = deposits;
             while let Option::Some(d) = deposits_.pop_front() {
-                let amount_u256: u256 = (*d.amount).into();
-                btc.mint(*d.recipient, amount_u256);
-                total = total + amount_u256;
+                let amount: u32 = (*d.amount).into();
+                btc.mint(*d.recipient, amount.into());
+                total = total + amount;
             };
 
             let id = double_sha256_parent(@txid, @root);
@@ -128,25 +136,25 @@ pub mod Bridge {
             self.emit(DepositEvent { id, total });
         }
 
-        fn withdraw(ref self: ContractState, recipient: L1Address, amount: u256) {
+        fn withdraw(ref self: ContractState, recipient: L1Address, amount: u32) {
             let caller = get_caller_address();
 
-            self.btc.read().burn(caller, amount);
+            self.btc.read().burn(caller, amount.into());
 
-            self.append(HelpersTrait::double_sha256_withdrawal(recipient, amount));
+            self.append(ProgresiveHelpersTrait::hash256_withdrawal(recipient, amount));
 
             self.emit(WithdrawEvent { id: self.batch.id.read(), recipient, amount });
         }
 
-        fn close_withdrawal_batch(ref self: ContractState) {
+        fn close_withdrawal_batch(ref self: ContractState, id: u128) {
             self.ownable.assert_only_owner();
 
-            self.close_batch_internal();
+            self.close_batch_internal(id);
         }
     }
 
     #[generate_trait]
-    pub impl HelpersImpl of HelpersTrait {
+    pub impl DepositHelpersImpl of DepositHelpersTrait {
         fn hash256_deposit(recipient: ContractAddress, amount: u32) -> Digest {
             let mut b: WordArray = Default::default();
 
@@ -160,7 +168,7 @@ pub mod Bridge {
             double_sha256_word_array(b)
         }
 
-        fn hash256_inner_deposit_node(level: u8, a: @Digest, b: @Digest) -> Digest {
+        fn hash256_inner_nodes(level: u8, a: @Digest, b: @Digest) -> Digest {
             let mut input: WordArray = Default::default();
             input.append_u8(level);
             input.append_span(a.value.span());
@@ -169,30 +177,20 @@ pub mod Bridge {
             double_sha256_word_array(input)
         }
 
-        fn double_sha256_withdrawal(recipient: L1Address, amount: u256) -> Digest {
-            let mut b: WordArray = Default::default();
-
-            let recipient: u256 = recipient.into();
-            let recipient: Digest = recipient.into();
-            b.append_span(recipient.value.span());
-
-            let amount: Digest = amount.into();
-            b.append_span(amount.value.span());
-
-            double_sha256_word_array(b)
-        }
-
         fn merkle_root(hashes: Span<Digest>) -> Digest {
             let mut hashes = hashes;
+
+            let mut level: u8 = 1;
 
             while hashes.len() > 1 {
                 let mut next_hashes: Array<Digest> = array![];
                 while let Option::Some(v) = hashes.multi_pop_front::<2>() {
                     let [a, b] = (*v).unbox();
-                    next_hashes.append(double_sha256_parent(@a, @b));
+                    next_hashes.append(Self::hash256_inner_nodes(level, @a, @b));
                 };
                 assert!(hashes.len() == 0, "Number of hashes should be a power of 2");
                 hashes = next_hashes.span();
+                level += 1;
             };
 
             *hashes.at(0)
@@ -206,7 +204,7 @@ pub mod Bridge {
                 let mut next_hashes: Array<Digest> = array![];
                 while let Option::Some(v) = hashes.multi_pop_front::<2>() {
                     let [a, b] = (*v).unbox();
-                    next_hashes.append(Self::hash256_inner_deposit_node(level, @a, @b));
+                    next_hashes.append(Self::hash256_inner_nodes(level, @a, @b));
                 };
                 assert!(hashes.len() == 0, "Number of hashes should be a power of 2");
                 hashes = next_hashes.span();
@@ -218,34 +216,34 @@ pub mod Bridge {
     }
 
     #[generate_trait]
-    pub impl ProgresiveHelpersImpl of ProgresiveHelpersTrait {
-        const TREE_HEIGHT: u8 = 4;
+    pub impl ProgresiveDepositHelpersImpl of ProgresiveHelpersTrait {
+        const TREE_HEIGHT: u8 = 8;
         const TREE_MAX_SIZE: u16 = 16; //pow2(TREE_HEIGHT)!
         // TODO: how to enforce ZERO_HASHES.len() == TREE_HEIGHT?
         // calculated with print_zero_hashes below
         #[cairofmt::skip]
         const ZERO_HASHES: [[u32; 8]; 8] = [
-            [0, 0, 0, 0, 0, 0, 0, 0],
-            [3807779903, 1909579517, 1068079583, 2741588853, 1550386825, 2040095412, 2347489334, 2538507513],
-            [2099567403, 4198582091, 4214196093, 1754246239, 2858291362, 2156722654, 812871865, 861070664],
-            [2491776318, 143757168, 962433542, 1091551145, 1123133577, 2858072088, 2395159599, 1847623111],
-            [431952387, 3552528441, 1013566501, 1502155963, 2651664431, 910006309, 3684743675, 2510070587],
-            [2911086469, 1887493546, 3378700630, 3912122119, 3565730943, 113941511, 247519979, 1936780936],
-            [4149171068, 670075167, 4270418929, 385287363, 953086358, 3888476695, 4151032589, 3608278989],
-            [1723082150, 3777628280, 2788800972, 2132291431, 4168203796, 2521771669, 2723785127, 1542325057],
+            [2941612277, 2709588858, 4153192267, 3339347471, 234167874, 3136888141, 3853660813, 3773316604], 
+            [4252268135, 3156982997, 1058175766, 3982171689, 2165452295, 1412192036, 676370435, 3246908486], 
+            [118982229, 1164891333, 433494718, 2210494425, 989293199, 3757041399, 2351707735, 3044148480],
+            [3132511574, 1535310176, 1940885095, 311013768, 3506796797, 1597562327, 1683926785, 2365022860],
+            [3874630278, 1618857047, 2837960875, 3102865115, 2694842550, 3865935458, 2704783161, 2089796958],
+            [1342209253, 336170425, 4130094296, 1198558124, 3471065097, 1609315156, 2623184362, 848957000],
+            [3363877118, 1484151529, 2503273299, 680864377, 987407226, 2588493262, 3422490052, 169888085],
+            [494208055, 180117351, 3987495022, 4240216843, 1810711745, 1677977769, 3712207368, 137579714],
         ];
 
-        fn get_element(self: @ContractState, i: u64) -> Digest {
+        fn get_element(self: @ContractState, i: u64) -> WithdrawalsTreeNode {
             match self.batch.branch.get(i) {
                 Option::Some(element) => element.read(),
                 Option::None => {
                     panic!("should not happen!");
-                    Zero::zero()
+                    WithdrawalsTreeNode { hash: Zero::zero(), amount: 0 }
                 },
             }
         }
 
-        fn write_element(ref self: ContractState, i: u64, value: Digest) {
+        fn write_element(ref self: ContractState, i: u64, value: WithdrawalsTreeNode) {
             if i >= self.batch.branch.len() {
                 self.batch.branch.append().write(value);
             } else {
@@ -257,11 +255,72 @@ pub mod Bridge {
             self.batch.size.read() == Self::TREE_MAX_SIZE
         }
 
-        fn append(ref self: ContractState, withdrawal: Digest) {
+        fn hash256_withdrawal(recipient: L1Address, amount: u32) -> WithdrawalsTreeNode {
+            assert!(amount <= 0x7fffffff, "amount to big");
+
+            let mut b: WordArray = recipient.into();
+            b.append_u64_le(amount.into());
+
+            let (input, last_input_word, last_input_num_bytes) = b.into().into_components();
+            let hash = DigestTrait::new(
+                compute_sha256_u32_array(input, last_input_word, last_input_num_bytes),
+            );
+
+            WithdrawalsTreeNode { hash, amount }
+        }
+
+        fn hash256_inner_nodes(
+            left: @WithdrawalsTreeNode, right: @WithdrawalsTreeNode,
+        ) -> WithdrawalsTreeNode {
+            let mut b: WordArray = Default::default();
+
+            b.append_u64_le((*left.amount).into());
+            b.append_span(left.hash.value.span());
+
+            b.append_u64_le((*right.amount).into());
+            b.append_span(right.hash.value.span());
+
+            let (input, last_input_word, last_input_num_bytes) = b.into().into_components();
+
+            let hash = DigestTrait::new(
+                compute_sha256_u32_array(input, last_input_word, last_input_num_bytes),
+            );
+
+            let amount = *left.amount + *right.amount;
+
+            assert!(amount <= 0x7fffffff, "amount to big");
+
+            WithdrawalsTreeNode { hash, amount }
+        }
+
+        fn empty_node(level: u32) -> WithdrawalsTreeNode {
+            WithdrawalsTreeNode {
+                hash: DigestTrait::new(*Self::ZERO_HASHES.span().at(level)), amount: 0,
+            }
+        }
+
+        fn merkle_root(hashes: Span<WithdrawalsTreeNode>) -> Digest {
+            let mut hashes = hashes;
+
+            while hashes.len() > 1 {
+                let mut next_hashes: Array<WithdrawalsTreeNode> = array![];
+                while let Option::Some(v) = hashes.multi_pop_front::<2>() {
+                    let [a, b] = (*v).unbox();
+                    next_hashes.append(Self::hash256_inner_nodes(@a, @b));
+                };
+                assert!(hashes.len() == 0, "Number of hashes should be a power of 2");
+                hashes = next_hashes.span();
+            };
+
+            *hashes.at(0).hash
+        }
+
+
+        fn append(ref self: ContractState, withdrawal: WithdrawalsTreeNode) {
             let original_size = self.batch.size.read();
 
             if original_size == Self::TREE_MAX_SIZE {
-                self.close_batch_internal();
+                self.close_batch_internal(self.batch.id.read());
             }
 
             let mut value = withdrawal;
@@ -269,7 +328,7 @@ pub mod Bridge {
             let mut i = 0;
 
             while size % 2 == 1 {
-                value = double_sha256_parent(@self.get_element(i), @value);
+                value = Self::hash256_inner_nodes(@self.get_element(i), @value);
                 size = size / 2;
                 i += 1;
             };
@@ -280,45 +339,54 @@ pub mod Bridge {
         }
 
         fn root(self: @ContractState) -> Digest {
-            let zero_hashes = Self::ZERO_HASHES.span();
-
-            let mut root = DigestTrait::new(*zero_hashes.at(0));
-            let mut height = 0;
+            let mut root = Self::empty_node(0);
+            let mut height = 0_u32;
             let mut size = self.batch.size.read();
 
             // round up to the nearest power of 2
-            let mut rounded_size = 1;
-            let mut rounded_height = 0;
+            let mut rounded_size = 1_u16;
+            let mut rounded_height = 0_u32;
             while (rounded_size < size) {
                 rounded_size *= 2;
                 rounded_height += 1;
             };
 
             if size == rounded_size {
-                return self.get_element(rounded_height.into());
+                return self.get_element(rounded_height.into()).hash;
             }
 
             while height < rounded_height {
                 if size % 2 == 1 {
-                    root = double_sha256_parent(@self.get_element(height.into()), @root);
+                    root = Self::hash256_inner_nodes(@self.get_element(height.into()), @root);
                 } else {
-                    root = double_sha256_parent(@root, @DigestTrait::new(*zero_hashes.at(height)));
+                    root = Self::hash256_inner_nodes(@root, @Self::empty_node(height));
                 }
                 size = size / 2;
                 height += 1;
             };
 
-            root
+            root.hash
         }
 
-        fn close_batch_internal(ref self: ContractState) {
-            let root = self.root();
+        fn close_batch_internal(ref self: ContractState, requested_id: u128) {
             let id = self.batch.id.read();
+
+            assert!(id >= requested_id, "Wrong batch id requested");
+
+            if (id != requested_id) {
+                return;
+            }
+
+            let root = self.root();
 
             self.batch.id.write(id + 1);
             self.batch.size.write(0);
 
             self.emit(CloseBatchEvent { id, root });
+        }
+
+        fn close_batch_for_testing(ref self: ContractState) {
+            self.close_batch_internal(self.batch.id.read());
         }
     }
 }
@@ -326,9 +394,7 @@ pub mod Bridge {
 #[cfg(test)]
 mod merkle_tree_tests {
     use crate::utils::hash::Digest;
-    use super::Bridge::HelpersImpl;
-    // use super::Bridge::MerkleTreeHelpersImpl::merkle_root;
-    // use super::Bridge::HelpersTrait::merkle_root;
+    use super::Bridge::DepositHelpersImpl;
 
     fn data(size: u256) -> Array<Digest> {
         let x = 0x8000000000000000000000000000000000000000000000000000000000000000;
@@ -342,58 +408,62 @@ mod merkle_tree_tests {
     #[test]
     fn test_merkle_root1() {
         let data = data(1).span();
-        assert_eq!(HelpersImpl::merkle_root(data), *data.at(0), "merkle root mismatch");
+        assert_eq!(DepositHelpersImpl::merkle_root(data), *data.at(0), "merkle root mismatch");
     }
 
     #[test]
     #[should_panic(expected: "Number of hashes should be a power of 2")]
     fn test_merkle_root3() {
-        HelpersImpl::merkle_root(data(3).span());
+        DepositHelpersImpl::merkle_root(data(3).span());
     }
 
     #[test]
     #[should_panic(expected: "Number of hashes should be a power of 2")]
     fn test_merkle_root7() {
-        HelpersImpl::merkle_root(data(7).span());
+        DepositHelpersImpl::merkle_root(data(7).span());
     }
 
     #[test]
     fn test_merkle_root() {
-        HelpersImpl::merkle_root(data(1).span());
-        HelpersImpl::merkle_root(data(2).span());
-        HelpersImpl::merkle_root(data(4).span());
-        HelpersImpl::merkle_root(data(8).span());
-        HelpersImpl::merkle_root(data(16).span());
+        DepositHelpersImpl::merkle_root(data(1).span());
+        DepositHelpersImpl::merkle_root(data(2).span());
+        DepositHelpersImpl::merkle_root(data(4).span());
+        DepositHelpersImpl::merkle_root(data(8).span());
+        DepositHelpersImpl::merkle_root(data(16).span());
     }
 }
 
 #[cfg(test)]
 mod withdrawals_tests {
-    use crate::utils::hash::Digest;
-    use crate::utils::double_sha256::double_sha256_parent;
     use super::Bridge;
-    use super::Bridge::{ProgresiveHelpersTrait, ProgresiveHelpersImpl, HelpersImpl};
+    use super::Bridge::{
+        ProgresiveHelpersTrait, ProgresiveDepositHelpersImpl, DepositHelpersImpl,
+        WithdrawalsTreeNode,
+    };
+    use crate::utils::word_array::{WordArray, WordArrayTrait};
+    use crate::utils::hex::{to_hex, from_hex};
 
     // use this to fill the ZERO_HASHES array
     #[test]
     #[ignore]
     fn print_zero_hashes() {
-        let mut previous: Digest = 0_u256.into();
-        for _ in 0..ProgresiveHelpersImpl::TREE_HEIGHT {
-            previous = double_sha256_parent(@previous, @previous);
+        let mut previous = ProgresiveHelpersTrait::hash256_withdrawal(Default::default(), 0);
+        println!("{:?}: {:?}", 0, previous.hash);
+        for i in 1..ProgresiveDepositHelpersImpl::TREE_HEIGHT {
+            previous = ProgresiveHelpersTrait::hash256_inner_nodes(@previous, @previous);
+            println!("{:?}: {:?}", i, previous.hash);
         }
     }
 
-    fn data(size: u256) -> Array<Digest> {
-        let x = 0x8000000000000000000000000000000000000000000000000000000000000000;
+    fn data(size: u32) -> Array<WithdrawalsTreeNode> {
         let mut r = array![];
         for i in 1..size + 1 {
-            r.append((x + i).into());
+            r.append(ProgresiveHelpersTrait::hash256_withdrawal(Default::default(), i));
         };
         r
     }
 
-    fn complement_with_zeros(data: Span<Digest>) -> Span<Digest> {
+    fn complement_with_zeros(data: Span<WithdrawalsTreeNode>) -> Span<WithdrawalsTreeNode> {
         let mut required_size = 1;
         while (required_size < data.len()) {
             required_size *= 2;
@@ -405,12 +475,12 @@ mod withdrawals_tests {
         let mut missing_zeros = required_size - data.len();
 
         for _ in 0..missing_zeros {
-            r.append(0_u256.into());
+            r.append(ProgresiveHelpersTrait::empty_node(0));
         };
         r.span()
     }
 
-    fn test_data(size: u256) {
+    fn test_data(size: u32) {
         let data = data(size).span();
 
         let mut bridge = Bridge::contract_state_for_testing();
@@ -421,24 +491,50 @@ mod withdrawals_tests {
 
         assert_eq!(
             bridge.root(),
-            HelpersImpl::merkle_root(complement_with_zeros(data)),
+            ProgresiveHelpersTrait::merkle_root(complement_with_zeros(data)),
             "merkle root mismatch",
         );
-        bridge.close_batch_internal();
+
+        bridge.close_batch_for_testing();
     }
 
     #[test]
     fn test_progressive_merkle_root1() {
-        for i in 1..64_u256 {
+        for i in 1..32_u32 {
             test_data(i);
         }
     }
 
     #[test]
     fn test_progressive_merkle_root2() {
-        for i in 65..96_u256 {
+        for i in 33..48_u32 {
             test_data(i);
         }
+    }
+
+    #[test]
+    fn test_progressive_merkle_root3() {
+        for i in 49..64_u32 {
+            test_data(i);
+        }
+    }
+
+    #[test]
+    #[ignore]
+    fn test_print_hashes() {
+        let l1_address = from_hex(
+            "03bfac5406925f9fa00194aa5fd093f60775d90475dcf88c24359eddd385b398a8",
+        );
+
+        let l1_address: WordArray = Into::<ByteArray, WordArray>::into(l1_address);
+
+        let leaf = ProgresiveHelpersTrait::hash256_withdrawal(l1_address.span(), 10);
+        let node = ProgresiveHelpersTrait::hash256_inner_nodes(@leaf, @leaf);
+        let node2 = ProgresiveHelpersTrait::hash256_inner_nodes(@node, @node);
+
+        println!("leaf hash: {:?}", to_hex(@Into::<_, ByteArray>::into(leaf.hash)));
+        println!("node hash: {:?}", to_hex(@Into::<_, ByteArray>::into(node.hash)));
+        println!("node2 hash: {:?}", to_hex(@Into::<_, ByteArray>::into(node2.hash)));
     }
 }
 
@@ -453,9 +549,12 @@ mod bridge_tests {
     use starknet::{ContractAddress, contract_address_const};
     use crate::btc::{IBTCDispatcher, IBTCDispatcherTrait};
     use super::{
-        Deposit, Bridge::{Event, CloseBatchEvent, ProgresiveHelpersImpl}, IBridgeDispatcher,
+        Deposit, Bridge::{Event, CloseBatchEvent, ProgresiveDepositHelpersImpl}, IBridgeDispatcher,
         IBridgeDispatcherTrait,
     };
+
+    use crate::utils::word_array::hex::words_from_hex;
+    use crate::utils::word_array::WordArrayTrait;
 
     use openzeppelin_access::ownable::interface::{IOwnableDispatcher, IOwnableDispatcherTrait};
 
@@ -502,6 +601,24 @@ mod bridge_tests {
     }
 
     #[test]
+    #[should_panic(expected: 'ERC20: insufficient allowance')]
+    fn test_bridge_not_allowed_to_burn() {
+        let (admin_address, alice_address, _, _, _, bridge) = fixture();
+
+        cheat_caller_address(bridge.contract_address, admin_address, CheatSpan::TargetCalls(1));
+
+        bridge
+            .deposit(
+                Default::default(),
+                array![Deposit { recipient: alice_address, amount: 100 }].span(),
+            );
+
+        cheat_caller_address(bridge.contract_address, alice_address, CheatSpan::TargetCalls(1));
+
+        bridge.withdraw(words_from_hex("8080").span(), 50);
+    }
+
+    #[test]
     fn test_basic_flow() {
         let (admin_address, alice_address, bob_address, carol_address, btc, bridge) = fixture();
 
@@ -513,20 +630,24 @@ mod bridge_tests {
                 array![Deposit { recipient: alice_address, amount: 100 }].span(),
             );
 
-        start_cheat_caller_address_global(alice_address);
+        cheat_caller_address(btc.contract_address, alice_address, CheatSpan::TargetCalls(1));
         btc.transfer(bob_address, 50);
+
+        cheat_caller_address(btc.contract_address, alice_address, CheatSpan::TargetCalls(1));
         btc.transfer(carol_address, 50);
 
-        start_cheat_caller_address_global(bob_address);
+        cheat_caller_address(btc.contract_address, bob_address, CheatSpan::TargetCalls(1));
         btc.approve(bridge.contract_address, 50);
-        bridge.withdraw(808_u256, 50);
+        cheat_caller_address(bridge.contract_address, bob_address, CheatSpan::TargetCalls(1));
+        bridge.withdraw(words_from_hex("8080").span(), 50);
 
-        start_cheat_caller_address_global(carol_address);
+        cheat_caller_address(btc.contract_address, carol_address, CheatSpan::TargetCalls(1));
         btc.approve(bridge.contract_address, 50);
-        bridge.withdraw(808_u256, 50);
+        cheat_caller_address(bridge.contract_address, carol_address, CheatSpan::TargetCalls(1));
+        bridge.withdraw(words_from_hex("8080").span(), 50);
 
         cheat_caller_address(bridge.contract_address, admin_address, CheatSpan::TargetCalls(1));
-        bridge.close_withdrawal_batch();
+        bridge.close_withdrawal_batch(0);
     }
 
     #[test]
@@ -542,10 +663,11 @@ mod bridge_tests {
 
         let mut spy = spy_events();
 
-        start_cheat_caller_address_global(alice_address);
+        cheat_caller_address(btc.contract_address, alice_address, CheatSpan::TargetCalls(1));
         btc.approve(bridge.contract_address, 2000);
-        for _ in 0..ProgresiveHelpersImpl::TREE_MAX_SIZE + 1 {
-            bridge.withdraw(808_u256, 1);
+        for _ in 0..ProgresiveDepositHelpersImpl::TREE_MAX_SIZE + 1 {
+            cheat_caller_address(bridge.contract_address, alice_address, CheatSpan::TargetCalls(1));
+            bridge.withdraw(words_from_hex("8080").span(), 1);
         };
 
         spy
@@ -556,7 +678,7 @@ mod bridge_tests {
                         Event::CloseBatchEvent(
                             CloseBatchEvent {
                                 id: 0,
-                                root: 0x6849d71bb3026db34e73ee25d236d16c2159f27d5f5877214b494a78a6c934e4_u256
+                                root: 0x6f812e8a435a8aeb38affa6514bbfdd5410c2833f0f4f90222590c2ae707632_u256
                                     .into(),
                             },
                         ),

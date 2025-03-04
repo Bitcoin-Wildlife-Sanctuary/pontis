@@ -98,9 +98,9 @@ export class Bridge extends SmartContract {
   /**
    * Finalize the L1 deposit.
    * used when the aggregations are done, and the satoshis of the aggregator utxo should be merged into the bridge utxo.
-   * 
+   *
    * tx: bridgeInput + aggregatorInput + feeInput => stateOutput + bridgeOutput + changeOutput(optional)
-   * 
+   *
    * @param shPreimage - The sighash preimage.
    * @param sigOperator - The operator signature.
    * @param prevTx - The previous bridge transaction.
@@ -188,9 +188,9 @@ export class Bridge extends SmartContract {
   /**
    * Finalize the L2 deposit.
    * used when the operator has sent the bitocin to the deposit addresses on l2 for a deposit batch. So the operator notify the bridge contract on L1 that the deposit batch is done.
-   * 
+   *
    * tx: bridgeInput + feeInput => stateOutput + bridgeOutput + changeOutput(optional)
-   * 
+   *
    * @param shPreimage - The sighash preimage.
    * @param sigOperator - The operator signature.
    * @param prevTx - The previous bridge transaction.
@@ -261,13 +261,13 @@ export class Bridge extends SmartContract {
 
   /**
    * Create a withdrawal transaction.
-   * 
+   *
    * Used when the users want to withdraw from L2 to L1.
    * The users request their withdrawals on L2, the operator collects the withdrawals.
    * Then call this function to create a withdrawalExpander utxo on L1 to start the L1 withdrawal process.
-   * 
+   *
    * tx: bridgeInput + feeInput => stateOutput + bridgeOutput + expanderOutput + changeOutput(optional)
-   * 
+   *
    * @param shPreimage - The sighash preimage.
    * @param sigOperator - The operator signature.
    * @param prevTx - The previous bridge transaction.
@@ -336,19 +336,19 @@ export class Bridge extends SmartContract {
 
   /**
    * Get the txid of the bridge transaction.
-   * 
-   * deployBridgeContract tx: 
+   *
+   * deployBridgeContract tx:
    * feeInput => stateOutput + bridgeOutput + changeOutput(optional)
-   * 
-   * finalizeL1Deposit  tx: 
+   *
+   * finalizeL1Deposit  tx:
    * bridgeInput + depositAggregatorInput + feeInput => stateOutput + bridgeOutput + changeOutput(optional)
-   * 
-   * finalizeL2Deposit tx: 
+   *
+   * finalizeL2Deposit tx:
    * bridgeInput + feeInput => stateOutput + bridgeOutput + changeOutput(optional)
-   * 
-   * createWithdrawal tx: 
+   *
+   * createWithdrawal tx:
    * bridgeInput + feeInput => stateOutput + bridgeOutput + expanderOutput + changeOutput(optional)
-   * 
+   *
    * @param tx - The bridge transaction.
    * @param expanderSPK - The script pubkey of the expander contract output.
    * @returns The txid of the bridge transaction.
@@ -392,7 +392,7 @@ export class Bridge extends SmartContract {
 
   /**
    * Get the hash of the finalizeL1Deposit transaction prevouts.
-   * 
+   *
    * @param prevTxId - The previous transaction id.
    * @param aggregatorTxId - The aggregator transaction id.
    * @param feePrevout - The fee prevout.
@@ -415,7 +415,7 @@ export class Bridge extends SmartContract {
 
   /**
    * Get the hash of the non-finalizeL1Deposit transaction prevouts.
-   * 
+   *
    * @param prevTxId - The previous transaction id.
    * @param feePrevout - The fee prevout.
    * @returns The hash of the non-finalizeL1Deposit transaction prevouts.

@@ -1,11 +1,17 @@
 import { L2Event } from './l2/events';
 import { assert } from 'console';
 import { cloneDeep, max } from 'lodash';
-import { BridgeState, DepositAggregatorState } from 'l1';
+import {
+  BridgeState,
+  DepositAggregatorState,
+  ExpansionMerkleTree,
+  WithdrawalExpanderState,
+  WithdrawalMerkle,
+} from 'l1';
 import { l2AddressToHex } from './l1/utils/contractUtil';
-import { readFileSync, writeFileSync } from 'fs';
+import { Sha256 } from 'scrypt-ts';
 
-export type L1Address = `0x${string}`;
+export type L1Address = string;
 export type L2Address = `0x${string}`;
 
 export type L1TxHash = string;
@@ -116,6 +122,10 @@ export type Withdrawal = {
   blockNumber: number;
 };
 
+export type WithdrawalExpansionState = WithdrawalExpanderState & {
+  tx: L1Tx;
+};
+
 type WithdrawalBatchCommon = {
   id: bigint;
   withdrawals: Withdrawal[];
@@ -124,41 +134,32 @@ type WithdrawalBatchCommon = {
 export type WithdrawalBatch =
   | ({
       status: 'PENDING';
-      id: bigint;
-      withdrawals: Withdrawal[];
     } & WithdrawalBatchCommon)
   | ({
       status: 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED';
-      withdrawals: Withdrawal[];
       closeWithdrawalBatchTx: L2Tx;
     } & WithdrawalBatchCommon)
   | ({
       status: 'CLOSED';
-      withdrawals: Withdrawal[];
       hash: string;
       closeWithdrawalBatchTx: L2Tx;
-    } & WithdrawalBatchCommon)
-  | ({
-      status: 'SUBMITTED_FOR_EXPANSION';
-      withdrawals: Withdrawal[];
-      hash: string;
-      closeWithdrawalBatchTx: L2Tx;
-      withdrawBatchTx: L1Tx;
+      createExpanderTx: L1Tx;
+      expansionTree: ExpansionMerkleTree;
     } & WithdrawalBatchCommon)
   | ({
       status: 'BEING_EXPANDED';
-      withdrawals: Withdrawal[];
       hash: string;
       closeWithdrawalBatchTx: L2Tx;
-      withdrawBatchTx: L1Tx;
+      createExpanderTx: L1Tx;
+      expansionTree: ExpansionMerkleTree;
       expansionTxs: L1Tx[][];
     } & WithdrawalBatchCommon)
   | ({
       status: 'EXPANDED';
-      withdrawals: Withdrawal[];
       hash: string;
       closeWithdrawalBatchTx: L2Tx;
-      withdrawBatchTx: L1Tx;
+      createExpanderTx: L1Tx;
+      expansionTree: ExpansionMerkleTree;
       expansionTxs: L1Tx[][];
     } & WithdrawalBatchCommon);
 
@@ -213,7 +214,22 @@ export type BridgeEnvironment = {
     bridgeState: BridgeCovenantState,
     batchId: string
   ) => Promise<BridgeCovenantState>;
-  closePendingWithdrawalBatch: () => Promise<L2Tx>;
+  closePendingWithdrawalBatch: (id: bigint) => Promise<L2Tx>;
+  createWithdrawalExpander: (
+    bridgeState: BridgeCovenantState,
+    hash: Sha256,
+    expectedWithdrawalState: WithdrawalExpanderState
+  ) => Promise<BridgeCovenantState>;
+  expandWithdrawals: (
+    level: number,
+    tree: ExpansionMerkleTree,
+    expansionTxs: L1Tx[]
+  ) => Promise<L1Tx[]>;
+  distributeWithdrawals: (
+    level: number,
+    tree: ExpansionMerkleTree,
+    expansionTxs: L1Tx[]
+  ) => Promise<L1Tx[]>;
 };
 
 let i = 0;
@@ -248,6 +264,7 @@ export async function applyChange(
       updateL1TxStatus(newState, change);
       await manageAggregation(env, newState);
       await manageVerification(env, newState);
+      await manageExpansion(env, newState);
       break;
     }
     case 'l1BlockNumber': {
@@ -258,6 +275,7 @@ export async function applyChange(
       await initiateAggregation(env, newState);
       await manageAggregation(env, newState);
       await manageVerification(env, newState);
+      await manageExpansion(env, newState);
       break;
     }
     case 'l2BlockNumber': {
@@ -279,7 +297,8 @@ export async function applyChange(
       break;
     }
     case 'closeBatch': {
-      updateWithdrawalBatch(env, newState, change);
+      await updateWithdrawalBatch(env, newState, change);
+      // await initiateWithdrawalsExpansion(env, newState);
       break;
     }
     case 'l2tx': {
@@ -341,20 +360,15 @@ function updateL1TxStatus(state: OperatorState, status: L1TxStatus) {
   }
 
   for (const wb of state.withdrawalBatches) {
-    if (
-      wb.status === 'SUBMITTED_FOR_EXPANSION' ||
-      wb.status === 'BEING_EXPANDED' ||
-      wb.status === 'EXPANDED'
-    ) {
-      update(wb.withdrawBatchTx);
-    }
-
     if (wb.status === 'BEING_EXPANDED' || wb.status === 'EXPANDED') {
       for (const expansionArray of wb.expansionTxs) {
         for (let i = 0; i < expansionArray.length; i++) {
           update(expansionArray[i]);
         }
       }
+    }
+    if (wb.status === 'CLOSED') {
+      update(wb.createExpanderTx);
     }
   }
 
@@ -399,18 +413,13 @@ export function getAllL1Txs(state: OperatorState): Set<L1TxId> {
   }
 
   for (const wb of state.withdrawalBatches) {
-    if (
-      wb.status === 'SUBMITTED_FOR_EXPANSION' ||
-      wb.status === 'BEING_EXPANDED' ||
-      wb.status === 'EXPANDED'
-    ) {
-      l1Txs.push(wb.withdrawBatchTx);
-    }
-
     if (wb.status === 'BEING_EXPANDED' || wb.status === 'EXPANDED') {
       for (const expansionArr of wb.expansionTxs) {
         l1Txs.push(...expansionArr);
       }
+    }
+    if (wb.status === 'CLOSED') {
+      l1Txs.push(wb.createExpanderTx);
     }
   }
 
@@ -448,7 +457,6 @@ function updateL2TxStatus(state: OperatorState, status: L2TxStatus) {
     if (
       wb.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED' ||
       wb.status === 'CLOSED' ||
-      wb.status === 'SUBMITTED_FOR_EXPANSION' ||
       wb.status === 'BEING_EXPANDED' ||
       wb.status === 'EXPANDED'
     ) {
@@ -477,7 +485,6 @@ export function getAllL2Txs(state: OperatorState): Set<L2TxId> {
     if (
       wb.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED' ||
       wb.status === 'CLOSED' ||
-      wb.status === 'SUBMITTED_FOR_EXPANSION' ||
       wb.status === 'BEING_EXPANDED' ||
       wb.status === 'EXPANDED'
     ) {
@@ -689,6 +696,7 @@ async function handleWithdrawal(state: OperatorState, change: L2Event) {
     });
   }
 }
+
 async function closeWithdrawalBatch(
   env: BridgeEnvironment,
   state: OperatorState
@@ -703,7 +711,7 @@ async function closeWithdrawalBatch(
       state.withdrawalBatches[i] = {
         ...batch,
         status: 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED',
-        closeWithdrawalBatchTx: await env.closePendingWithdrawalBatch(),
+        closeWithdrawalBatchTx: await env.closePendingWithdrawalBatch(batch.id),
       };
     }
   }
@@ -720,9 +728,36 @@ async function updateWithdrawalBatch(
       if (batch.id === change.id) {
         assert(batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED');
         if (batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED') {
+          const expansionTree = WithdrawalMerkle.getMerkleTree(
+            batch.withdrawals.map((w) => ({
+              l1Address: w.recipient,
+              amt: w.amount,
+            }))
+          );
+
+          const expectedWithdrawalState =
+            WithdrawalMerkle.getStateForHashFromTree(
+              expansionTree,
+              expansionTree.root
+            );
+
+          console.log('initiating expansion');
+
+          const bridgeState = await env.createWithdrawalExpander(
+            state.bridgeState,
+            Sha256(change.root.substring(2)), // TODO: clean this up!
+            expectedWithdrawalState // TODO: is state necessary here?
+          );
+
+          console.log('bridgeState', bridgeState);
+
+          state.bridgeState = bridgeState;
+
           state.withdrawalBatches[i] = {
             ...batch,
             status: 'CLOSED',
+            createExpanderTx: bridgeState.latestTx,
+            expansionTree,
             hash: change.root,
           };
         }
@@ -744,30 +779,55 @@ function withdrawalsOldEnough(
   return false;
 }
 
-export function save(path: string, state: OperatorState) {
-  const jsonString = JSON.stringify(
-    state,
-    (key, value) => {
-      if (typeof value === 'bigint') {
-        return value.toString() + 'n';
-      }
-      return value;
-    },
-    2
-  );
-
-  writeFileSync(path, jsonString, 'utf8');
+async function distributeOrExpand(
+  env: BridgeEnvironment,
+  level: number,
+  expansionTree: ExpansionMerkleTree,
+  expansionTxs: L1Tx[]
+): Promise<L1Tx[]> {
+  if (expansionTree.levels.length - expansionTxs.length === 1) {
+    return await env.distributeWithdrawals(level, expansionTree, expansionTxs);
+  } else {
+    return await env.expandWithdrawals(level, expansionTree, expansionTxs);
+  }
 }
 
-export function load(path: string): OperatorState {
-  const rawData = readFileSync(path, 'utf8');
+async function manageExpansion(env: BridgeEnvironment, state: OperatorState) {
+  for (let i = 0; i < state.withdrawalBatches.length; i++) {
+    const batch = state.withdrawalBatches[i];
 
-  const state = JSON.parse(rawData, (key, value) => {
-    if (typeof value === 'string' && /^\d+n$/.test(value)) {
-      return BigInt(value.slice(0, -1));
+    if (
+      batch.status === 'CLOSED' &&
+      batch.createExpanderTx.status === 'MINED'
+    ) {
+      console.log(`expander of batch: ${batch.id} created, starting expansion`);
+      const level0Txs = await distributeOrExpand(env, 0, batch.expansionTree, [
+        batch.createExpanderTx,
+      ]);
+      state.withdrawalBatches[i] = {
+        ...batch,
+        status: 'BEING_EXPANDED',
+        expansionTxs: [level0Txs],
+      };
+    } else if (batch.status === 'BEING_EXPANDED') {
+      const expansionTxs = batch.expansionTxs.at(-1);
+      if (expansionTxs && expansionTxs.every((tx) => tx.status === 'MINED')) {
+        if (expansionTxs.length === batch.withdrawals.length) {
+          state.withdrawalBatches[i] = {
+            ...batch,
+            status: 'EXPANDED',
+          };
+        } else {
+          batch.expansionTxs.push(
+            await distributeOrExpand(
+              env,
+              batch.expansionTxs.length,
+              batch.expansionTree,
+              expansionTxs
+            )
+          );
+        }
+      }
     }
-    return value;
-  });
-
-  return state as OperatorState;
+  }
 }

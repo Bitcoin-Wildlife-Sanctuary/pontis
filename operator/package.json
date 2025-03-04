@@ -14,10 +14,10 @@
     "test": "npm run td",
     "td": "mocha --config=.mocharc.json --no-timeouts",
     "devnet": "docker run -p 5050:5050 shardlabs/starknet-devnet-rs --seed 0 --lite-mode",
-    "main": "ts-node src/main.ts",
+    "main": "tsx src/main.ts",
     "sandbox": "tsx src/sandbox.ts",
-    "deploy": "ts-node src/deploy.ts",
-    "play": "ts-node src/play.ts",
+    "deploy": "tsx src/deploy.ts",
+    "command": "tsx src/command.ts",
     "deposit": "tsx src/l1/makeADeposit.ts"
   },
   "dependencies": {

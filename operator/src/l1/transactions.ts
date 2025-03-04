@@ -15,15 +15,18 @@ import {
   Observable,
   switchMap,
   takeWhile,
-  tap,
   timer,
 } from 'rxjs';
 import * as l1Api from './api';
 import { createL1Provider } from './deps/l1Provider';
 import * as env from './env';
-import { getFileOffChainDataProvider } from './deps/offchainDataProvider';
-import { EnhancedProvider } from 'l1';
+import {
+  EnhancedProvider,
+  ExpansionMerkleTree,
+  WithdrawalExpanderState,
+} from 'l1';
 import { addressToScript } from './utils/contractUtil';
+import { Sha256 } from 'scrypt-ts';
 
 export function l1TransactionStatus(
   // add whatever parameters you need
@@ -103,90 +106,63 @@ export async function verifyDepositBatch(
 }
 
 /// create the withdrawal expander, return the L1Tx
-export async function createWithdrwalExpander(
-  batch: WithdrawalBatch
-): Promise<L1Tx> {
-  const txid = await l1Api.createWithdrawal(
+export async function createWithdrawalExpander(
+  bridgeState: BridgeCovenantState,
+  hash: Sha256,
+  expectedWithdrawalState: WithdrawalExpanderState
+): Promise<BridgeCovenantState> {
+  return await l1Api.createWithdrawal2(
     env.operatorSigner,
     env.l1Network,
     env.createUtxoProvider(),
     env.createChainProvider(),
     createL1Provider(env.useRpc, env.rpcConfig, env.l1Network),
-    getFileOffChainDataProvider(),
     env.l1FeeRate,
-    batch
+    bridgeState,
+    hash,
+    expectedWithdrawalState
   );
-  return {
-    type: 'l1tx',
-    hash: txid,
-    status: 'UNCONFIRMED',
-  };
-}
-
-/// check if the withdrawal batch is completed, do not need to call expandWithdrawal if it is completed
-export function isExpansionCompleted(batch: WithdrawalBatch): boolean {
-  return !l1Api.shouldDistribute(batch) && !l1Api.shouldExpand(batch);
 }
 
 /// expand the withdrawal batch, return the txids. In the inner implementation, it will call expand or distribute
-export async function expandWithdrawal(batch: WithdrawalBatch): Promise<{
-  txs: L1Tx[];
-  replace: boolean;
-}> {
-  if (isExpansionCompleted(batch)) {
-    throw new Error('withdrawal batch is completed');
-  }
-  if (l1Api.shouldExpand(batch)) {
-    const txids = await l1Api.expandLevelWithdrawals(
-      env.operatorSigner,
-      env.l1Network,
-      new EnhancedProvider(
-        env.createUtxoProvider(),
-        env.createChainProvider(),
-        true
-      ),
-      createL1Provider(env.useRpc, env.rpcConfig, env.l1Network),
-      getFileOffChainDataProvider(),
-      env.l1FeeRate,
-      batch
-    );
-    const txs: L1Tx[] = txids.map((txid) => ({
-      type: 'l1tx',
-      hash: txid,
-      status: 'UNCONFIRMED',
-    }));
-    // todo: add replace logic
-    return {
-      txs,
-      replace: false,
-    };
-  }
-  if (l1Api.shouldDistribute(batch)) {
-    const txids = await l1Api.distributeLevelWithdrawals(
-      env.operatorSigner,
-      env.l1Network,
-      new EnhancedProvider(
-        env.createUtxoProvider(),
-        env.createChainProvider(),
-        true
-      ),
-      createL1Provider(env.useRpc, env.rpcConfig, env.l1Network),
-      getFileOffChainDataProvider(),
-      env.l1FeeRate,
-      batch
-    );
-    const txs: L1Tx[] = txids.map((txid) => ({
-      type: 'l1tx',
-      hash: txid,
-      status: 'UNCONFIRMED',
-    }));
-    // todo: add replace logic
-    return {
-      txs,
-      replace: false,
-    };
-  }
-  throw new Error('no reach here');
+export async function expandWithdrawals(
+  level: number,
+  tree: ExpansionMerkleTree,
+  expansionTxs: L1Tx[]
+): Promise<L1Tx[]> {
+  return await l1Api.expandLevelWithdrawals2(
+    env.operatorSigner,
+    env.l1Network,
+    new EnhancedProvider(
+      env.createUtxoProvider(),
+      env.createChainProvider(),
+      true
+    ),
+    env.l1FeeRate,
+    level,
+    tree,
+    expansionTxs
+  );
+}
+
+export async function distributeWithdrawals(
+  level: number,
+  tree: ExpansionMerkleTree,
+  expansionTxs: L1Tx[]
+): Promise<L1Tx[]> {
+  return await l1Api.distributeLevelWithdrawals2(
+    env.operatorSigner,
+    env.l1Network,
+    new EnhancedProvider(
+      env.createUtxoProvider(),
+      env.createChainProvider(),
+      true
+    ),
+    env.l1FeeRate,
+    level,
+    tree,
+    expansionTxs
+  );
 }
 
 /// convert the btc address to the withdrawal expander address
