@@ -11,6 +11,7 @@ import {
 import * as fs from 'fs';
 import { Deposit, L2Tx, L2TxId, L2TxStatus } from '../state';
 import { from, map, Observable } from 'rxjs';
+import { assert } from 'console';
 
 async function declareAndDeploy(
   account: Account,
@@ -77,8 +78,9 @@ export function toDigest(x: bigint): { value: bigint[] } {
 }
 
 export function fromDigest(value: bigint[]): bigint {
+  assert(value.length === 8);
   let result = 0n;
-  for (let i = 7; i >= 0; i--) {
+  for (let i = 0; i < 8; i++) {
     result = (result << 32n) + value[i];
   }
   return result;

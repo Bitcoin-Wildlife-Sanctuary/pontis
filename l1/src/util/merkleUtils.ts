@@ -125,13 +125,13 @@ export type Withdrawal = {
 export type WithdrawalNode = {
   hash: Sha256
   amt: bigint
-  level: bigint
+  level: number
   withdrawals: Array<Withdrawal>
 }
 // todo: maybe add a hash prefix to avoid tree collision
 export class WithdrawalMerkle {
   private static calculateMerkle(withdrawalList: Array<Withdrawal>): ExpansionMerkleTree {
-    let startLevel = 0n
+    let startLevel = 0
     if (withdrawalList.length == 0) {
       throw new Error('withdrawalList length must be greater than 0')
     }
@@ -179,7 +179,7 @@ export class WithdrawalMerkle {
 
     // eslint-disable-next-line no-constant-condition
     while (true) {
-      startLevel += 1n
+      startLevel += 1
       const newLeafHashes: Array<WithdrawalNode> = []
 
       for (let i = 0; i < leafHashes.length; i += 2) {
@@ -265,7 +265,7 @@ export class WithdrawalMerkle {
   static getStateForHashFromTree(tree: ExpansionMerkleTree, hash: Sha256) {
     const levels = tree.levels;
     const node = levels.flat().find((v) => v.hash === hash)
-    if (node.level === 0n) {
+    if (node.level === 0) {
       return WithdrawalExpanderCovenant.createLeafState(
         node.withdrawals[0].l1Address,
         node.withdrawals[0].amt
@@ -285,7 +285,7 @@ export class WithdrawalMerkle {
     this.assertHashExists(allWithdrawals, hash)
     const levels = this.getMerkleLevels(allWithdrawals)
     const node = levels.flat().find((v) => v.hash === hash)
-    if (node.level === 0n) {
+    if (node.level === 0) {
       return WithdrawalExpanderCovenant.createLeafState(
         node.withdrawals[0].l1Address,
         node.withdrawals[0].amt

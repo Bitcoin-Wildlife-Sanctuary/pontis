@@ -16,6 +16,7 @@ import {
 import { L2Address } from './state';
 import { createDeposit } from './l1/api';
 import * as env from './l1/env';
+import { toWithdrawalExpanderAddress } from './l1/transactions';
 
 async function events() {
   const provider = new RpcProvider({ nodeUrl: 'http://127.0.0.1:5050/rpc' });
@@ -81,10 +82,11 @@ async function withdrawFromAlice() {
   const btc = await contractFromAddress(provider, btcAddress);
 
   // operator
-  const recipient =
-    '03bfac5406925f9fa00194aa5fd093f60775d90475dcf88c24359eddd385b398a8';
+  const recipient = toWithdrawalExpanderAddress(
+    'bc1pu9tujtamxpetkgsjyetwey8esgr2y35374ag4a9xy6j3kwwy4mzqnetae0'
+  );
 
-  console.log(await withdraw(provider, btc, bridge, alice, recipient, 10n));
+  console.log(await withdraw(provider, btc, bridge, alice, recipient, 501n));
 }
 
 async function deposit() {

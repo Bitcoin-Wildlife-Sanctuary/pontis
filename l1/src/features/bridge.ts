@@ -388,6 +388,9 @@ export async function createWithdrawalExpander2(
   const sumAmt = outputWithdrawalState.type === 'LEAF' ?
     outputWithdrawalState.withdrawAmt :
     outputWithdrawalState.leftAmt +  outputWithdrawalState.rightAmt;
+
+  console.log("sumAmt > bridgeUtxo.utxo.satoshis", sumAmt, bridgeUtxo.utxo.satoshis)
+
   if (sumAmt > bridgeUtxo.utxo.satoshis) {
     throw new Error('withdrawal amt is greater than bridge utxo satoshis')
   }

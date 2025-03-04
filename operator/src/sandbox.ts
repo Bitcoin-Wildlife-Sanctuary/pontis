@@ -11,9 +11,7 @@ import {
   BridgeEnvironment,
   Deposit,
   L1TxHash,
-  load,
   OperatorState,
-  save,
 } from './state';
 import { setupOperator } from './operator';
 // import { aggregateDeposits, finalizeBatch } from './l1/l1mocks';
@@ -33,6 +31,7 @@ import * as env from './l1/env';
 import { l2TransactionStatus } from './l2/transactions';
 import { l2Events } from './l2/events';
 import { loadContractArtifacts } from './l1/utils/contractUtil';
+import { load, save } from './persistence';
 
 async function initialState(path: string): Promise<OperatorState> {
   loadContractArtifacts();
