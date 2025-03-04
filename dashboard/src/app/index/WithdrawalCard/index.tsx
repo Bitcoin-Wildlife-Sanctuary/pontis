@@ -89,12 +89,12 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
             <>
               <Text.CardTitle>Expansion Txs:</Text.CardTitle>
               <TreeView>
-                {expansionTxs.map((expansionTxLevels, levelIdx) => (
+                {expansionTxs.map((expansionTxLevel, levelIdx) => (
                   <Fragment key={levelIdx.toString()}>
                     {levelIdx % 2 === 1 && <TreeView.Separator />}
 
                     <Col $gap="xxsmall">
-                      {expansionTxLevels.map((expansionTx) => (
+                      {expansionTxLevel.map((expansionTx) => (
                         <TransactionCard key={expansionTx.hash} $gap={4}>
                           <ExplorerLink tx={expansionTx}>
                             <Text.CardValue $color="inherit">{shortenHex(expansionTx.hash)}</Text.CardValue>

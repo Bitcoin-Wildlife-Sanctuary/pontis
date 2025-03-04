@@ -64,8 +64,8 @@ const transitions = {
 
 const misc = {
   fonts: {
-    Inter: 'var(--font-inter)',
-    default: 'var(--font-inter)',
+    Inter: 'var(--font-roboto)',
+    default: 'var(--font-roboto)',
   },
   transitions,
   spacings,

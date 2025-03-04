@@ -7,15 +7,29 @@ type TreeViewProps = {
   children?: React.ReactNode;
 };
 
-const horizontalClassName = 'd-none d-md-flex d-lg-none d-xxl-flex';
-const verticalClassName = 'd-flex d-md-none d-lg-flex d-xxl-none';
+const horizontalClassName = 'd-none d-md-flex d-lg-none d-xxl-flex flex-shrink-0';
+const verticalClassName = 'd-flex d-md-none d-lg-flex d-xxl-none flex-shrink-0';
 
 const TreeViewContainer: React.FC<TreeViewProps> = ({children}) => {
   return (
     <>
-      <Col className={verticalClassName}>{children}</Col>
+      <Col
+        $padding="xsmall"
+        style={{
+          paddingLeft: 0,
+          paddingRight: 0,
+        }}
+        className={verticalClassName}
+      >
+        {children}
+      </Col>
 
-      <Row $alignItems="center" className={horizontalClassName}>
+      <Row
+        $alignItems="center"
+        $padding="xsmall"
+        className={horizontalClassName}
+        style={{overflow: 'auto', paddingLeft: 0}}
+      >
         {children}
       </Row>
     </>

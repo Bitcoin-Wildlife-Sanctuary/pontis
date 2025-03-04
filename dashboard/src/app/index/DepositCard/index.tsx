@@ -59,17 +59,16 @@ export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
         <SectionTitle>Transactions</SectionTitle>
 
         <Col $gap="xsmall">
-
           {deposit.aggregationTxs.length > 0 && (
             <>
               <Text.CardTitle>Aggregation Txs:</Text.CardTitle>
               <TreeView>
-                {deposit.aggregationTxs.map((aggregationTxLevels, levelIdx) => (
+                {deposit.aggregationTxs.map((aggregationTxLevel, levelIdx) => (
                   <Fragment key={levelIdx.toString()}>
-                    {levelIdx % 2 === 1 && <TreeView.Separator />}
+                    {levelIdx !== 0 && <TreeView.Separator />}
 
                     <Col $gap="xxsmall">
-                      {aggregationTxLevels.map((aggregationTx) => (
+                      {aggregationTxLevel.map((aggregationTx) => (
                         <TransactionCard key={aggregationTx.tx.hash} $gap={4}>
                           <Row $justify="space-between" $alignItems="center" $gap="xsmall">
                             {aggregationTx.type === 'LEAF' && (
@@ -108,10 +107,11 @@ export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
             </Col>
 
             <Col $gap="xxsmall" $justify="center">
-              {finalizeBatchTx &&
+              {finalizeBatchTx && (
                 <ExplorerLink tx={finalizeBatchTx}>
                   <Text.CardValue $color="inherit">{shortenHex(finalizeBatchTx.hash)}</Text.CardValue>
-                </ExplorerLink>}
+                </ExplorerLink>
+              )}
 
               {depositTx && (
                 <ExplorerLink tx={depositTx}>
