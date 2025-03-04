@@ -61,13 +61,13 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
       <Divider />
 
       <Col $padding="small" $gap="small">
-        <SectionTitle>Transaction Informations</SectionTitle>
+        <SectionTitle>Transactions</SectionTitle>
 
         <Col $gap="xsmall">
           <Row $gap="xxlarge">
             <Col $gap="xxsmall" $justify="center">
-              {closeTx && <Text.CardTitle>Close:</Text.CardTitle>}
-              {withdrawBatchTx && <Text.CardTitle>Withdraw Batch:</Text.CardTitle>}
+              {closeTx && <Text.CardTitle>Close Tx:</Text.CardTitle>}
+              {withdrawBatchTx && <Text.CardTitle>Withdraw Batch Tx:</Text.CardTitle>}
             </Col>
 
             <Col $gap="xxsmall" $justify="center">
@@ -87,7 +87,7 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
 
           {expansionTxs && expansionTxs.length > 0 && (
             <>
-              <Text.CardTitle>Expansion TXs:</Text.CardTitle>
+              <Text.CardTitle>Expansion Txs:</Text.CardTitle>
               <TreeView>
                 {expansionTxs.map((expansionTxLevels, levelIdx) => (
                   <Fragment key={levelIdx.toString()}>

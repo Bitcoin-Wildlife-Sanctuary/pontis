@@ -56,22 +56,13 @@ export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
       <Divider />
 
       <Col $padding="small" $gap="small">
-        <SectionTitle>Transaction Informations</SectionTitle>
+        <SectionTitle>Transactions</SectionTitle>
 
         <Col $gap="xsmall">
-          {finalizeBatchTx && (
-            <Row $gap="xxlarge">
-              <Text.CardTitle>Finalize:</Text.CardTitle>
-
-              <ExplorerLink tx={finalizeBatchTx}>
-                <Text.CardValue $color="inherit">{shortenHex(finalizeBatchTx.hash)}</Text.CardValue>
-              </ExplorerLink>
-            </Row>
-          )}
 
           {deposit.aggregationTxs.length > 0 && (
             <>
-              <Text.CardTitle>Aggregation TXs:</Text.CardTitle>
+              <Text.CardTitle>Aggregation Txs:</Text.CardTitle>
               <TreeView>
                 {deposit.aggregationTxs.map((aggregationTxLevels, levelIdx) => (
                   <Fragment key={levelIdx.toString()}>
@@ -109,14 +100,19 @@ export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
               </TreeView>
             </>
           )}
-
           <Row $gap="xxlarge">
             <Col $gap="xxsmall" $justify="center">
-              {depositTx && <Text.CardTitle>Deposit:</Text.CardTitle>}
-              {verifyTx && <Text.CardTitle>Verify:</Text.CardTitle>}
+              {finalizeBatchTx && <Text.CardTitle>Finalize Tx:</Text.CardTitle>}
+              {depositTx && <Text.CardTitle>Deposit Tx:</Text.CardTitle>}
+              {verifyTx && <Text.CardTitle>Verify Tx:</Text.CardTitle>}
             </Col>
 
             <Col $gap="xxsmall" $justify="center">
+              {finalizeBatchTx &&
+                <ExplorerLink tx={finalizeBatchTx}>
+                  <Text.CardValue $color="inherit">{shortenHex(finalizeBatchTx.hash)}</Text.CardValue>
+                </ExplorerLink>}
+
               {depositTx && (
                 <ExplorerLink tx={depositTx}>
                   <Text.CardValue $color="inherit">{shortenHex(depositTx.hash)}</Text.CardValue>
