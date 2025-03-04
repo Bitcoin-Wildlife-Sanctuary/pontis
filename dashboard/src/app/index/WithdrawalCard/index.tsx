@@ -15,9 +15,6 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
   const closeTx = 'closeWithdrawalBatchTx' in withdrawal ? withdrawal.closeWithdrawalBatchTx : undefined;
   const expansionTxs = 'expansionTxs' in withdrawal ? withdrawal.expansionTxs : undefined;
 
-  // TODO: what to do with removed withdrawBatchTx?
-  const withdrawBatchTx = 'withdrawBatchTx' in withdrawal ? withdrawal.withdrawBatchTx : undefined;
-
   return (
     <Container>
       <SectionTitleContainer as={Row} $justify="space-between" $gap="none">
@@ -69,24 +66,13 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
 
         <Col $gap="xsmall">
           <Row $gap="xxlarge">
-            <Col $gap="xxsmall" $justify="center">
-              {closeTx && <Text.CardTitle>Close Tx:</Text.CardTitle>}
-              {/* {withdrawBatchTx && <Text.CardTitle>Withdraw Batch Tx:</Text.CardTitle>} */}
-            </Col>
+            {closeTx && <Text.CardTitle>Close Tx:</Text.CardTitle>}
 
-            <Col $gap="xxsmall" $justify="center">
-              {closeTx && (
-                <ExplorerLink tx={closeTx}>
-                  <Text.CardValue $color="inherit">{shortenHex(closeTx.hash)}</Text.CardValue>
-                </ExplorerLink>
-              )}
-
-              {/* {withdrawBatchTx && (
-                <ExplorerLink tx={withdrawBatchTx}>
-                  <Text.CardValue $color="inherit">{shortenHex(withdrawBatchTx.hash)}</Text.CardValue>
-                </ExplorerLink>
-              )} */}
-            </Col>
+            {closeTx && (
+              <ExplorerLink tx={closeTx}>
+                <Text.CardValue $color="inherit">{shortenHex(closeTx.hash)}</Text.CardValue>
+              </ExplorerLink>
+            )}
           </Row>
 
           {expansionTxs && expansionTxs.length > 0 && (
