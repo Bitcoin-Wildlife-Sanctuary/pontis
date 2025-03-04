@@ -61,3 +61,5 @@ jobs:
         working-directory: dashboard
         env:
           OPERATOR_STATE_PATH: ./public/state.json
+          NEXT_PUBLIC_L1_EXPLORER_LINK: https://mempool-testnet.fractalbitcoin.io
+          NEXT_PUBLIC_L2_EXPLORER_LINK: https://sepolia.voyager.online
