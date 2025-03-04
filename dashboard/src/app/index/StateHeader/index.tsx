@@ -63,22 +63,20 @@ export const StateHeader: React.FC<{state: OperatorState}> = ({state}) => {
           <ContentCard $padding="small" $flex={1} $gap="xsmall">
             <Text.Subtitle>Merkle Tree</Text.Subtitle>
 
-            <Row $gap="small">
-              <Col>
-                {state.bridgeState.merkleTree.map((leaf, index) => {
-                  if (isAllZeroHex(leaf)) return null;
+            <Row $gap="xxsmall" $flex={1} style={{flexWrap: 'wrap'}}>
+              {state.bridgeState.merkleTree.map((leaf, index) => {
+                if (isAllZeroHex(leaf)) return null;
 
-                  return (
-                    <Row key={leaf} $alignItems="center" $gap="xsmall">
-                      <Text.Subtitle $color="textStrong" $fontSize={18}>
-                        {index + 1}:
-                      </Text.Subtitle>
+                return (
+                  <Row key={leaf} $alignItems="center" $gap="xsmall" $flex={1}>
+                    <Text.Subtitle $color="textStrong" $fontSize={18}>
+                      {index + 1}:
+                    </Text.Subtitle>
 
-                      <Text.Subtitle $color="textStrong">{shortenHex(leaf, 12)}</Text.Subtitle>
-                    </Row>
-                  );
-                })}
-              </Col>
+                    <Text.Subtitle $color="textStrong">{shortenHex(leaf, 12)}</Text.Subtitle>
+                  </Row>
+                );
+              })}
             </Row>
           </ContentCard>
         </Col>
