@@ -38,12 +38,12 @@ export function save(path: string, state: OperatorState) {
 }
 
 export function parse(raw: string): OperatorState {
-    return JSON.parse(raw, (key, value) => {
-        if (typeof value === 'string' && /^\d+n$/.test(value)) {
-          return BigInt(value.slice(0, -1));
-        }
-        return value;
-      });
+  return JSON.parse(raw, (key, value) => {
+    if (typeof value === 'string' && /^\d+n$/.test(value)) {
+      return BigInt(value.slice(0, -1));
+    }
+    return value;
+  });
 }
 
 export function load(path: string): OperatorState {
