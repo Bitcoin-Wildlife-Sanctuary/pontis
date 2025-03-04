@@ -12,14 +12,12 @@ import {
   ChainProvider,
   TraceableWithdrawalExpanderUtxo,
   WithdrawalMerkle,
-  Withdrawal as L1Withdrawal,
   withdrawFeatures,
   EnhancedProvider,
   DepositAggregatorCovenant,
   bridgeFeatures,
   depositFeatures,
   BatchId,
-  WithdrawalNode,
   ExpansionMerkleTree,
 } from 'l1';
 import {
@@ -31,9 +29,8 @@ import {
   L1TxHash,
   L1TxStatus,
   L2Address,
-  WithdrawalBatch,
 } from '../state';
-import { ByteString, PubKey, Sha256, UTXO } from 'scrypt-ts';
+import { PubKey, Sha256 } from 'scrypt-ts';
 import { l2AddressToHex, getContractAddresses } from './utils/contractUtil';
 import {
   UNCONFIRMED_BLOCK_NUMBER,
@@ -43,11 +40,7 @@ import {
   Utxo,
 } from './deps/l1Provider';
 import { OffchainDataProvider } from './deps/offchainDataProvider';
-import {
-  CONTRACT_INDEXES,
-  WithdrawalExpanderCovenant,
-  WithdrawalExpanderState,
-} from 'l1';
+import { WithdrawalExpanderState } from 'l1';
 import { Transaction } from '@scrypt-inc/bitcoinjs-lib';
 import { assert } from 'console';
 
@@ -298,7 +291,7 @@ export async function aggregateLevelDeposits(
   feeRate: number,
   currentLevel: DepositAggregationState[]
 ): Promise<DepositAggregationState[]> {
-  console.log('aggregating level:', currentLevel);
+  // console.log('aggregating level:', currentLevel);
 
   const operatorPubKey = await operatorSigner.getPublicKey();
   const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
@@ -348,6 +341,7 @@ export async function aggregateLevelDeposits(
   if (broadcastRes.failedBroadcastTxError) {
     console.error(`aggregateDeposits(batch), error`);
     console.error(broadcastRes.failedBroadcastTxError);
+    // TODO: handle error?
   }
 
   return result.filter((r) =>
@@ -588,29 +582,6 @@ export async function createWithdrawal2(
       hash: res.txid,
     },
   };
-}
-
-export function shouldExpand(batch: WithdrawalBatch): boolean {
-  if (batch.status !== 'BEING_EXPANDED') return false;
-
-  // just distribute for level <= 2
-  const height = Math.ceil(Math.log2(batch.withdrawals.length));
-  if (height <= WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE)
-    return false;
-
-  const currentExpandCount = batch.expansionTxs.length;
-
-  // expanding is started, return false
-  return (
-    height >
-    currentExpandCount +
-      Number(WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE)
-  );
-}
-
-export function shouldDistribute(batch: WithdrawalBatch): boolean {
-  if (batch.status !== 'BEING_EXPANDED') return false;
-  return !shouldExpand(batch);
 }
 
 export async function expandLevelWithdrawals2(

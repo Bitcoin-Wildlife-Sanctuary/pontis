@@ -124,11 +124,6 @@ export async function createWithdrawalExpander(
   );
 }
 
-/// check if the withdrawal batch is completed, do not need to call expandWithdrawal if it is completed
-export function isExpansionCompleted(batch: WithdrawalBatch): boolean {
-  return !l1Api.shouldDistribute(batch) && !l1Api.shouldExpand(batch);
-}
-
 /// expand the withdrawal batch, return the txids. In the inner implementation, it will call expand or distribute
 export async function expandWithdrawals(
   level: number,

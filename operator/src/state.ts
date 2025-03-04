@@ -9,7 +9,6 @@ import {
   WithdrawalMerkle,
 } from 'l1';
 import { l2AddressToHex } from './l1/utils/contractUtil';
-import { readFileSync, writeFileSync } from 'fs';
 import { Sha256 } from 'scrypt-ts';
 
 export type L1Address = string;
