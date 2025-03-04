@@ -5,6 +5,7 @@ import '@csstools/normalize.css';
 
 import type {Metadata, Viewport} from 'next';
 import {Roboto} from 'next/font/google';
+import {cookies} from 'next/headers';
 
 import {ThemeProvider} from '@/theme';
 import {GlobalStyle} from '@/theme/globalStyle';
@@ -25,16 +26,24 @@ export const metadata: Metadata = {
   description: 'OP_CAT enabled Bitcoin <> Starknet Bridge',
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const cookieStore = await cookies();
+  const themeCookie = cookieStore.get('theme');
+
+  let initialTheme: 'light' | 'dark' = 'light';
+  if (themeCookie?.value && (themeCookie.value === 'dark' || themeCookie.value === 'light')) {
+    initialTheme = themeCookie.value;
+  }
+
   return (
     <html lang="en">
       <body className={roboto.variable}>
         <StyledComponentsRegistry>
-          <ThemeProvider>
+          <ThemeProvider initialTheme={initialTheme}>
             <GlobalStyle />
 
             {children}
