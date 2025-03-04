@@ -73,11 +73,11 @@ export const SectionCard = styled(ContentCard)`
   min-height: 240px;
 `;
 
-export const SectionCardTitle = styled(Text.Title).attrs({$textAlign: 'center'})`
+export const SectionCardTitle = styled(Text.Title)<{$elevated?: boolean}>`
   display: inline-block;
   padding: ${({theme}) => theme.spacings.small}px;
   margin-bottom: ${({theme}) => theme.spacings.small}px;
-  background-color: ${({theme}) => theme.colors.background};
+  background-color: ${({theme, $elevated}) => theme.colors[$elevated ? 'elevated' : 'background']};
   border-bottom: 1px solid ${({theme}) => theme.colors.border};
 `;
 
@@ -86,4 +86,12 @@ export const Table = styled(TableComponent)`
   td {
     padding: ${({theme}) => `${theme.spacings.xsmall}px ${theme.spacings.small}px`};
   }
+`;
+
+export const ThemeButton = styled.button`
+  background-color: transparent;
+  border: 0;
+  outline: 0;
+  cursor: pointer;
+  padding: ${({theme}) => theme.spacings.xxsmall}px;
 `;

@@ -1,10 +1,11 @@
 'use client';
 
 import {Fragment} from 'react';
+import {useTheme} from 'styled-components';
 
-import {Col} from '@/components';
-import {useAutoUpdateState} from '@/hooks';
-import {OperatorState} from '@/types';
+import {Col, Icon, Row, Text} from '@/components';
+import {useAutoUpdateState, useToggleTheme} from '@/hooks';
+import {StateWithDate} from '@/types';
 
 import {DepositCard} from './DepositCard';
 import {PendingTableRow} from './PendingTableRow';
@@ -17,24 +18,45 @@ import {
   SectionCard,
   SectionCardTitle,
   Table,
+  ThemeButton,
 } from './styled';
 import {WithdrawalCard} from './WithdrawalCard';
 
-export default function Page({initialState}: {initialState: OperatorState}) {
-  const state = useAutoUpdateState(initialState);
+export default function Page({initialState}: {initialState: StateWithDate}) {
+  const {state, lastUpdate} = useAutoUpdateState(initialState);
+
+  const theme = useTheme();
+  const toggleTheme = useToggleTheme();
 
   return (
     <Container $flex={1}>
       <Col $gap="large" $flex={1} className="container">
-        <StateHeader state={state} />
+        <Col $gap="xxsmall">
+          <Row $alignItems="center" $justify="space-between">
+            <Row $gap="small">
+              <Text.BodyStrong>Last Update:</Text.BodyStrong>
+              <Text.BodyStrong>{lastUpdate.toLocaleString()}</Text.BodyStrong>
+            </Row>
+
+            <ThemeButton onClick={toggleTheme}>
+              <Icon name={theme.dark ? 'Sun' : 'Moon'} color="primary" size={24} />
+            </ThemeButton>
+          </Row>
+
+          <StateHeader state={state} />
+        </Col>
 
         <HistoryContainer>
           <SectionCard className="deposits">
-            <SectionCardTitle>Deposits</SectionCardTitle>
+            <SectionCardTitle $textAlign="center" $elevated>
+              Deposits
+            </SectionCardTitle>
 
             <HistorySectionContainer>
               <ContentCard $surface>
-                <SectionCardTitle>Pending</SectionCardTitle>
+                <SectionCardTitle as={Text.BodyStrong} $fontSize={22}>
+                  Pending
+                </SectionCardTitle>
 
                 <Col $padding="small">
                   <Table headings={['Recipient', 'Amount', 'Origin TX']}>
@@ -55,7 +77,9 @@ export default function Page({initialState}: {initialState: OperatorState}) {
           </SectionCard>
 
           <SectionCard className="withdrawals">
-            <SectionCardTitle>Withdrawals</SectionCardTitle>
+            <SectionCardTitle $textAlign="center" $elevated>
+              Withdrawals
+            </SectionCardTitle>
 
             <HistorySectionContainer>
               {state.withdrawalBatches?.map((withdrawalBatch) => (

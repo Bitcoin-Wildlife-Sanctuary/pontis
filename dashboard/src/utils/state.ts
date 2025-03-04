@@ -1,12 +1,19 @@
 import fs from 'node:fs/promises';
 
-import {OperatorState} from '@/types';
+import {StateWithDate} from '@/types';
 
 import {ABSOLUTE_OPERATOR_STATE_PATH} from './constants';
 
-export const loadState = async (): Promise<OperatorState> => {
+export const loadState = async (): Promise<StateWithDate> => {
   const rawState = await fs.readFile(ABSOLUTE_OPERATOR_STATE_PATH, 'utf-8');
-  return JSON.parse(rawState);
+  const state = JSON.parse(rawState);
+
+  const stat = await fs.stat(ABSOLUTE_OPERATOR_STATE_PATH);
+
+  return {
+    state,
+    lastUpdate: stat.mtime,
+  };
 };
 
 export const watchState = async (ac: AbortController, callback: () => void) => {

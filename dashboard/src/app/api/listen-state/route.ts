@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       watchState(abortController, async () => {
         const newState = await loadState();
 
-        sendEvent({message: 'state-change', state: newState, timestamp: new Date().toISOString()});
+        sendEvent({message: 'state-change', state: newState.state, timestamp: newState.lastUpdate.toISOString()});
       });
 
       request.signal.addEventListener('abort', () => {

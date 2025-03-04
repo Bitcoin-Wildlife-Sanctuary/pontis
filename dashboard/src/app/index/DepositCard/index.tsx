@@ -70,41 +70,44 @@ export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
           )}
 
           {deposit.aggregationTxs.length > 0 && (
-            <TreeView>
-              {deposit.aggregationTxs.map((aggregationTxLevels, levelIdx) => (
-                <Fragment key={levelIdx.toString()}>
-                  {levelIdx % 2 === 1 && <TreeView.Separator />}
+            <>
+              <Text.CardTitle>Aggregation TXs:</Text.CardTitle>
+              <TreeView>
+                {deposit.aggregationTxs.map((aggregationTxLevels, levelIdx) => (
+                  <Fragment key={levelIdx.toString()}>
+                    {levelIdx % 2 === 1 && <TreeView.Separator />}
 
-                  <Col $gap="xxsmall">
-                    {aggregationTxLevels.map((aggregationTx) => (
-                      <TransactionCard key={aggregationTx.tx.hash} $gap={4}>
-                        <Row $justify="space-between" $alignItems="center" $gap="xsmall">
-                          {aggregationTx.type === 'LEAF' && (
-                            <Col>
-                              <Text.CardValue>{aggregationTx.depositAmt.toString()}</Text.CardValue>
-                            </Col>
-                          )}
-
-                          <Col $alignItems="flex-end">
+                    <Col $gap="xxsmall">
+                      {aggregationTxLevels.map((aggregationTx) => (
+                        <TransactionCard key={aggregationTx.tx.hash} $gap={4}>
+                          <Row $justify="space-between" $alignItems="center" $gap="xsmall">
                             {aggregationTx.type === 'LEAF' && (
-                              <ExplorerLink network="l1" address={aggregationTx.depositAddress}>
-                                <Text.CardValue $color="inherit">
-                                  {shortenHex(aggregationTx.depositAddress)}
-                                </Text.CardValue>
-                              </ExplorerLink>
+                              <Col>
+                                <Text.CardValue>{aggregationTx.depositAmt.toString()}</Text.CardValue>
+                              </Col>
                             )}
 
-                            <ExplorerLink tx={aggregationTx.tx}>
-                              <Text.CardValue $color="inherit">{shortenHex(aggregationTx.tx.hash)}</Text.CardValue>
-                            </ExplorerLink>
-                          </Col>
-                        </Row>
-                      </TransactionCard>
-                    ))}
-                  </Col>
-                </Fragment>
-              ))}
-            </TreeView>
+                            <Col $alignItems="flex-end">
+                              {aggregationTx.type === 'LEAF' && (
+                                <ExplorerLink network="l1" address={aggregationTx.depositAddress}>
+                                  <Text.CardValue $color="inherit">
+                                    {shortenHex(aggregationTx.depositAddress)}
+                                  </Text.CardValue>
+                                </ExplorerLink>
+                              )}
+
+                              <ExplorerLink tx={aggregationTx.tx}>
+                                <Text.CardValue $color="inherit">{shortenHex(aggregationTx.tx.hash)}</Text.CardValue>
+                              </ExplorerLink>
+                            </Col>
+                          </Row>
+                        </TransactionCard>
+                      ))}
+                    </Col>
+                  </Fragment>
+                ))}
+              </TreeView>
+            </>
           )}
 
           <Row $gap="xxlarge">

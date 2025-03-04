@@ -2,9 +2,9 @@
 
 import {useEffect, useState} from 'react';
 
-import {OperatorState} from '@/types';
+import {StateWithDate} from '@/types';
 
-export const useAutoUpdateState = (initialState: OperatorState) => {
+export const useAutoUpdateState = (initialState: StateWithDate) => {
   const [state, setState] = useState(initialState);
 
   useEffect(() => {
@@ -23,7 +23,10 @@ export const useAutoUpdateState = (initialState: OperatorState) => {
           console.log('State change:', data.state);
 
           if (data.state && typeof data.state === 'object') {
-            setState(data.state);
+            setState({
+              state: data.state,
+              lastUpdate: new Date(data.timestamp) || new Date(),
+            });
           }
 
           return;

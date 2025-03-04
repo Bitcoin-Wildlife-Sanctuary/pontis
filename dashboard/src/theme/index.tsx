@@ -1,9 +1,11 @@
 'use client';
 
-import {useState} from 'react';
+import {useCallback, useMemo, useState} from 'react';
 import {ThemeProvider as SCThemeProvider} from 'styled-components';
 
-import {darkThemeColors} from './colors';
+import {ToggleThemeContext} from '@/hooks/useToggleTheme';
+
+import {darkThemeColors, lightThemeColors} from './colors';
 
 type Size = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
 
@@ -69,18 +71,32 @@ const misc = {
   spacings,
 };
 
-export function getTheme(theme: 'dark') {
+export function getTheme(theme: 'dark' | 'light') {
   const dark = theme === 'dark';
 
   return {
     dark,
-    colors: dark ? darkThemeColors : darkThemeColors,
+    colors: dark ? darkThemeColors : lightThemeColors,
     ...misc,
   };
 }
 
 export function ThemeProvider({children}: React.PropsWithChildren) {
-  const [theme] = useState(() => getTheme('dark'));
+  const [theme, setTheme] = useState(() => getTheme('dark'));
 
-  return <SCThemeProvider theme={theme}>{children}</SCThemeProvider>;
+  const toggleTheme = useCallback(() => {
+    if (theme.dark) {
+      setTheme(getTheme('light'));
+    } else {
+      setTheme(getTheme('dark'));
+    }
+  }, [theme.dark, setTheme]);
+
+  const toggleThemeContextValue = useMemo(() => ({toggleTheme}), [toggleTheme]);
+
+  return (
+    <ToggleThemeContext.Provider value={toggleThemeContextValue}>
+      <SCThemeProvider theme={theme}>{children}</SCThemeProvider>
+    </ToggleThemeContext.Provider>
+  );
 }
