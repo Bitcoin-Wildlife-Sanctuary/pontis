@@ -5,10 +5,7 @@ import {ThemeProvider as SCThemeProvider} from 'styled-components';
 
 import {ToggleThemeContext} from '@/hooks/useToggleTheme';
 
-import {setInitialTheme} from './actions';
 import {darkThemeColors, lightThemeColors} from './colors';
-
-type AllowedThemes = 'dark' | 'light';
 
 type Size = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
 
@@ -67,14 +64,14 @@ const transitions = {
 
 const misc = {
   fonts: {
-    Roboto: 'var(--font-roboto)',
+    Inter: 'var(--font-roboto)',
     default: 'var(--font-roboto)',
   },
   transitions,
   spacings,
 };
 
-export function getTheme(theme: AllowedThemes) {
+export function getTheme(theme: 'dark' | 'light') {
   const dark = theme === 'dark';
 
   return {
@@ -84,16 +81,15 @@ export function getTheme(theme: AllowedThemes) {
   };
 }
 
-export function ThemeProvider({children, initialTheme}: React.PropsWithChildren<{initialTheme: AllowedThemes}>) {
-  const [theme, setTheme] = useState(() => getTheme(initialTheme));
+export function ThemeProvider({children}: React.PropsWithChildren) {
+  const [theme, setTheme] = useState(() => getTheme('dark'));
 
   const toggleTheme = useCallback(() => {
-    let newTheme: AllowedThemes = 'light';
-    if (theme.dark) newTheme = 'light';
-    else newTheme = 'dark';
-
-    setTheme(getTheme(newTheme));
-    setInitialTheme(newTheme);
+    if (theme.dark) {
+      setTheme(getTheme('light'));
+    } else {
+      setTheme(getTheme('dark'));
+    }
   }, [theme.dark, setTheme]);
 
   const toggleThemeContextValue = useMemo(() => ({toggleTheme}), [toggleTheme]);
