@@ -59,7 +59,7 @@ export default function Page({initialState}: {initialState: StateWithDate}) {
                 </SectionCardTitle>
 
                 <Col $padding="small">
-                  <Table headings={['Recipient', 'Amount', 'Origin TX']}>
+                  <Table headings={['Recipient', 'Amount', 'Origin Tx']}>
                     {state.pendingDeposits?.map((deposit) => (
                       <Fragment key={deposit.origin.hash}>
                         <PendingTableRow deposit={deposit} />

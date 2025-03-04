@@ -35,7 +35,7 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
       </SectionTitleContainer>
 
       <Col $padding="small">
-        <Table headings={['Recipient', 'Amount', 'Origin TX']}>
+        <Table headings={['Recipient', 'Amount', 'Origin Tx']}>
           {withdrawal.withdrawals.map((batchWithdrawal) => (
             <tr key={batchWithdrawal.origin}>
               <td>

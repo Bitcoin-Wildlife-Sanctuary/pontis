@@ -30,7 +30,7 @@ export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
       </SectionTitleContainer>
 
       <Col $padding="small">
-        <Table headings={['Recipient', 'Amount', 'Origin TX']}>
+        <Table headings={['Recipient', 'Amount', 'Origin Tx']}>
           {deposit.deposits.map((batchDeposit) => (
             <tr key={batchDeposit.origin.hash}>
               <td>
