@@ -1,6 +1,7 @@
 import {useMemo} from 'react';
 
 import {L1Tx, L2Tx, Theme} from '@/types';
+import {L1_EXPLORER_LINK, L2_EXPLORER_LINK} from '@/utils/envPublic';
 import {getStatusType} from '@/utils/format';
 
 import {Row} from '../Layout';
@@ -26,19 +27,16 @@ export const ExplorerLink: React.FC<ExplorerLinkProps> = ({children, iconGap = '
   const address = 'address' in props ? props.address : undefined;
 
   const href = useMemo(() => {
-    const l1BaseUrl = 'https://btcscan.org';
-    const l2BaseUrl = 'https://starkscan.co';
-
     if (tx) {
-      return `${tx.type === 'l1tx' ? l1BaseUrl : l2BaseUrl}/tx/${tx.hash}`;
+      return `${tx.type === 'l1tx' ? L1_EXPLORER_LINK : L2_EXPLORER_LINK}/tx/${tx.hash}`;
     }
 
     if (network === 'l1') {
-      return `${l1BaseUrl}/address/${address}`;
+      return `${L1_EXPLORER_LINK}/address/${address}`;
     }
 
     if (network === 'l2') {
-      return `${l2BaseUrl}/contract/${address}`;
+      return `${L2_EXPLORER_LINK}/contract/${address}`;
     }
 
     return '';

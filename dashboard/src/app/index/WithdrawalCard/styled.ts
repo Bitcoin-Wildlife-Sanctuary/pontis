@@ -16,7 +16,7 @@ export const Container = styled(Flex)`
 export const SectionTitleContainer = styled(Flex)`
   width: 100%;
   padding: ${({theme}) => theme.spacings.medium}px;
-  background-color: ${({theme}) => theme.colors.elevated};
+  background-color: ${({theme}) => theme.colors.background};
   border-bottom: 1px solid ${({theme}) => theme.colors.border};
 `;
 

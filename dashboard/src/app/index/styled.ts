@@ -77,6 +77,7 @@ export const SectionCardTitle = styled(Text.Title).attrs({$textAlign: 'center'})
   display: inline-block;
   padding: ${({theme}) => theme.spacings.small}px;
   margin-bottom: ${({theme}) => theme.spacings.small}px;
+  background-color: ${({theme}) => theme.colors.background};
   border-bottom: 1px solid ${({theme}) => theme.colors.border};
 `;
 

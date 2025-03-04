@@ -59,6 +59,16 @@ export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
         <SectionTitle>Transaction Informations</SectionTitle>
 
         <Col $gap="xsmall">
+          {finalizeBatchTx && (
+            <Row $gap="xxlarge">
+              <Text.CardTitle>Finalize:</Text.CardTitle>
+
+              <ExplorerLink tx={finalizeBatchTx}>
+                <Text.CardValue $color="inherit">{shortenHex(finalizeBatchTx.hash)}</Text.CardValue>
+              </ExplorerLink>
+            </Row>
+          )}
+
           {deposit.aggregationTxs.length > 0 && (
             <TreeView>
               {deposit.aggregationTxs.map((aggregationTxLevels, levelIdx) => (
@@ -99,18 +109,11 @@ export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
 
           <Row $gap="xxlarge">
             <Col $gap="xxsmall" $justify="center">
-              {finalizeBatchTx && <Text.CardTitle>Finalize:</Text.CardTitle>}
               {depositTx && <Text.CardTitle>Deposit:</Text.CardTitle>}
               {verifyTx && <Text.CardTitle>Verify:</Text.CardTitle>}
             </Col>
 
             <Col $gap="xxsmall" $justify="center">
-              {finalizeBatchTx && (
-                <ExplorerLink tx={finalizeBatchTx}>
-                  <Text.CardValue $color="inherit">{shortenHex(finalizeBatchTx.hash)}</Text.CardValue>
-                </ExplorerLink>
-              )}
-
               {depositTx && (
                 <ExplorerLink tx={depositTx}>
                   <Text.CardValue $color="inherit">{shortenHex(depositTx.hash)}</Text.CardValue>
