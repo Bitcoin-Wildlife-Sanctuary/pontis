@@ -1,13 +1,11 @@
 import {DepositStatus, StatusType, TxStatus, WithdrawalStatus} from '@/types';
 
-// eslint-disable-next-line import/no-unused-modules
 export const shortenHex = (hex?: string, partLength = 6, separator = '...'): string => {
   if (!hex) return '';
 
   return `${hex.slice(0, hex.startsWith('0x') ? partLength + 2 : partLength)}${separator}${hex.slice(-partLength)}`;
 };
 
-// eslint-disable-next-line import/no-unused-modules
 export const showTxStatus = (txStatus?: TxStatus): string => {
   switch (txStatus) {
     case 'DROPPED':
@@ -32,7 +30,6 @@ export const showTxStatus = (txStatus?: TxStatus): string => {
   }
 };
 
-// eslint-disable-next-line import/no-unused-modules
 export const showDepositStatus = (txStatus?: DepositStatus): string => {
   switch (txStatus) {
     case 'BEING_AGGREGATED':
@@ -55,7 +52,6 @@ export const showDepositStatus = (txStatus?: DepositStatus): string => {
   }
 };
 
-// eslint-disable-next-line import/no-unused-modules
 export const showWithdrawalStatus = (txStatus?: WithdrawalStatus): string => {
   switch (txStatus) {
     case 'PENDING':
@@ -64,8 +60,6 @@ export const showWithdrawalStatus = (txStatus?: WithdrawalStatus): string => {
       return 'Close Batch Submitted';
     case 'CLOSED':
       return 'Closed';
-    case 'SUBMITTED_FOR_EXPANSION':
-      return 'Submitted for Expansion';
     case 'BEING_EXPANDED':
       return 'Being Expanded';
     case 'EXPANDED':
@@ -76,8 +70,7 @@ export const showWithdrawalStatus = (txStatus?: WithdrawalStatus): string => {
   }
 };
 
-// eslint-disable-next-line import/no-unused-modules
-export const getStatusType = (status?: TxStatus | DepositStatus | WithdrawalStatus): StatusType => {
+export const getStatusType = (status?: TxStatus): StatusType => {
   switch (status) {
     case 'DROPPED':
     case 'ERROR':
@@ -87,22 +80,10 @@ export const getStatusType = (status?: TxStatus | DepositStatus | WithdrawalStat
 
     case 'PENDING':
     case 'UNCONFIRMED':
-    case 'BEING_AGGREGATED':
-    case 'SUBMITTED_TO_L2':
-    case 'SUBMITTED_FOR_VERIFICATION':
-    case 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED':
-    case 'SUBMITTED_FOR_EXPANSION':
-    case 'BEING_EXPANDED':
       return 'pending';
 
     case 'MINED':
     case 'SUCCEEDED':
-    case 'AGGREGATED':
-    case 'FINALIZED':
-    case 'DEPOSITED':
-    case 'COMPLETED':
-    case 'CLOSED':
-    case 'EXPANDED':
       return 'success';
 
     default:
