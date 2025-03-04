@@ -37,14 +37,15 @@ export function save(path: string, state: OperatorState) {
   writeFileSync(path, stringify(state), 'utf8');
 }
 
-export function load(path: string): OperatorState {
-  const rawData = readFileSync(path, 'utf8');
+export function parse(raw: string): OperatorState {
+    return JSON.parse(raw, (key, value) => {
+        if (typeof value === 'string' && /^\d+n$/.test(value)) {
+          return BigInt(value.slice(0, -1));
+        }
+        return value;
+      });
+}
 
-  const state = JSON.parse(rawData, (key, value) => {
-    if (typeof value === 'string' && /^\d+n$/.test(value)) {
-      return BigInt(value.slice(0, -1));
-    }
-    return value;
-  });
-  return state as OperatorState;
+export function load(path: string): OperatorState {
+  return parse(readFileSync(path, 'utf8'));
 }
