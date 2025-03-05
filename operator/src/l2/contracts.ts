@@ -11,7 +11,7 @@ import {
 import * as fs from 'fs';
 import { Deposit, L2Tx, L2TxId, L2TxStatus } from '../state';
 import { from, map, Observable } from 'rxjs';
-import { assert } from 'console';
+import assert from 'assert';
 
 async function declareAndDeploy(
   account: Account,

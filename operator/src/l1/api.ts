@@ -11,7 +11,6 @@ import {
   UtxoProvider,
   ChainProvider,
   TraceableWithdrawalExpanderUtxo,
-  WithdrawalMerkle,
   withdrawFeatures,
   EnhancedProvider,
   DepositAggregatorCovenant,
@@ -19,6 +18,9 @@ import {
   depositFeatures,
   BatchId,
   ExpansionMerkleTree,
+  WithdrawalExpansionNode,
+  withdrawalExpandedStateFromNode,
+  leafNodes,
 } from 'l1';
 import {
   BridgeCovenantState,
@@ -42,7 +44,7 @@ import {
 import { OffchainDataProvider } from './deps/offchainDataProvider';
 import { WithdrawalExpanderState } from 'l1';
 import { Transaction } from '@scrypt-inc/bitcoinjs-lib';
-import { assert } from 'console';
+import assert from 'assert';
 
 async function checkBridgeUtxo(
   offchainDataProvider: OffchainDataProvider,
@@ -546,7 +548,6 @@ export async function createWithdrawal(
     l1Network,
     utxoProvider,
     chainProvider,
-
     {
       operator: PubKey(operatorPubKey),
       expanderSPK: spks.withdrawExpander,
@@ -573,8 +574,7 @@ export async function expandLevelWithdrawals(
   l1Network: SupportedNetwork,
   enhancedUtxoProvider: EnhancedProvider,
   feeRate: number,
-  level: number,
-  withdrawalsTree: ExpansionMerkleTree,
+  expansionLevels: WithdrawalExpansionNode[],
   expansionLevelTxs: L1Tx[]
 ): Promise<L1Tx[]> {
   const expanderTxs: Transaction[] = (
@@ -593,34 +593,24 @@ export async function expandLevelWithdrawals(
     .flat();
 
   for (let i = 0; i < expanderUtxos.length; i++) {
+    const node = expansionLevels[i];
+
+    if (node.type !== 'INNER') {
+      throw new Error('wrong expansion node type!');
+    }
+
+    if (node.left.total === 0n && node.right.total === 0n) {
+      continue;
+    }
+
     const traceableUtxo: TraceableWithdrawalExpanderUtxo = {
       operator: PubKey(operatorPubKey),
-      state: WithdrawalMerkle.getStateForHashFromTree(
-        withdrawalsTree,
-        withdrawalsTree.levels[level][i].hash
-      ),
+      state: withdrawalExpandedStateFromNode(node),
       utxo: expanderUtxos[i],
     };
 
-    if (traceableUtxo.state.type === 'LEAF') {
-      throw new Error('expander utxo is a leaf');
-    }
-
-    if (
-      traceableUtxo.state.leftAmt === 0n &&
-      traceableUtxo.state.rightAmt === 0n
-    )
-      continue;
-
-    const leftState = WithdrawalMerkle.getStateForHashFromTree(
-      withdrawalsTree,
-      withdrawalsTree.levels[level + 1][2 * i].hash
-    );
-
-    const rightState = WithdrawalMerkle.getStateForHashFromTree(
-      withdrawalsTree,
-      withdrawalsTree.levels[level + 1][2 * i + 1].hash
-    );
+    const leftState = withdrawalExpandedStateFromNode(node.left);
+    const rightState = withdrawalExpandedStateFromNode(node.right);
 
     const res = await withdrawFeatures.expandWithdrawal(
       operatorSigner,
@@ -653,8 +643,7 @@ export async function distributeLevelWithdrawals(
   l1Network: SupportedNetwork,
   enhancedUtxoProvider: EnhancedProvider,
   feeRate: number,
-  level: number,
-  withdrawalsTree: ExpansionMerkleTree,
+  expansionLevel: WithdrawalExpansionNode[],
   expansionLevelTxs: L1TxStatus[]
 ): Promise<L1Tx[]> {
   const expanderTxs = await Promise.all(
@@ -671,25 +660,31 @@ export async function distributeLevelWithdrawals(
     .flat();
 
   for (let i = 0; i < expanderUtxos.length; i++) {
-    const node = withdrawalsTree.levels[level][i];
+    const node = expansionLevel[i];
+    if (node.type === 'INNER') {
+      console.error('Wrong expansion node type!', node);
+      throw new Error('wrong expansion node type!');
+    }
+
     const traceableUtxo: TraceableWithdrawalExpanderUtxo = {
       operator: PubKey(operatorPubKey),
-      state: WithdrawalMerkle.getStateForHashFromTree(
-        withdrawalsTree,
-        node.hash
-      ),
+      state: withdrawalExpandedStateFromNode(node),
       utxo: expanderUtxos[i],
     };
+
+    const withdrawals = leafNodes(node).map((n) =>
+      n.type === 'LEAF'
+        ? { amt: n.total, l1Address: n.l1Address }
+        : { amt: 0n, l1Address: '' }
+    );
 
     await withdrawFeatures.distributeWithdrawals(
       operatorSigner,
       l1Network,
       enhancedUtxoProvider,
       enhancedUtxoProvider,
-
       traceableUtxo,
-      WithdrawalMerkle.getNodeForHashFromTree(withdrawalsTree, node.hash)
-        .withdrawals,
+      withdrawals,
       feeRate
     );
   }

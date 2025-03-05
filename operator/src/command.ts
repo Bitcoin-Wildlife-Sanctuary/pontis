@@ -2,34 +2,13 @@ import { Account, RpcProvider } from 'starknet';
 import { contractFromAddress, init, withdraw } from './l2/contracts';
 import * as devnet from './l2/devnet';
 import { l2Events } from './l2/events';
-import { assert } from 'console';
+import assert from 'assert';
 import { loadContractArtifacts, WithdrawalExpander } from 'l1';
 import { PubKey } from 'scrypt-ts';
 import { L2Address } from './state';
 import { createDeposit } from './l1/api';
 import * as env from './l1/env';
 import { toWithdrawalExpanderAddress } from './l1/transactions';
-
-async function events() {
-  const provider = new RpcProvider({ nodeUrl: 'http://127.0.0.1:5050/rpc' });
-
-  const admin = new Account(
-    provider,
-    devnet.admin.address,
-    devnet.admin.privateKey
-  );
-
-  const bridgeAddress =
-    '0x5fe94132a5d4960ea93f163840fb1950e02c6af089fd2f808fc2f085bd51eb8';
-  const bridge = await contractFromAddress(provider, bridgeAddress);
-  bridge.connect(admin);
-
-  const operatorL2Events = l2Events(provider, 0, [bridgeAddress]);
-
-  operatorL2Events.subscribe((event) => {
-    console.log('event', event);
-  });
-}
 
 async function withdrawFromAlice() {
   const provider = new RpcProvider({ nodeUrl: 'http://127.0.0.1:5050/rpc' });
@@ -49,7 +28,7 @@ async function withdrawFromAlice() {
   const btcAddress =
     '0x3bf13a2032fa2fe8652266e93fd5acf213d6ddd05509b185ee4edf0c4000d5d';
   const bridgeAddress =
-    '0x4e6bd07bed93a0bf10d0ead96d9b2f227877fe3d79f46bd74324f37be237029';
+    '0x57b0b6ff4e5426725c049502bcf6362a09e6f7cca031494f39d6c569940dd43';
 
   const bridge = await contractFromAddress(provider, bridgeAddress);
   const btc = await contractFromAddress(provider, btcAddress);
@@ -59,7 +38,7 @@ async function withdrawFromAlice() {
     'bc1pu9tujtamxpetkgsjyetwey8esgr2y35374ag4a9xy6j3kwwy4mzqnetae0'
   );
 
-  console.log(await withdraw(provider, btc, bridge, alice, recipient, 501n));
+  console.log(await withdraw(provider, btc, bridge, alice, recipient, 509n));
 }
 
 async function deposit() {

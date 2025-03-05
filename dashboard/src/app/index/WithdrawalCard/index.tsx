@@ -62,8 +62,6 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
       <Divider />
 
       <Col $padding="small" $gap="small">
-        <SectionTitle>Transactions</SectionTitle>
-
         <Col $gap="xsmall">
           <Row $gap="xxlarge">
             {closeTx && <Text.CardTitle>Close Tx:</Text.CardTitle>}

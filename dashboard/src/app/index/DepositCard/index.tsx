@@ -56,8 +56,6 @@ export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
       <Divider />
 
       <Col $padding="small" $gap="small">
-        <SectionTitle>Transactions</SectionTitle>
-
         <Col $gap="xsmall">
           {deposit.aggregationTxs.length > 0 && (
             <>

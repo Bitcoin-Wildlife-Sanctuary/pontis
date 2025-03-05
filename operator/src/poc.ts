@@ -64,8 +64,8 @@ async function initialState(
   }
 }
 
-async function sandboxOperator() {
-  const path = './operator_state.json';
+async function pocOperator() {
+  const path = './state.json';
 
   const provider = new RpcProvider({ nodeUrl: 'http://127.0.0.1:5050/rpc' });
 
@@ -80,7 +80,7 @@ async function sandboxOperator() {
   const btcAddress =
     '0x3bf13a2032fa2fe8652266e93fd5acf213d6ddd05509b185ee4edf0c4000d5d';
   const bridgeAddress =
-    '0x4e6bd07bed93a0bf10d0ead96d9b2f227877fe3d79f46bd74324f37be237029';
+    '0x57b0b6ff4e5426725c049502bcf6362a09e6f7cca031494f39d6c569940dd43';
 
   const bridge = await contractFromAddress(provider, bridgeAddress);
   const btc = await contractFromAddress(provider, btcAddress);
@@ -128,4 +128,4 @@ async function sandboxOperator() {
   operator.subscribe((_) => {});
 }
 
-sandboxOperator().catch(console.error);
+pocOperator().catch(console.error);

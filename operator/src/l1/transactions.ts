@@ -24,6 +24,7 @@ import {
   EnhancedProvider,
   ExpansionMerkleTree,
   WithdrawalExpanderState,
+  WithdrawalExpansionNode,
 } from 'l1';
 import { addressToScript } from './utils/contractUtil';
 import { Sha256 } from 'scrypt-ts';
@@ -120,8 +121,7 @@ export async function createWithdrawalExpander(
 
 /// expand the withdrawal batch, return the txids. In the inner implementation, it will call expand or distribute
 export async function expandWithdrawals(
-  level: number,
-  tree: ExpansionMerkleTree,
+  level: WithdrawalExpansionNode[],
   expansionTxs: L1Tx[]
 ): Promise<L1Tx[]> {
   return await l1Api.expandLevelWithdrawals(
@@ -134,14 +134,12 @@ export async function expandWithdrawals(
     ),
     env.l1FeeRate,
     level,
-    tree,
     expansionTxs
   );
 }
 
 export async function distributeWithdrawals(
-  level: number,
-  tree: ExpansionMerkleTree,
+  level: WithdrawalExpansionNode[],
   expansionTxs: L1Tx[]
 ): Promise<L1Tx[]> {
   return await l1Api.distributeLevelWithdrawals(
@@ -154,7 +152,6 @@ export async function distributeWithdrawals(
     ),
     env.l1FeeRate,
     level,
-    tree,
     expansionTxs
   );
 }
