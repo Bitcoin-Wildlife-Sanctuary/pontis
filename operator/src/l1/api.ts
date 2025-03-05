@@ -233,7 +233,6 @@ export async function createDeposit(
       hash: depositTx.txid as L1TxHash,
     },
   };
-  // console.log(`createDeposit(signer,${l2Address}, ${depositAmt}) done, txid: ${deposit.origin.hash}`)
   return deposit;
 }
 
@@ -274,15 +273,6 @@ export async function createDepositWithoutSigning(
   };
 }
 
-export async function shouldAggregate(batch: DepositBatch) {
-  const depositCount = batch.deposits.length;
-  const height = Math.log2(depositCount);
-  if (batch.aggregationTxs.length === height) {
-    return false;
-  }
-  return true;
-}
-
 /// aggregate 1 level deposit batch
 export async function aggregateLevelDeposits(
   operatorSigner: Signer,
@@ -291,7 +281,6 @@ export async function aggregateLevelDeposits(
   feeRate: number,
   currentLevel: DepositAggregationState[]
 ): Promise<DepositAggregationState[]> {
-  // console.log('aggregating level:', currentLevel);
 
   const operatorPubKey = await operatorSigner.getPublicKey();
   const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
@@ -462,15 +451,13 @@ export async function verifyDepositBatch(
 ): Promise<BridgeCovenantState> {
   const operatorPubKey = await operatorSigner.getPublicKey();
   const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
-  const addresses = await getContractAddresses(operatorSigner, l1Network);
 
-  const bridgeUtxos = await l1Provider.listUtxos(
-    addresses.bridge,
-    DEFAULT_FROM_BLOCK,
-    DEFAULT_TO_BLOCK
-  );
-  const bridgeUtxo = bridgeUtxos.find(
-    (utxo: Utxo) => utxo.txId === bridgeState.latestTx.hash
+  const bridgeUtxo = await findUtxo(
+    operatorSigner,
+    l1Network,
+    l1Provider,
+    'bridge',
+    bridgeState.latestTx.hash
   );
 
   if (!bridgeUtxo) {
@@ -523,7 +510,6 @@ export function getL1TransactionStatus(
   l1Provider: L1Provider,
   txid: L1TxHash
 ): Promise<L1TxStatus> {
-  // console.log(`getL1TransactionStatus(${txid})`)
   return l1Provider.getTransactionStatus(txid);
 }
 
@@ -531,11 +517,10 @@ export function getL1TransactionStatus(
 export function getL1CurrentBlockNumber(
   l1Provider: L1Provider
 ): Promise<number> {
-  // console.log(`getL1CurrentBlockNumber()`)
   return l1Provider.getCurrentBlockNumber();
 }
 
-export async function createWithdrawal2(
+export async function createWithdrawal(
   operatorSigner: Signer,
   l1Network: SupportedNetwork,
   utxoProvider: UtxoProvider,
@@ -557,7 +542,7 @@ export async function createWithdrawal2(
   const operatorPubKey = await operatorSigner.getPublicKey();
   const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
 
-  const res = await bridgeFeatures.createWithdrawalExpander2(
+  const res = await bridgeFeatures.createWithdrawalExpander(
     operatorSigner,
     l1Network,
     utxoProvider,
@@ -584,7 +569,7 @@ export async function createWithdrawal2(
   };
 }
 
-export async function expandLevelWithdrawals2(
+export async function expandLevelWithdrawals(
   operatorSigner: Signer,
   l1Network: SupportedNetwork,
   enhancedUtxoProvider: EnhancedProvider,
@@ -638,7 +623,7 @@ export async function expandLevelWithdrawals2(
       withdrawalsTree.levels[level + 1][2 * i + 1].hash
     );
 
-    const res = await withdrawFeatures.expandWithdrawal2(
+    const res = await withdrawFeatures.expandWithdrawal(
       operatorSigner,
       l1Network,
       enhancedUtxoProvider,
@@ -664,7 +649,7 @@ export async function expandLevelWithdrawals2(
   }));
 }
 
-export async function distributeLevelWithdrawals2(
+export async function distributeLevelWithdrawals(
   operatorSigner: Signer,
   l1Network: SupportedNetwork,
   enhancedUtxoProvider: EnhancedProvider,
@@ -697,7 +682,7 @@ export async function distributeLevelWithdrawals2(
       utxo: expanderUtxos[i],
     };
 
-    await withdrawFeatures.distributeWithdrawals2(
+    await withdrawFeatures.distributeWithdrawals(
       operatorSigner,
       l1Network,
       enhancedUtxoProvider,

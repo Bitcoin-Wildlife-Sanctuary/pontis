@@ -4,15 +4,7 @@ import * as devnet from './l2/devnet';
 import { l2Events } from './l2/events';
 import { assert } from 'console';
 import { loadContractArtifacts, WithdrawalExpander } from 'l1';
-import {
-  ByteString,
-  int2ByteString,
-  len,
-  PubKey,
-  sha256,
-  Sha256,
-  toByteString,
-} from 'scrypt-ts';
+import { PubKey } from 'scrypt-ts';
 import { L2Address } from './state';
 import { createDeposit } from './l1/api';
 import * as env from './l1/env';
@@ -31,9 +23,6 @@ async function events() {
     '0x5fe94132a5d4960ea93f163840fb1950e02c6af089fd2f808fc2f085bd51eb8';
   const bridge = await contractFromAddress(provider, bridgeAddress);
   bridge.connect(admin);
-  // const { transaction_hash } = await bridge.close_withdrawal_batch();
-  // const status = await provider.waitForTransaction(transaction_hash);
-  // console.log(status);
 
   const operatorL2Events = l2Events(provider, 0, [bridgeAddress]);
 
@@ -41,22 +30,6 @@ async function events() {
     console.log('event', event);
   });
 }
-
-// function hexToRawString(hex: string): string {
-//   // Remove optional "0x" prefix.
-//   if (hex.startsWith('0x') || hex.startsWith('0X')) {
-//     hex = hex.slice(2);
-//   }
-
-//   let raw = '';
-//   // Process every two hex characters.
-//   for (let i = 0; i < hex.length; i += 2) {
-//     const hexPair = hex.substr(i, 2);
-//     const charCode = parseInt(hexPair, 16);
-//     raw += String.fromCharCode(charCode);
-//   }
-//   return raw;
-// }
 
 async function withdrawFromAlice() {
   const provider = new RpcProvider({ nodeUrl: 'http://127.0.0.1:5050/rpc' });
@@ -133,14 +106,6 @@ async function deploy() {
 
   const { btc, bridge } = await init(admin);
   console.log(`deployed:\nbtc: ${btc.address}\nbridge: ${bridge.address} `);
-
-  // const bridgeAddress =
-  //   '0x2b553433dc1efe29adba3f9bc1b972cce032490185aba1b2572ed5c39cb5376';
-  // const bridge = await contractFromAddress(provider, bridgeAddress);
-  // bridge.connect(admin);
-  // const { transaction_hash } = await bridge.close_withdrawal_batch();
-  // const status = await provider.waitForTransaction(transaction_hash);
-  // console.log(status);
 }
 
 const args = process.argv.slice(2);

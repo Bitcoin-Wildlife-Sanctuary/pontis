@@ -13,8 +13,12 @@ export const StateHeader: React.FC<{state: OperatorState}> = ({state}) => {
           <ContentCard $padding="small" $flex="1 1 max-content">
             <Col $flex={1} $justify="center">
               <Row $gap="xsmall">
-                <Text.Subtitle>Total:</Text.Subtitle>
-                <Text.Subtitle $color="textStrong">.....</Text.Subtitle>
+                <Text.Subtitle>L1 Bridge Balance:</Text.Subtitle>
+                <Text.Subtitle $color="textStrong">{state.l1BridgeBalance}</Text.Subtitle>
+              </Row>
+              <Row $gap="xsmall">
+                <Text.Subtitle>L2 Total Supply:</Text.Subtitle>
+                <Text.Subtitle $color="textStrong">{state.l2TotalSupply}</Text.Subtitle>
               </Row>
             </Col>
           </ContentCard>
@@ -39,7 +43,7 @@ export const StateHeader: React.FC<{state: OperatorState}> = ({state}) => {
         <ContentCard $padding="small" $flex={1}>
           <Col $flex={1} $justify="center" $gap="small">
             <Row $gap="xsmall" $justify="space-between">
-              <Text.Subtitle>Latest TX:</Text.Subtitle>
+              <Text.Subtitle>Latest Tx:</Text.Subtitle>
               <ExplorerLink tx={state.bridgeState.latestTx}>
                 <Text.Subtitle $color="inherit">{shortenHex(state.bridgeState.latestTx.hash)}</Text.Subtitle>
               </ExplorerLink>

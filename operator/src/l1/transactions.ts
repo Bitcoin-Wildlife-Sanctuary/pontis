@@ -51,12 +51,6 @@ async function getL1TransactionStatus(
   return await l1Api.getL1TransactionStatus(l1ChainProvider, tx.hash);
 }
 
-export async function isAggregationCompleted(
-  batch: DepositBatch
-): Promise<boolean> {
-  return !l1Api.shouldAggregate(batch);
-}
-
 export async function aggregateDeposits(
   level: DepositAggregationState[]
 ): Promise<DepositAggregationState[]> {
@@ -111,7 +105,7 @@ export async function createWithdrawalExpander(
   hash: Sha256,
   expectedWithdrawalState: WithdrawalExpanderState
 ): Promise<BridgeCovenantState> {
-  return await l1Api.createWithdrawal2(
+  return await l1Api.createWithdrawal(
     env.operatorSigner,
     env.l1Network,
     env.createUtxoProvider(),
@@ -130,7 +124,7 @@ export async function expandWithdrawals(
   tree: ExpansionMerkleTree,
   expansionTxs: L1Tx[]
 ): Promise<L1Tx[]> {
-  return await l1Api.expandLevelWithdrawals2(
+  return await l1Api.expandLevelWithdrawals(
     env.operatorSigner,
     env.l1Network,
     new EnhancedProvider(
@@ -150,7 +144,7 @@ export async function distributeWithdrawals(
   tree: ExpansionMerkleTree,
   expansionTxs: L1Tx[]
 ): Promise<L1Tx[]> {
-  return await l1Api.distributeLevelWithdrawals2(
+  return await l1Api.distributeLevelWithdrawals(
     env.operatorSigner,
     env.l1Network,
     new EnhancedProvider(

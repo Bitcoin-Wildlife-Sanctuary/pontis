@@ -627,8 +627,14 @@ mod bridge_tests {
         bridge
             .deposit(
                 Default::default(),
-                array![Deposit { recipient: alice_address, amount: 100 }].span(),
+                array![
+                    Deposit { recipient: alice_address, amount: 50 },
+                    Deposit { recipient: alice_address, amount: 50 },
+                ]
+                    .span(),
             );
+
+        assert_eq!(btc.total_supply(), 100);
 
         cheat_caller_address(btc.contract_address, alice_address, CheatSpan::TargetCalls(1));
         btc.transfer(bob_address, 50);

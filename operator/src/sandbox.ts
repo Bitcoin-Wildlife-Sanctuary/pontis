@@ -24,16 +24,17 @@ import {
   createWithdrawalExpander,
   distributeWithdrawals,
 } from './l1/transactions';
-import { deposits, l1BlockNumber } from './l1/events';
+import { deposits, l1BlockNumber, l1BridgeBalance } from './l1/events';
 import { createBridgeContract } from './l1/api';
 import { existsSync } from 'fs';
 import * as env from './l1/env';
 import { l2TransactionStatus } from './l2/transactions';
-import { l2Events } from './l2/events';
+import { l2BlockNumber, l2Events, totalSupply } from './l2/events';
 import { loadContractArtifacts } from './l1/utils/contractUtil';
 import { load, save } from './persistence';
+import { first, firstValueFrom, merge, Observable } from 'rxjs';
 
-async function initialState(path: string): Promise<OperatorState> {
+async function initialState(path: string, provider: RpcProvider): Promise<OperatorState> {
   loadContractArtifacts();
   await importAddressesIntoNode();
   if (existsSync(path)) {
@@ -47,12 +48,14 @@ async function initialState(path: string): Promise<OperatorState> {
       env.l1FeeRate
     );
     return {
-      l1BlockNumber: 0,
-      l2BlockNumber: 0,
+      l1BlockNumber: (await firstValueFrom(l1BlockNumber())).blockNumber,
+      l2BlockNumber: (await firstValueFrom(l2BlockNumber(provider))).blockNumber,
       bridgeState,
       depositBatches: [],
       withdrawalBatches: [],
       pendingDeposits: [],
+      l1BridgeBalance: 0n,
+      l2TotalSupply: 0n,
     };
   }
 }
@@ -79,7 +82,8 @@ async function sandboxOperator() {
   const btc = await contractFromAddress(provider, btcAddress);
   bridge.connect(admin);
 
-  const startState = await initialState(path);
+  const startState = await initialState(path, provider);
+
 
   const env: BridgeEnvironment = {
     DEPOSIT_BATCH_SIZE: 4,
@@ -106,10 +110,15 @@ async function sandboxOperator() {
     env,
     l1BlockNumber(),
     deposits(startState.l1BlockNumber),
-    //    merge(l2Events(provider, startState.l2BlockNumber, [bridgeAddress]), l2BlockNumber(provider)),
-    l2Events(provider, startState.l2BlockNumber, [bridgeAddress]),
+    merge(
+      l2Events(provider, startState.l2BlockNumber, [bridgeAddress]), 
+      l2BlockNumber(provider),
+      totalSupply(provider, btc)
+    ),
+    // l2Events(provider, startState.l2BlockNumber, [bridgeAddress]),
     l1TransactionStatus,
     (tx) => l2TransactionStatus(provider, tx),
+    (state) => l1BridgeBalance(state),
     applyChange,
     (state) => save(path, state)
   );

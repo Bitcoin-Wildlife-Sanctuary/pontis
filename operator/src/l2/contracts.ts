@@ -237,3 +237,7 @@ export async function withdraw(
     status: receipToStatus(await provider.waitForTransaction(transaction_hash)),
   };
 }
+
+export async function getTotalSupply(btc: Contract): Promise<bigint> {
+  return await btc.total_supply();
+}

@@ -170,6 +170,8 @@ export type BridgeCovenantState = BridgeState & {
 export type OperatorState = {
   l1BlockNumber: number;
   l2BlockNumber: number;
+  l1BridgeBalance: bigint;
+  l2TotalSupply: bigint;
   bridgeState: BridgeCovenantState;
   pendingDeposits: Deposit[];
   depositBatches: DepositBatch[];
@@ -185,7 +187,15 @@ export type BlockNumberEvent =
   | { type: 'l1BlockNumber'; blockNumber: number }
   | { type: 'l2BlockNumber'; blockNumber: number };
 
-export type BridgeEvent = L2Event | Deposits | BlockNumberEvent;
+export type L2TotalSupplyEvent = { type: 'l2TotalSupply'; totalSupply: bigint };
+export type L1BridgeBalance = { type: 'l1BridgeBalance'; balance: bigint };
+
+export type BridgeEvent =
+  | L2Event
+  | Deposits
+  | BlockNumberEvent
+  | L2TotalSupplyEvent
+  | L1BridgeBalance;
 
 export type TransactionId = L1TxId | L2TxId;
 
@@ -298,7 +308,6 @@ export async function applyChange(
     }
     case 'closeBatch': {
       await updateWithdrawalBatch(env, newState, change);
-      // await initiateWithdrawalsExpansion(env, newState);
       break;
     }
     case 'l2tx': {
@@ -307,6 +316,12 @@ export async function applyChange(
       await manageVerification(env, newState);
       break;
     }
+    case 'l1BridgeBalance':
+      newState.l1BridgeBalance = change.balance;
+      break;
+    case 'l2TotalSupply':
+      newState.l2TotalSupply = change.totalSupply;
+      break;
     default: {
       const _exhaustiveCheck: never = change;
       return _exhaustiveCheck;
@@ -652,10 +667,6 @@ async function manageVerification(
       newState.depositBatches[i] = {
         ...batch,
         status: 'SUBMITTED_FOR_VERIFICATION',
-        depositTx: await env.submitDepositsToL2(
-          batch.finalizeBatchTx.hash,
-          batch.deposits
-        ),
         verifyTx: newState.bridgeState.latestTx,
       };
     }
@@ -735,6 +746,9 @@ async function updateWithdrawalBatch(
             }))
           );
 
+          const root = Sha256(change.root.substring(2));
+          assert(expansionTree.root === root);
+
           const expectedWithdrawalState =
             WithdrawalMerkle.getStateForHashFromTree(
               expansionTree,
@@ -745,7 +759,7 @@ async function updateWithdrawalBatch(
 
           const bridgeState = await env.createWithdrawalExpander(
             state.bridgeState,
-            Sha256(change.root.substring(2)), // TODO: clean this up!
+            root,
             expectedWithdrawalState // TODO: is state necessary here?
           );
 

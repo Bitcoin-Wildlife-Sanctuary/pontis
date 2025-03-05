@@ -20,11 +20,9 @@ import { Transaction } from '@scrypt-inc/bitcoinjs-lib'
 import { getTxId, toXOnly } from '../lib/utils'
 import {
   createEmptySha256,
-  INITIAL_DEPOSIT_AGGREGATOR_STATE_OUTPUT_SCRIPT_LENGTH,
   inputToByteString,
   isTxHashEqual,
   locktimeToByteString,
-  outputToByteString,
   splitHashFromStateOutput,
   versionToByteString,
 } from '../lib/txTools'

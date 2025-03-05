@@ -22,8 +22,6 @@ import * as tools from 'uint8array-tools'
 import {
   BatchMerkleTree,
   BridgeMerkle,
-  Withdrawal,
-  WithdrawalMerkle,
 } from '../util/merkleUtils'
 
 export async function deployBridge(
@@ -274,99 +272,6 @@ export async function finalizeL2Deposit(
 }
 
 export async function createWithdrawalExpander(
-  signer: Signer,
-  network: SupportedNetwork,
-  utxoProvider: UtxoProvider,
-  chainProvider: ChainProvider,
-
-  bridgeUtxo: TraceableBridgeUtxo,
-  withdrawals: Array<Withdrawal>,
-
-  feeRate: number
-) {
-  const changeAddress = await signer.getAddress()
-  const withdrawalMerkleRoot = WithdrawalMerkle.getMerkleRoot(withdrawals)
-
-  withdrawals.forEach((withdrawal) =>
-    WithdrawalMerkle.checkWithdrawalValid(withdrawal)
-  )
-  const sumAmt = withdrawals.reduce(
-    (acc, withdrawal) => acc + withdrawal.amt,
-    0n
-  )
-  if (sumAmt > bridgeUtxo.utxo.satoshis) {
-    throw new Error('withdrawal amt is greater than bridge utxo satoshis')
-  }
-
-  const tracedBridge = await BridgeCovenant.backtrace(bridgeUtxo, chainProvider)
-  const outputBridgeCovenant = new BridgeCovenant(
-    tracedBridge.covenant.operator,
-    tracedBridge.covenant.expanderSPK,
-    tracedBridge.covenant.state
-  )
-
-  const outputWithdrawalState = WithdrawalMerkle.getRootState(withdrawals)
-  
-  const outputWithdrawalExpanderCovenant = new WithdrawalExpanderCovenant(
-    tracedBridge.covenant.operator,
-    outputWithdrawalState
-  )
-
-  const est = estimateCreateWithdrawalTxVSize(
-    network,
-    bridgeUtxo,
-    tracedBridge,
-    outputBridgeCovenant,
-    outputWithdrawalExpanderCovenant,
-    withdrawalMerkleRoot,
-    sumAmt,
-    changeAddress,
-    feeRate
-  )
-  const total = feeRate * est.vSize
-  const utxos = await utxoProvider.getUtxos(changeAddress, {
-    total: Number(total),
-  })
-  if (utxos.length === 0) {
-    throw new Error(`Insufficient satoshis input amount: no utxos found`)
-  }
-  const feeUtxo = pickLargeFeeUtxo(utxos)
-  if (feeUtxo.satoshis < total) {
-    throw new Error(
-      `Insufficient satoshis input amount: fee utxo(${feeUtxo.satoshis}) < total(${total})`
-    )
-  }
-
-  const createWithdrawalTx = buildCreateWithdrawalTx(
-    network,
-    feeUtxo,
-    bridgeUtxo,
-    tracedBridge,
-    outputBridgeCovenant,
-    outputWithdrawalExpanderCovenant,
-    withdrawalMerkleRoot,
-    sumAmt,
-    changeAddress,
-    feeRate
-  )
-  
-  const signedPsbt = await signer.signPsbt(createWithdrawalTx.toHex(), createWithdrawalTx.psbtOptions())
-  const txPsbt = createWithdrawalTx.combine(ExtPsbt.fromHex(signedPsbt))
-  await txPsbt.finalizeAllInputsAsync()
-  const tx = txPsbt.extractTransaction()
-  await chainProvider.broadcast(tx.toHex())
-  markSpent(utxoProvider, tx)
-  return {
-    psbt: txPsbt,
-    txid: tx.getId(),
-    bridgeState: outputBridgeCovenant.state,
-    withdrawalState: outputWithdrawalExpanderCovenant.state,
-    bridgeUtxo: outputToUtxo(tx, CONTRACT_INDEXES.outputIndex.bridge) as UTXO,
-    withdrawalUtxo: outputToUtxo(tx, CONTRACT_INDEXES.outputIndex.withdrawalExpander.inBridgeTx) as UTXO,
-  }
-}
-
-export async function createWithdrawalExpander2(
   signer: Signer,
   network: SupportedNetwork,
   utxoProvider: UtxoProvider,

@@ -1,4 +1,4 @@
-import { Provider, events, CallData, ParsedEvent } from 'starknet';
+import { Provider, events, CallData, ParsedEvent, Contract } from 'starknet';
 import { EMPTY, Observable, from, timer } from 'rxjs';
 import {
   switchMap,
@@ -11,8 +11,13 @@ import {
   EMITTED_EVENT,
   EVENT,
 } from 'starknet-types-07/dist/types/api/components';
-import { BlockNumberEvent, L1Address, L2TxHash } from '../state';
-import { fromDigest, wordSpanToHex } from './contracts';
+import {
+  BlockNumberEvent,
+  L1Address,
+  L2TotalSupplyEvent,
+  L2TxHash,
+} from '../state';
+import { fromDigest, getTotalSupply, wordSpanToHex } from './contracts';
 
 const POLL_INTERVAL = 5000;
 const CHUNK_SIZE = 10;
@@ -183,5 +188,16 @@ export function l2BlockNumber(
 ): Observable<BlockNumberEvent> {
   return currentBlock(provider).pipe(
     map((blockNumber) => ({ type: 'l2BlockNumber', blockNumber }))
+  );
+}
+
+export function totalSupply(
+  provider: Provider,
+  btc: Contract
+): Observable<L2TotalSupplyEvent> {
+  return currentBlock(provider).pipe(
+    switchMap(() => getTotalSupply(btc)),
+    distinctUntilChanged(),
+    map((totalSupply) => ({ type: 'l2TotalSupply', totalSupply }))
   );
 }
