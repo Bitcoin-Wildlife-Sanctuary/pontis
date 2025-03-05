@@ -51,7 +51,6 @@ function stateToTransactions<S, TI, TS>(
       ],
       [[], []]
     ),
-    // tap(([allTxs, newTxs]) => console.log('all:', allTxs, 'new:', newTxs)),
     map(([_, newTxs]) => newTxs),
     mergeMap((txs) => from(txs)),
     mergeMap(transactionStatus)
@@ -62,6 +61,7 @@ function operatorLoop<E, TI, TS, S>(
   events: Observable<E>,
   transactionsFromState: (state: S) => TI[],
   transactionStatus: (tx: TI) => Observable<TS>,
+  eventsFromState: (state: Observable<S>) => Observable<E>,
   applyChange: (state: S, change: E | TS) => Observable<S>,
   initialState: S
 ): Observable<S> {
@@ -69,7 +69,8 @@ function operatorLoop<E, TI, TS, S>(
   const transactions = state.pipe(
     stateToTransactions(transactionsFromState, transactionStatus)
   );
-  return merge(events, transactions).pipe(
+  const stateEvents = eventsFromState(state);
+  return merge(events, stateEvents, transactions).pipe(
     mergeScan(applyChange, initialState, 1),
     tap(state)
   );
@@ -83,6 +84,9 @@ export function setupOperator(
   l2Events: Observable<BridgeEvent>,
   l1TxStatus: (tx: L1TxId) => Observable<L1TxStatus>,
   l2TxStatus: (tx: L2TxId) => Observable<L2TxStatus>,
+  eventsFromState: (
+    state: Observable<OperatorState>
+  ) => Observable<BridgeEvent>,
   applyChange: (
     environment: BridgeEnvironment,
     state: OperatorState,
@@ -110,6 +114,7 @@ export function setupOperator(
     merge(block, l1Events, l2Events),
     transactionsFromState,
     transactionStatus,
+    eventsFromState,
     (state: OperatorState, change: OperatorChange) =>
       from(applyChange(environment, state, change)),
     initialState

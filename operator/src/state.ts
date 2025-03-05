@@ -1,12 +1,14 @@
 import { L2Event } from './l2/events';
-import { assert } from 'console';
+import assert from 'assert';
 import { cloneDeep, max } from 'lodash';
 import {
   BridgeState,
   DepositAggregatorState,
-  ExpansionMerkleTree,
+  getExpansionTree,
+  getNthLevelNodes,
+  withdrawalExpandedStateFromNode,
   WithdrawalExpanderState,
-  WithdrawalMerkle,
+  WithdrawalExpansionNode,
 } from 'l1';
 import { l2AddressToHex } from './l1/utils/contractUtil';
 import { Sha256 } from 'scrypt-ts';
@@ -144,14 +146,14 @@ export type WithdrawalBatch =
       hash: string;
       closeWithdrawalBatchTx: L2Tx;
       createExpanderTx: L1Tx;
-      expansionTree: ExpansionMerkleTree;
+      expansionTree: WithdrawalExpansionNode;
     } & WithdrawalBatchCommon)
   | ({
       status: 'BEING_EXPANDED';
       hash: string;
       closeWithdrawalBatchTx: L2Tx;
       createExpanderTx: L1Tx;
-      expansionTree: ExpansionMerkleTree;
+      expansionTree: WithdrawalExpansionNode;
       expansionTxs: L1Tx[][];
     } & WithdrawalBatchCommon)
   | ({
@@ -159,7 +161,7 @@ export type WithdrawalBatch =
       hash: string;
       closeWithdrawalBatchTx: L2Tx;
       createExpanderTx: L1Tx;
-      expansionTree: ExpansionMerkleTree;
+      expansionTree: WithdrawalExpansionNode;
       expansionTxs: L1Tx[][];
     } & WithdrawalBatchCommon);
 
@@ -170,6 +172,8 @@ export type BridgeCovenantState = BridgeState & {
 export type OperatorState = {
   l1BlockNumber: number;
   l2BlockNumber: number;
+  l1BridgeBalance: bigint;
+  l2TotalSupply: bigint;
   bridgeState: BridgeCovenantState;
   pendingDeposits: Deposit[];
   depositBatches: DepositBatch[];
@@ -185,7 +189,15 @@ export type BlockNumberEvent =
   | { type: 'l1BlockNumber'; blockNumber: number }
   | { type: 'l2BlockNumber'; blockNumber: number };
 
-export type BridgeEvent = L2Event | Deposits | BlockNumberEvent;
+export type L2TotalSupplyEvent = { type: 'l2TotalSupply'; totalSupply: bigint };
+export type L1BridgeBalance = { type: 'l1BridgeBalance'; balance: bigint };
+
+export type BridgeEvent =
+  | L2Event
+  | Deposits
+  | BlockNumberEvent
+  | L2TotalSupplyEvent
+  | L1BridgeBalance;
 
 export type TransactionId = L1TxId | L2TxId;
 
@@ -221,13 +233,11 @@ export type BridgeEnvironment = {
     expectedWithdrawalState: WithdrawalExpanderState
   ) => Promise<BridgeCovenantState>;
   expandWithdrawals: (
-    level: number,
-    tree: ExpansionMerkleTree,
+    level: WithdrawalExpansionNode[],
     expansionTxs: L1Tx[]
   ) => Promise<L1Tx[]>;
   distributeWithdrawals: (
-    level: number,
-    tree: ExpansionMerkleTree,
+    level: WithdrawalExpansionNode[],
     expansionTxs: L1Tx[]
   ) => Promise<L1Tx[]>;
 };
@@ -276,6 +286,7 @@ export async function applyChange(
       await manageAggregation(env, newState);
       await manageVerification(env, newState);
       await manageExpansion(env, newState);
+      await closeWithdrawalBatch(env, newState);
       break;
     }
     case 'l2BlockNumber': {
@@ -298,7 +309,6 @@ export async function applyChange(
     }
     case 'closeBatch': {
       await updateWithdrawalBatch(env, newState, change);
-      // await initiateWithdrawalsExpansion(env, newState);
       break;
     }
     case 'l2tx': {
@@ -307,6 +317,12 @@ export async function applyChange(
       await manageVerification(env, newState);
       break;
     }
+    case 'l1BridgeBalance':
+      newState.l1BridgeBalance = change.balance;
+      break;
+    case 'l2TotalSupply':
+      newState.l2TotalSupply = change.totalSupply;
+      break;
     default: {
       const _exhaustiveCheck: never = change;
       return _exhaustiveCheck;
@@ -564,7 +580,7 @@ function depositsOldEnough(
   for (const deposit of state.pendingDeposits) {
     if (
       deposit.origin.status === 'MINED' &&
-      deposit.origin.blockNumber + env.MAX_DEPOSIT_BLOCK_AGE <
+      deposit.origin.blockNumber + env.MAX_DEPOSIT_BLOCK_AGE <=
         state.l1BlockNumber
     ) {
       return true;
@@ -652,10 +668,6 @@ async function manageVerification(
       newState.depositBatches[i] = {
         ...batch,
         status: 'SUBMITTED_FOR_VERIFICATION',
-        depositTx: await env.submitDepositsToL2(
-          batch.finalizeBatchTx.hash,
-          batch.deposits
-        ),
         verifyTx: newState.bridgeState.latestTx,
       };
     }
@@ -728,25 +740,28 @@ async function updateWithdrawalBatch(
       if (batch.id === change.id) {
         assert(batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED');
         if (batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED') {
-          const expansionTree = WithdrawalMerkle.getMerkleTree(
+          const expansionTree = getExpansionTree(
             batch.withdrawals.map((w) => ({
               l1Address: w.recipient,
               amt: w.amount,
             }))
           );
 
-          const expectedWithdrawalState =
-            WithdrawalMerkle.getStateForHashFromTree(
-              expansionTree,
-              expansionTree.root
-            );
+          console.dir(expansionTree);
 
-          console.log('initiating expansion');
+          const root = Sha256(change.root.substring(2));
+
+          console.log('root', root);
+
+          assert(expansionTree.hash === root);
+
+          const expectedWithdrawalState =
+            withdrawalExpandedStateFromNode(expansionTree);
 
           const bridgeState = await env.createWithdrawalExpander(
             state.bridgeState,
-            Sha256(change.root.substring(2)), // TODO: clean this up!
-            expectedWithdrawalState // TODO: is state necessary here?
+            root,
+            expectedWithdrawalState
           );
 
           console.log('bridgeState', bridgeState);
@@ -772,7 +787,7 @@ function withdrawalsOldEnough(
   withdrawals: Withdrawal[]
 ): boolean {
   for (const withdrawal of withdrawals) {
-    if (withdrawal.blockNumber + env.MAX_WITHDRAWAL_BLOCK_AGE < blockNumber) {
+    if (withdrawal.blockNumber + env.MAX_WITHDRAWAL_BLOCK_AGE <= blockNumber) {
       return true;
     }
   }
@@ -781,14 +796,14 @@ function withdrawalsOldEnough(
 
 async function distributeOrExpand(
   env: BridgeEnvironment,
-  level: number,
-  expansionTree: ExpansionMerkleTree,
-  expansionTxs: L1Tx[]
+  expansionLevel: WithdrawalExpansionNode[],
+  expansionTxsLevel: L1Tx[]
 ): Promise<L1Tx[]> {
-  if (expansionTree.levels.length - expansionTxs.length === 1) {
-    return await env.distributeWithdrawals(level, expansionTree, expansionTxs);
+  if (expansionLevel.every((n) => n.type !== 'INNER')) {
+    return await env.distributeWithdrawals(expansionLevel, expansionTxsLevel);
   } else {
-    return await env.expandWithdrawals(level, expansionTree, expansionTxs);
+    assert(expansionLevel.every((n) => n.type === 'INNER'));
+    return await env.expandWithdrawals(expansionLevel, expansionTxsLevel);
   }
 }
 
@@ -801,28 +816,32 @@ async function manageExpansion(env: BridgeEnvironment, state: OperatorState) {
       batch.createExpanderTx.status === 'MINED'
     ) {
       console.log(`expander of batch: ${batch.id} created, starting expansion`);
-      const level0Txs = await distributeOrExpand(env, 0, batch.expansionTree, [
-        batch.createExpanderTx,
-      ]);
+      const level0Txs = await distributeOrExpand(
+        env,
+        [batch.expansionTree],
+        [batch.createExpanderTx]
+      );
       state.withdrawalBatches[i] = {
         ...batch,
         status: 'BEING_EXPANDED',
         expansionTxs: [level0Txs],
       };
     } else if (batch.status === 'BEING_EXPANDED') {
-      const expansionTxs = batch.expansionTxs.at(-1);
-      if (expansionTxs && expansionTxs.every((tx) => tx.status === 'MINED')) {
+      const expansionTxs = batch.expansionTxs.at(-1)!;
+      if (expansionTxs.every((tx) => tx.status === 'MINED')) {
         if (expansionTxs.length === batch.withdrawals.length) {
           state.withdrawalBatches[i] = {
             ...batch,
             status: 'EXPANDED',
           };
         } else {
+          console.log(
+            `continuing expansion of batch: ${batch.id}, level: ${batch.expansionTxs.length}`
+          );
           batch.expansionTxs.push(
             await distributeOrExpand(
               env,
-              batch.expansionTxs.length,
-              batch.expansionTree,
+              getNthLevelNodes(batch.expansionTree, batch.expansionTxs.length),
               expansionTxs
             )
           );

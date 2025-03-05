@@ -9,10 +9,17 @@ import {
   filter,
   retry,
 } from 'rxjs';
-import { BlockNumberEvent, Deposit, Deposits } from '../state';
+import {
+  BlockNumberEvent,
+  BridgeEvent,
+  Deposit,
+  Deposits,
+  OperatorState,
+} from '../state';
 import * as l1Api from './api';
 import * as env from './env';
 import { createL1Provider } from './deps/l1Provider';
+import { RpcProvider } from 'starknet';
 
 const POLL_INTERVAL = 5000;
 
@@ -78,4 +85,23 @@ async function depositsInRange(
   );
   // console.log('deposits', blockFrom, blockTo, deposits)
   return deposits;
+}
+
+export function l1BridgeBalance(
+  state: Observable<OperatorState>
+): Observable<BridgeEvent> {
+  return state.pipe(
+    filter((s) => s.bridgeState.latestTx.status === 'MINED'),
+    map((s) => s.bridgeState.latestTx.hash),
+    distinctUntilChanged(),
+    switchMap((txId) =>
+      l1Api.getBridgeBalance(
+        env.operatorSigner,
+        txId,
+        env.createUtxoProvider(),
+        env.l1Network
+      )
+    ),
+    map((balance) => ({ type: 'l1BridgeBalance', balance }))
+  );
 }

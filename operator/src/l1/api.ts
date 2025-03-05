@@ -11,7 +11,6 @@ import {
   UtxoProvider,
   ChainProvider,
   TraceableWithdrawalExpanderUtxo,
-  WithdrawalMerkle,
   withdrawFeatures,
   EnhancedProvider,
   DepositAggregatorCovenant,
@@ -19,6 +18,9 @@ import {
   depositFeatures,
   BatchId,
   ExpansionMerkleTree,
+  WithdrawalExpansionNode,
+  withdrawalExpandedStateFromNode,
+  leafNodes,
 } from 'l1';
 import {
   BridgeCovenantState,
@@ -42,7 +44,7 @@ import {
 import { OffchainDataProvider } from './deps/offchainDataProvider';
 import { WithdrawalExpanderState } from 'l1';
 import { Transaction } from '@scrypt-inc/bitcoinjs-lib';
-import { assert } from 'console';
+import assert from 'assert';
 
 async function checkBridgeUtxo(
   offchainDataProvider: OffchainDataProvider,
@@ -233,7 +235,6 @@ export async function createDeposit(
       hash: depositTx.txid as L1TxHash,
     },
   };
-  // console.log(`createDeposit(signer,${l2Address}, ${depositAmt}) done, txid: ${deposit.origin.hash}`)
   return deposit;
 }
 
@@ -274,15 +275,6 @@ export async function createDepositWithoutSigning(
   };
 }
 
-export async function shouldAggregate(batch: DepositBatch) {
-  const depositCount = batch.deposits.length;
-  const height = Math.log2(depositCount);
-  if (batch.aggregationTxs.length === height) {
-    return false;
-  }
-  return true;
-}
-
 /// aggregate 1 level deposit batch
 export async function aggregateLevelDeposits(
   operatorSigner: Signer,
@@ -291,8 +283,6 @@ export async function aggregateLevelDeposits(
   feeRate: number,
   currentLevel: DepositAggregationState[]
 ): Promise<DepositAggregationState[]> {
-  // console.log('aggregating level:', currentLevel);
-
   const operatorPubKey = await operatorSigner.getPublicKey();
   const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
 
@@ -462,15 +452,13 @@ export async function verifyDepositBatch(
 ): Promise<BridgeCovenantState> {
   const operatorPubKey = await operatorSigner.getPublicKey();
   const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
-  const addresses = await getContractAddresses(operatorSigner, l1Network);
 
-  const bridgeUtxos = await l1Provider.listUtxos(
-    addresses.bridge,
-    DEFAULT_FROM_BLOCK,
-    DEFAULT_TO_BLOCK
-  );
-  const bridgeUtxo = bridgeUtxos.find(
-    (utxo: Utxo) => utxo.txId === bridgeState.latestTx.hash
+  const bridgeUtxo = await findUtxo(
+    operatorSigner,
+    l1Network,
+    l1Provider,
+    'bridge',
+    bridgeState.latestTx.hash
   );
 
   if (!bridgeUtxo) {
@@ -523,7 +511,6 @@ export function getL1TransactionStatus(
   l1Provider: L1Provider,
   txid: L1TxHash
 ): Promise<L1TxStatus> {
-  // console.log(`getL1TransactionStatus(${txid})`)
   return l1Provider.getTransactionStatus(txid);
 }
 
@@ -531,11 +518,10 @@ export function getL1TransactionStatus(
 export function getL1CurrentBlockNumber(
   l1Provider: L1Provider
 ): Promise<number> {
-  // console.log(`getL1CurrentBlockNumber()`)
   return l1Provider.getCurrentBlockNumber();
 }
 
-export async function createWithdrawal2(
+export async function createWithdrawal(
   operatorSigner: Signer,
   l1Network: SupportedNetwork,
   utxoProvider: UtxoProvider,
@@ -557,12 +543,11 @@ export async function createWithdrawal2(
   const operatorPubKey = await operatorSigner.getPublicKey();
   const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
 
-  const res = await bridgeFeatures.createWithdrawalExpander2(
+  const res = await bridgeFeatures.createWithdrawalExpander(
     operatorSigner,
     l1Network,
     utxoProvider,
     chainProvider,
-
     {
       operator: PubKey(operatorPubKey),
       expanderSPK: spks.withdrawExpander,
@@ -584,13 +569,12 @@ export async function createWithdrawal2(
   };
 }
 
-export async function expandLevelWithdrawals2(
+export async function expandLevelWithdrawals(
   operatorSigner: Signer,
   l1Network: SupportedNetwork,
   enhancedUtxoProvider: EnhancedProvider,
   feeRate: number,
-  level: number,
-  withdrawalsTree: ExpansionMerkleTree,
+  expansionLevels: WithdrawalExpansionNode[],
   expansionLevelTxs: L1Tx[]
 ): Promise<L1Tx[]> {
   const expanderTxs: Transaction[] = (
@@ -609,36 +593,26 @@ export async function expandLevelWithdrawals2(
     .flat();
 
   for (let i = 0; i < expanderUtxos.length; i++) {
+    const node = expansionLevels[i];
+
+    if (node.type !== 'INNER') {
+      throw new Error('wrong expansion node type!');
+    }
+
+    if (node.left.total === 0n && node.right.total === 0n) {
+      continue;
+    }
+
     const traceableUtxo: TraceableWithdrawalExpanderUtxo = {
       operator: PubKey(operatorPubKey),
-      state: WithdrawalMerkle.getStateForHashFromTree(
-        withdrawalsTree,
-        withdrawalsTree.levels[level][i].hash
-      ),
+      state: withdrawalExpandedStateFromNode(node),
       utxo: expanderUtxos[i],
     };
 
-    if (traceableUtxo.state.type === 'LEAF') {
-      throw new Error('expander utxo is a leaf');
-    }
+    const leftState = withdrawalExpandedStateFromNode(node.left);
+    const rightState = withdrawalExpandedStateFromNode(node.right);
 
-    if (
-      traceableUtxo.state.leftAmt === 0n &&
-      traceableUtxo.state.rightAmt === 0n
-    )
-      continue;
-
-    const leftState = WithdrawalMerkle.getStateForHashFromTree(
-      withdrawalsTree,
-      withdrawalsTree.levels[level + 1][2 * i].hash
-    );
-
-    const rightState = WithdrawalMerkle.getStateForHashFromTree(
-      withdrawalsTree,
-      withdrawalsTree.levels[level + 1][2 * i + 1].hash
-    );
-
-    const res = await withdrawFeatures.expandWithdrawal2(
+    const res = await withdrawFeatures.expandWithdrawal(
       operatorSigner,
       l1Network,
       enhancedUtxoProvider,
@@ -664,13 +638,12 @@ export async function expandLevelWithdrawals2(
   }));
 }
 
-export async function distributeLevelWithdrawals2(
+export async function distributeLevelWithdrawals(
   operatorSigner: Signer,
   l1Network: SupportedNetwork,
   enhancedUtxoProvider: EnhancedProvider,
   feeRate: number,
-  level: number,
-  withdrawalsTree: ExpansionMerkleTree,
+  expansionLevel: WithdrawalExpansionNode[],
   expansionLevelTxs: L1TxStatus[]
 ): Promise<L1Tx[]> {
   const expanderTxs = await Promise.all(
@@ -687,25 +660,31 @@ export async function distributeLevelWithdrawals2(
     .flat();
 
   for (let i = 0; i < expanderUtxos.length; i++) {
-    const node = withdrawalsTree.levels[level][i];
+    const node = expansionLevel[i];
+    if (node.type === 'INNER') {
+      console.error('Wrong expansion node type!', node);
+      throw new Error('wrong expansion node type!');
+    }
+
     const traceableUtxo: TraceableWithdrawalExpanderUtxo = {
       operator: PubKey(operatorPubKey),
-      state: WithdrawalMerkle.getStateForHashFromTree(
-        withdrawalsTree,
-        node.hash
-      ),
+      state: withdrawalExpandedStateFromNode(node),
       utxo: expanderUtxos[i],
     };
 
-    await withdrawFeatures.distributeWithdrawals2(
+    const withdrawals = leafNodes(node).map((n) =>
+      n.type === 'LEAF'
+        ? { amt: n.total, l1Address: n.l1Address }
+        : { amt: 0n, l1Address: '' }
+    );
+
+    await withdrawFeatures.distributeWithdrawals(
       operatorSigner,
       l1Network,
       enhancedUtxoProvider,
       enhancedUtxoProvider,
-
       traceableUtxo,
-      WithdrawalMerkle.getNodeForHashFromTree(withdrawalsTree, node.hash)
-        .withdrawals,
+      withdrawals,
       feeRate
     );
   }

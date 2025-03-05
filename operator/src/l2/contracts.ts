@@ -11,7 +11,7 @@ import {
 import * as fs from 'fs';
 import { Deposit, L2Tx, L2TxId, L2TxStatus } from '../state';
 import { from, map, Observable } from 'rxjs';
-import { assert } from 'console';
+import assert from 'assert';
 
 async function declareAndDeploy(
   account: Account,
@@ -236,4 +236,8 @@ export async function withdraw(
     hash: transaction_hash as any,
     status: receipToStatus(await provider.waitForTransaction(transaction_hash)),
   };
+}
+
+export async function getTotalSupply(btc: Contract): Promise<bigint> {
+  return await btc.total_supply();
 }

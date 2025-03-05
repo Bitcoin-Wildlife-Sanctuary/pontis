@@ -15,6 +15,7 @@ pub trait IBridge<TContractState> {
     fn deposit(ref self: TContractState, txid: Digest, deposits: Span<Deposit>);
     fn withdraw(ref self: TContractState, recipient: L1Address, amount: u32);
     fn close_withdrawal_batch(ref self: TContractState, id: u128);
+    fn current_withdrawal_batch_id(self: @TContractState) -> u128;
 }
 
 #[starknet::contract]
@@ -150,6 +151,10 @@ pub mod Bridge {
             self.ownable.assert_only_owner();
 
             self.close_batch_internal(id);
+        }
+
+        fn current_withdrawal_batch_id(self: @ContractState) -> u128 {
+            self.batch.id.read()
         }
     }
 
@@ -627,8 +632,14 @@ mod bridge_tests {
         bridge
             .deposit(
                 Default::default(),
-                array![Deposit { recipient: alice_address, amount: 100 }].span(),
+                array![
+                    Deposit { recipient: alice_address, amount: 50 },
+                    Deposit { recipient: alice_address, amount: 50 },
+                ]
+                    .span(),
             );
+
+        assert_eq!(btc.total_supply(), 100);
 
         cheat_caller_address(btc.contract_address, alice_address, CheatSpan::TargetCalls(1));
         btc.transfer(bob_address, 50);

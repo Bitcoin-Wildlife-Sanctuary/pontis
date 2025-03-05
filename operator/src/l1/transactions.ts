@@ -24,6 +24,7 @@ import {
   EnhancedProvider,
   ExpansionMerkleTree,
   WithdrawalExpanderState,
+  WithdrawalExpansionNode,
 } from 'l1';
 import { addressToScript } from './utils/contractUtil';
 import { Sha256 } from 'scrypt-ts';
@@ -49,12 +50,6 @@ async function getL1TransactionStatus(
     env.l1Network
   );
   return await l1Api.getL1TransactionStatus(l1ChainProvider, tx.hash);
-}
-
-export async function isAggregationCompleted(
-  batch: DepositBatch
-): Promise<boolean> {
-  return !l1Api.shouldAggregate(batch);
 }
 
 export async function aggregateDeposits(
@@ -111,7 +106,7 @@ export async function createWithdrawalExpander(
   hash: Sha256,
   expectedWithdrawalState: WithdrawalExpanderState
 ): Promise<BridgeCovenantState> {
-  return await l1Api.createWithdrawal2(
+  return await l1Api.createWithdrawal(
     env.operatorSigner,
     env.l1Network,
     env.createUtxoProvider(),
@@ -126,11 +121,10 @@ export async function createWithdrawalExpander(
 
 /// expand the withdrawal batch, return the txids. In the inner implementation, it will call expand or distribute
 export async function expandWithdrawals(
-  level: number,
-  tree: ExpansionMerkleTree,
+  level: WithdrawalExpansionNode[],
   expansionTxs: L1Tx[]
 ): Promise<L1Tx[]> {
-  return await l1Api.expandLevelWithdrawals2(
+  return await l1Api.expandLevelWithdrawals(
     env.operatorSigner,
     env.l1Network,
     new EnhancedProvider(
@@ -140,17 +134,15 @@ export async function expandWithdrawals(
     ),
     env.l1FeeRate,
     level,
-    tree,
     expansionTxs
   );
 }
 
 export async function distributeWithdrawals(
-  level: number,
-  tree: ExpansionMerkleTree,
+  level: WithdrawalExpansionNode[],
   expansionTxs: L1Tx[]
 ): Promise<L1Tx[]> {
-  return await l1Api.distributeLevelWithdrawals2(
+  return await l1Api.distributeLevelWithdrawals(
     env.operatorSigner,
     env.l1Network,
     new EnhancedProvider(
@@ -160,7 +152,6 @@ export async function distributeWithdrawals(
     ),
     env.l1FeeRate,
     level,
-    tree,
     expansionTxs
   );
 }
