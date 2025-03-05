@@ -3,11 +3,23 @@
 import {useEffect, useState} from 'react';
 
 import {StateWithDate} from '@/types';
+import {parseOperatorState} from '@/utils/json';
+
+import {usePageVisibility} from './usePageVisibility';
 
 export const useAutoUpdateState = (initialState: StateWithDate) => {
-  const [state, setState] = useState(initialState);
+  const [state, setState] = useState<StateWithDate>(() => {
+    return {
+      lastUpdate: initialState.lastUpdate,
+      state: parseOperatorState(JSON.stringify(initialState.state)),
+    };
+  });
+
+  const visible = usePageVisibility();
 
   useEffect(() => {
+    if (!visible) return;
+
     const event = new EventSource('/api/listen-state');
 
     event.onmessage = (message) => {
@@ -22,12 +34,15 @@ export const useAutoUpdateState = (initialState: StateWithDate) => {
         if (data.message === 'state-change') {
           console.log('State change:', data.state);
 
-          if (data.state && typeof data.state === 'object') {
-            setState({
-              state: data.state,
-              lastUpdate: new Date(data.timestamp) || new Date(),
-            });
+          // If the received state is not an object, ignore it.
+          if (!data.state || typeof data.state !== 'object') {
+            return;
           }
+
+          setState({
+            state: parseOperatorState(JSON.stringify(data.state)),
+            lastUpdate: new Date(data.timestamp) || new Date(),
+          });
 
           return;
         }
@@ -40,7 +55,7 @@ export const useAutoUpdateState = (initialState: StateWithDate) => {
     return () => {
       event.close();
     };
-  }, []);
+  }, [visible]);
 
   return state;
 };

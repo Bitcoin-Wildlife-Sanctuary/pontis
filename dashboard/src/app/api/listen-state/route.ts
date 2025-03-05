@@ -6,13 +6,17 @@ export async function GET(request: NextRequest) {
   const abortController = new AbortController();
 
   const stream = new ReadableStream({
-    start(controller) {
+    async start(controller) {
       const sendEvent = (data: object) => {
         controller.enqueue(`data: ${JSON.stringify(data)}\n\n`);
       };
 
       controller.enqueue(': connected\n\n');
       sendEvent({message: 'connected', timestamp: new Date().toISOString()});
+
+      // Send the state immediately after connecting.
+      const initialState = await loadState();
+      sendEvent({message: 'state-change', state: initialState.state, timestamp: initialState.lastUpdate.toISOString()});
 
       watchState(abortController, async () => {
         const newState = await loadState();

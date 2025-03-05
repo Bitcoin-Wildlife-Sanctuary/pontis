@@ -53,21 +53,23 @@ export default function Page({initialState}: {initialState: StateWithDate}) {
             </SectionCardTitle>
 
             <HistorySectionContainer>
-              <ContentCard $surface>
-                <SectionCardTitle as={Text.BodyStrong} $fontSize={22}>
-                  Pending
-                </SectionCardTitle>
+              {(state.pendingDeposits?.length ?? 0) > 0 && (
+                <ContentCard $surface>
+                  <SectionCardTitle as={Text.BodyStrong} $fontSize={22}>
+                    Pending
+                  </SectionCardTitle>
 
-                <Col $padding="small">
-                  <Table headings={['Recipient', 'Amount', 'Origin Tx']}>
-                    {state.pendingDeposits?.map((deposit) => (
-                      <Fragment key={deposit.origin.hash}>
-                        <PendingTableRow deposit={deposit} />
-                      </Fragment>
-                    ))}
-                  </Table>
-                </Col>
-              </ContentCard>
+                  <Col $padding="small">
+                    <Table headings={['Recipient', 'Amount', 'Origin Tx']}>
+                      {state.pendingDeposits.map((deposit) => (
+                        <Fragment key={deposit.origin.hash}>
+                          <PendingTableRow deposit={deposit} />
+                        </Fragment>
+                      ))}
+                    </Table>
+                  </Col>
+                </ContentCard>
+              )}
 
               {state.depositBatches?.map((depositBatch, index) => (
                 // depositBatch doesn't always have a unique identifier, so using the index as the key

@@ -52,7 +52,7 @@ export const rem = (input: number | string, base = 16): `${number}rem` => {
   if (unit === '%') result = (value / 100) * base;
   if (unit === 'px') result = value / base;
 
-  return `${result}rem`;
+  return `${Number(result.toFixed(4))}rem`;
 };
 
 export const px = (input: number | string, base = 16): `${number}px` => {
@@ -63,5 +63,5 @@ export const px = (input: number | string, base = 16): `${number}px` => {
   if (unit === '%') result = (value / 100) * base;
   if (unit === 'rem' || unit === 'em') result = value * base;
 
-  return `${result}px`;
+  return `${Number(result.toFixed(4))}px`;
 };

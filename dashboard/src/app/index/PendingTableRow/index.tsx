@@ -6,7 +6,6 @@ type PendingTableRowProps = {
   deposit: Deposit;
 };
 
-// eslint-disable-next-line import/no-unused-modules
 export const PendingTableRow: React.FC<PendingTableRowProps> = ({deposit}) => {
   return (
     <tr>

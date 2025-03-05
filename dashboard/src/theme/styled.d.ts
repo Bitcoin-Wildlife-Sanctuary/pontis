@@ -3,6 +3,6 @@ import {getTheme} from './index';
 type ThemeType = ReturnType<typeof getTheme>;
 
 declare module 'styled-components' {
-  // eslint-disable-next-line import/no-unused-modules, @typescript-eslint/no-empty-interface
+  // eslint-disable-next-line @typescript-eslint/no-empty-interface
   export interface DefaultTheme extends ThemeType {}
 }

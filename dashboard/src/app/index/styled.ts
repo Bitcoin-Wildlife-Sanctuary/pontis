@@ -29,7 +29,6 @@ export const ContentCard = styled(Flex)<{$surface?: boolean}>`
   overflow: hidden;
 `;
 
-// eslint-disable-next-line import/no-unused-modules
 export const HistoryContainer = styled.div`
   display: grid;
   grid-template-columns: 1fr 1fr;
