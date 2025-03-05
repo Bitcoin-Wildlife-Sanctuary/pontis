@@ -34,7 +34,10 @@ import { loadContractArtifacts } from './l1/utils/contractUtil';
 import { load, save } from './persistence';
 import { first, firstValueFrom, merge, Observable } from 'rxjs';
 
-async function initialState(path: string, provider: RpcProvider): Promise<OperatorState> {
+async function initialState(
+  path: string,
+  provider: RpcProvider
+): Promise<OperatorState> {
   loadContractArtifacts();
   await importAddressesIntoNode();
   if (existsSync(path)) {
@@ -49,7 +52,8 @@ async function initialState(path: string, provider: RpcProvider): Promise<Operat
     );
     return {
       l1BlockNumber: (await firstValueFrom(l1BlockNumber())).blockNumber,
-      l2BlockNumber: (await firstValueFrom(l2BlockNumber(provider))).blockNumber,
+      l2BlockNumber: (await firstValueFrom(l2BlockNumber(provider)))
+        .blockNumber,
       bridgeState,
       depositBatches: [],
       withdrawalBatches: [],
@@ -84,7 +88,6 @@ async function sandboxOperator() {
 
   const startState = await initialState(path, provider);
 
-
   const env: BridgeEnvironment = {
     DEPOSIT_BATCH_SIZE: 4,
     MAX_DEPOSIT_BLOCK_AGE: 2,
@@ -111,7 +114,7 @@ async function sandboxOperator() {
     l1BlockNumber(),
     deposits(startState.l1BlockNumber),
     merge(
-      l2Events(provider, startState.l2BlockNumber, [bridgeAddress]), 
+      l2Events(provider, startState.l2BlockNumber, [bridgeAddress]),
       l2BlockNumber(provider),
       totalSupply(provider, btc)
     ),

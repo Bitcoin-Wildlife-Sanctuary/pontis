@@ -281,7 +281,6 @@ export async function aggregateLevelDeposits(
   feeRate: number,
   currentLevel: DepositAggregationState[]
 ): Promise<DepositAggregationState[]> {
-
   const operatorPubKey = await operatorSigner.getPublicKey();
   const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
 
