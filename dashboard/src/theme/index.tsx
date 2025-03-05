@@ -82,7 +82,7 @@ export function getTheme(theme: 'dark' | 'light') {
 }
 
 export function ThemeProvider({children}: React.PropsWithChildren) {
-  const [theme, setTheme] = useState(() => getTheme('dark'));
+  const [theme, setTheme] = useState(() => getTheme('light'));
 
   const toggleTheme = useCallback(() => {
     if (theme.dark) {
