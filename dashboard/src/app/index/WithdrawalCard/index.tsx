@@ -13,7 +13,6 @@ type WithdrawalCardProps = {
 export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
   const hash = 'hash' in withdrawal ? withdrawal.hash : undefined;
   const closeTx = 'closeWithdrawalBatchTx' in withdrawal ? withdrawal.closeWithdrawalBatchTx : undefined;
-  const withdrawBatchTx = 'withdrawBatchTx' in withdrawal ? withdrawal.withdrawBatchTx : undefined;
   const expansionTxs = 'expansionTxs' in withdrawal ? withdrawal.expansionTxs : undefined;
 
   return (
@@ -25,10 +24,12 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
             <SectionTitle>{withdrawal.id.toString()}</SectionTitle>
           </Row>
 
-          <Row $gap="xxsmall">
-            <SectionTitle>Hash:</SectionTitle>
-            <SectionTitle>{shortenHex(hash, 10)}</SectionTitle>
-          </Row>
+          {hash && (
+            <Row $gap="xxsmall">
+              <SectionTitle>Hash:</SectionTitle>
+              <SectionTitle>{shortenHex(hash, 10)}</SectionTitle>
+            </Row>
+          )}
         </Col>
 
         <SectionTitle>{showWithdrawalStatus(withdrawal.status)}</SectionTitle>
@@ -65,46 +66,30 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
 
         <Col $gap="xsmall">
           <Row $gap="xxlarge">
-            <Col $gap="xxsmall" $justify="center">
-              {closeTx && <Text.CardTitle>Close Tx:</Text.CardTitle>}
-              {withdrawBatchTx && <Text.CardTitle>Withdraw Batch Tx:</Text.CardTitle>}
-            </Col>
+            {closeTx && <Text.CardTitle>Close Tx:</Text.CardTitle>}
 
-            <Col $gap="xxsmall" $justify="center">
-              {closeTx && (
-                <ExplorerLink tx={closeTx}>
-                  <Text.CardValue $color="inherit">{shortenHex(closeTx.hash)}</Text.CardValue>
-                </ExplorerLink>
-              )}
-
-              {withdrawBatchTx && (
-                <ExplorerLink tx={withdrawBatchTx}>
-                  <Text.CardValue $color="inherit">{shortenHex(withdrawBatchTx.hash)}</Text.CardValue>
-                </ExplorerLink>
-              )}
-            </Col>
+            {closeTx && (
+              <ExplorerLink tx={closeTx}>
+                <Text.CardValue $color="inherit">{shortenHex(closeTx.hash)}</Text.CardValue>
+              </ExplorerLink>
+            )}
           </Row>
 
           {expansionTxs && expansionTxs.length > 0 && (
             <>
               <Text.CardTitle>Expansion Txs:</Text.CardTitle>
-              <TreeView>
-                {expansionTxs.map((expansionTxLevels, levelIdx) => (
-                  <Fragment key={levelIdx.toString()}>
-                    {levelIdx % 2 === 1 && <TreeView.Separator />}
 
-                    <Col $gap="xxsmall">
-                      {expansionTxLevels.map((expansionTx) => (
-                        <TransactionCard key={expansionTx.hash} $gap={4}>
-                          <ExplorerLink tx={expansionTx}>
-                            <Text.CardValue $color="inherit">{shortenHex(expansionTx.hash)}</Text.CardValue>
-                          </ExplorerLink>
-                        </TransactionCard>
-                      ))}
-                    </Col>
-                  </Fragment>
-                ))}
-              </TreeView>
+              <TreeView
+                items={expansionTxs}
+                keyExtractor={(expansionTx) => expansionTx.hash}
+                renderItem={(expansionTx) => (
+                  <TransactionCard key={expansionTx.hash} $gap={4}>
+                    <ExplorerLink tx={expansionTx}>
+                      <Text.CardValue $color="inherit">{shortenHex(expansionTx.hash)}</Text.CardValue>
+                    </ExplorerLink>
+                  </TransactionCard>
+                )}
+              />
             </>
           )}
         </Col>

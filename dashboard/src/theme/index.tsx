@@ -64,8 +64,8 @@ const transitions = {
 
 const misc = {
   fonts: {
-    Inter: 'var(--font-inter)',
-    default: 'var(--font-inter)',
+    Inter: 'var(--font-roboto)',
+    default: 'var(--font-roboto)',
   },
   transitions,
   spacings,
@@ -82,7 +82,7 @@ export function getTheme(theme: 'dark' | 'light') {
 }
 
 export function ThemeProvider({children}: React.PropsWithChildren) {
-  const [theme, setTheme] = useState(() => getTheme('dark'));
+  const [theme, setTheme] = useState(() => getTheme('light'));
 
   const toggleTheme = useCallback(() => {
     if (theme.dark) {

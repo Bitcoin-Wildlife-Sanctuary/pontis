@@ -14,48 +14,48 @@ const createTextVariant = (variantProps: TextWrapperProps) => {
 
 export const HeadlineLarge = createTextVariant({
   $color: 'textStrong',
-  $fontSize: 48,
+  $fontSize: 42,
   $fontWeight: 700,
 });
 
 export const HeadlineSmall = createTextVariant({
   $color: 'textLight',
-  $fontSize: 24,
+  $fontSize: 21,
   $fontWeight: 600,
 });
 
 export const Title = createTextVariant({
   $color: 'textStrong',
-  $fontSize: 22,
+  $fontSize: 20,
   $fontWeight: 600,
 });
 
 export const Subtitle = createTextVariant({
   $color: 'textLight',
-  $fontSize: 16,
+  $fontSize: 14.5,
   $fontWeight: 700,
 });
 
 export const Body = createTextVariant({
   $color: 'text',
-  $fontSize: 16,
+  $fontSize: 14.5,
   $fontWeight: 400,
 });
 
 export const BodyStrong = createTextVariant({
   $color: 'textStrong',
-  $fontSize: 16,
+  $fontSize: 14.5,
   $fontWeight: 600,
 });
 
 export const CardTitle = createTextVariant({
   $color: 'textLight',
-  $fontSize: 14,
+  $fontSize: 13.5,
   $fontWeight: 700,
 });
 
 export const CardValue = createTextVariant({
   $color: 'textStrong',
-  $fontSize: 15,
+  $fontSize: 14.5,
   $fontWeight: 700,
 });
