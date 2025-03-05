@@ -5,6 +5,8 @@ import {useEffect, useState} from 'react';
 import {StateWithDate} from '@/types';
 import {parseOperatorState} from '@/utils/json';
 
+import {usePageVisibility} from './usePageVisibility';
+
 export const useAutoUpdateState = (initialState: StateWithDate) => {
   const [state, setState] = useState<StateWithDate>(() => {
     return {
@@ -13,7 +15,11 @@ export const useAutoUpdateState = (initialState: StateWithDate) => {
     };
   });
 
+  const visible = usePageVisibility();
+
   useEffect(() => {
+    if (!visible) return;
+
     const event = new EventSource('/api/listen-state');
 
     event.onmessage = (message) => {
@@ -49,7 +55,7 @@ export const useAutoUpdateState = (initialState: StateWithDate) => {
     return () => {
       event.close();
     };
-  }, []);
+  }, [visible]);
 
   return state;
 };
