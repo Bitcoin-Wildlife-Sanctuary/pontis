@@ -255,7 +255,7 @@ export async function applyChange(
   // console.log(li, 'change:');
   // console.dir(change, { depth: null });
 
-  console.log("change:", JSON.stringify(change));
+  console.log('change:', JSON.stringify(change));
 
   const newState = cloneDeep(state);
   newState.recentChanges.unshift(change);
@@ -481,7 +481,7 @@ function updateL2TxStatus(state: OperatorState, status: L2TxStatus) {
       wb.status === 'BEING_EXPANDED' ||
       wb.status === 'EXPANDED'
     ) {
-      if(wb.closeWithdrawalBatchTx) {
+      if (wb.closeWithdrawalBatchTx) {
         update(wb.closeWithdrawalBatchTx);
       }
     }
@@ -511,7 +511,7 @@ export function getAllL2Txs(state: OperatorState): Set<L2TxId> {
       wb.status === 'BEING_EXPANDED' ||
       wb.status === 'EXPANDED'
     ) {
-      if(wb.closeWithdrawalBatchTx) {
+      if (wb.closeWithdrawalBatchTx) {
         results.push(wb.closeWithdrawalBatchTx);
       }
     }
@@ -747,8 +747,14 @@ async function updateWithdrawalBatch(
     for (let i = 0; i < state.withdrawalBatches.length; i++) {
       const batch = state.withdrawalBatches[i];
       if (batch.id === change.id) {
-        assert(batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED' || batch.status === 'PENDING');
-        if (batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED' || batch.status === 'PENDING') {
+        assert(
+          batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED' ||
+            batch.status === 'PENDING'
+        );
+        if (
+          batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED' ||
+          batch.status === 'PENDING'
+        ) {
           const expansionTree = getExpansionTree(
             batch.withdrawals.map((w) => ({
               l1Address: w.recipient,

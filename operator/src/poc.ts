@@ -60,7 +60,7 @@ async function initialState(
       pendingDeposits: [],
       l1BridgeBalance: 0n,
       l2TotalSupply: 0n,
-      recentChanges: []
+      recentChanges: [],
     };
   }
 }

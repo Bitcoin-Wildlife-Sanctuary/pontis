@@ -1,5 +1,10 @@
 import { Account, RpcProvider } from 'starknet';
-import { closePendingWithdrawalBatch, contractFromAddress, init, withdraw } from './l2/contracts';
+import {
+  closePendingWithdrawalBatch,
+  contractFromAddress,
+  init,
+  withdraw,
+} from './l2/contracts';
 import * as devnet from './l2/devnet';
 import { l2Events } from './l2/events';
 import assert from 'assert';
@@ -11,10 +16,9 @@ import * as env from './l1/env';
 import { toWithdrawalExpanderAddress } from './l1/transactions';
 
 const btcAddress =
-'0x3bf13a2032fa2fe8652266e93fd5acf213d6ddd05509b185ee4edf0c4000d5d';
+  '0x3bf13a2032fa2fe8652266e93fd5acf213d6ddd05509b185ee4edf0c4000d5d';
 const bridgeAddress =
-'0x20e5866c53e02141b1fd22d1e02ebaf520fddfa16321a39d7f1545dd59497ae';
-
+  '0x20e5866c53e02141b1fd22d1e02ebaf520fddfa16321a39d7f1545dd59497ae';
 
 async function withdrawFromAlice() {
   const provider = new RpcProvider({ nodeUrl: 'http://127.0.0.1:5050/rpc' });

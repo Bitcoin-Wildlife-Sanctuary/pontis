@@ -74,7 +74,7 @@ async function depositsInRange(
   blockFrom: number,
   blockTo: number
 ): Promise<Deposit[]> {
-  console.log('looking for deposits:', JSON.stringify({blockFrom, blockTo}));
+  console.log('looking for deposits:', JSON.stringify({ blockFrom, blockTo }));
   const deposits = await l1Api.listDeposits(
     blockFrom,
     blockTo,
