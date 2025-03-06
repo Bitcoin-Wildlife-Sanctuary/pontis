@@ -7,26 +7,35 @@ export async function GET(request: NextRequest) {
 
   const stream = new ReadableStream({
     async start(controller) {
-      const sendEvent = (data: object) => {
-        controller.enqueue(`data: ${JSON.stringify(data)}\n\n`);
-      };
+      try {
+        const sendEvent = (data: object) => {
+          controller.enqueue(`data: ${JSON.stringify(data)}\n\n`);
+        };
 
-      controller.enqueue(': connected\n\n');
-      sendEvent({message: 'connected', timestamp: new Date().toISOString()});
+        controller.enqueue(': connected\n\n');
+        sendEvent({message: 'connected', timestamp: new Date().toISOString()});
 
-      // Send the state immediately after connecting.
-      const initialState = await loadState();
-      sendEvent({message: 'state-change', state: initialState.state, timestamp: initialState.lastUpdate.toISOString()});
+        // Send the state immediately after connecting.
+        const initialState = await loadState();
+        sendEvent({
+          message: 'state-change',
+          state: initialState.state,
+          timestamp: initialState.lastUpdate.toISOString(),
+        });
 
-      watchState(abortController, async () => {
-        const newState = await loadState();
+        watchState(abortController, async () => {
+          const newState = await loadState();
 
-        sendEvent({message: 'state-change', state: newState.state, timestamp: newState.lastUpdate.toISOString()});
-      });
+          sendEvent({message: 'state-change', state: newState.state, timestamp: newState.lastUpdate.toISOString()});
+        });
 
-      request.signal.addEventListener('abort', () => {
-        controller.close();
-      });
+        request.signal.addEventListener('abort', () => {
+          controller.close();
+        });
+      } catch (err) {
+        console.error(err);
+        if (!stream.locked) controller.error(err);
+      }
     },
     cancel() {
       abortController.abort();

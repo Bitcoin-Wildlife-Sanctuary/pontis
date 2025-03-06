@@ -9,18 +9,27 @@ type DepositCardProps = {
 };
 
 export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
-  const batchId = 'batchId' in deposit ? deposit.batchId : undefined;
+  const hash = 'hash' in deposit ? deposit.hash : undefined;
   const finalizeBatchTx = 'finalizeBatchTx' in deposit ? deposit.finalizeBatchTx : undefined;
   const depositTx = 'depositTx' in deposit ? deposit.depositTx : undefined;
   const verifyTx = 'verifyTx' in deposit ? deposit.verifyTx : undefined;
 
   return (
     <Container>
-      <SectionTitleContainer as={Row} $justify="space-between" $alignItems="center">
-        <Row $gap="xxsmall">
-          <SectionTitle>Batch:</SectionTitle>
-          <SectionTitle>{batchId && shortenHex(batchId, 8)}</SectionTitle>
-        </Row>
+      <SectionTitleContainer as={Row} $justify="space-between" $alignItems="center" $gap="none">
+        <Col $gap="xxsmall">
+          <Row $gap="xxsmall">
+            <SectionTitle>Batch:</SectionTitle>
+            <SectionTitle>{deposit.id.toString()}</SectionTitle>
+          </Row>
+
+          {hash && (
+            <Row $gap="xxsmall">
+              <SectionTitle>Hash:</SectionTitle>
+              <SectionTitle>{shortenHex(hash, 10)}</SectionTitle>
+            </Row>
+          )}
+        </Col>
 
         <StatusChip type="deposit" status={deposit.status} />
       </SectionTitleContainer>
@@ -87,6 +96,7 @@ export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
               />
             </>
           )}
+
           <Row $gap="xxlarge">
             <Col $gap="xxsmall" $justify="center">
               {finalizeBatchTx && <Text.CardTitle>Finalize Tx:</Text.CardTitle>}

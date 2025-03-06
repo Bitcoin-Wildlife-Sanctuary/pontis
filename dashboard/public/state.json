@@ -66,7 +66,8 @@
         "hash": "580df55052d301ceb069028a219bf8cf96704a2292dec6c274e15098ee302f1c",
         "blockNumber": 462088
       },
-      "batchId": "8113c6db276fe30fd15f0139d2d2eb69db53843bac0712165f737e6b5904306c",
+      "id": "0n",
+      "hash": "8113c6db276fe30fd15f0139d2d2eb69db53843bac0712165f737e6b5904306c",
       "depositTx": {
         "type": "l2tx",
         "hash": "0x382ef2cf0f6759145a88cfa190489e9da41b42d46c5937a6eb6aa870fae70d6",
@@ -221,7 +222,8 @@
         "hash": "5b2e331446c7de413cdd5b3803eee5c4002b5bf064a7f73c0cb15ab42f8e27fc",
         "blockNumber": 462102
       },
-      "batchId": "4b784cbfdcecd890f7935f918a3dfcb606563f2173613e336386b44185e22899",
+      "id": "1n",
+      "hash": "4b784cbfdcecd890f7935f918a3dfcb606563f2173613e336386b44185e22899",
       "depositTx": {
         "type": "l2tx",
         "hash": "0x6a807f1949de48dc9c002f57b7b6de1208e20636d87e31339339ea048e7f737",

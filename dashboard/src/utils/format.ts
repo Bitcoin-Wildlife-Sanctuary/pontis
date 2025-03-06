@@ -23,7 +23,6 @@ export const getTransactionStatusType = (status?: TxStatus): StatusType => {
       return 'success';
 
     default:
-      status satisfies undefined;
       return 'pending';
   }
 };
@@ -42,7 +41,6 @@ export const getDepositStatusType = (status?: DepositStatus): StatusType => {
       return 'success';
 
     default:
-      status satisfies undefined;
       return 'pending';
   }
 };
@@ -50,7 +48,8 @@ export const getDepositStatusType = (status?: DepositStatus): StatusType => {
 export const getWithdrawalStatusType = (status?: WithdrawalStatus): StatusType => {
   switch (status) {
     case 'PENDING':
-    case 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED':
+    case 'CLOSE_SUBMITTED':
+    case 'EXPANDER_SUBMITED':
     case 'BEING_EXPANDED':
       return 'pending';
 
@@ -59,7 +58,6 @@ export const getWithdrawalStatusType = (status?: WithdrawalStatus): StatusType =
       return 'success';
 
     default:
-      status satisfies undefined;
       return 'pending';
   }
 };
