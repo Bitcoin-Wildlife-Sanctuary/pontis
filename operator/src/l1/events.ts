@@ -19,6 +19,7 @@ import {
 import * as l1Api from './api';
 import * as env from './env';
 import { createL1Provider } from './deps/l1Provider';
+import logger from '../logger';
 
 const POLL_INTERVAL = 5000;
 
@@ -74,7 +75,7 @@ async function depositsInRange(
   blockFrom: number,
   blockTo: number
 ): Promise<Deposit[]> {
-  console.log('looking for deposits:', JSON.stringify({ blockFrom, blockTo }));
+  logger.debug({ blockFrom, blockTo }, 'looking for deposits');
   const deposits = await l1Api.listDeposits(
     blockFrom,
     blockTo,
