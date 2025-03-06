@@ -343,8 +343,6 @@ export class DepositAggregatorCovenant extends Covenant<DepositAggregatorState> 
   ): Promise<TracedDepositAggregator> {
     const level = utxo.state.level;
 
-    console.log("level", level);
-
     const covenant = new DepositAggregatorCovenant(
       utxo.operator,
       utxo.bridgeSPK,

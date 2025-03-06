@@ -61,6 +61,7 @@ export type Deposit = {
 };
 
 type DepositBatchCommon = {
+  id: bigint
   deposits: Deposit[];
 };
 
@@ -77,33 +78,33 @@ export type DepositBatch =
       status: 'AGGREGATED';
       aggregationTxs: DepositAggregationState[][];
       finalizeBatchTx: L1Tx;
-      batchId: string;
+      hash: string;
     } & DepositBatchCommon)
   | ({
       status: 'FINALIZED';
       aggregationTxs: DepositAggregationState[][];
       finalizeBatchTx: L1Tx;
-      batchId: string;
+      hash: string;
     } & DepositBatchCommon)
   | ({
       status: 'SUBMITTED_TO_L2';
       aggregationTxs: DepositAggregationState[][];
       finalizeBatchTx: L1Tx;
-      batchId: string;
+      hash: string;
       depositTx: L2TxStatus;
     } & DepositBatchCommon)
   | ({
       status: 'DEPOSITED';
       aggregationTxs: DepositAggregationState[][];
       finalizeBatchTx: L1Tx;
-      batchId: string;
+      hash: string;
       depositTx: L2TxStatus;
     } & DepositBatchCommon)
   | ({
       status: 'SUBMITTED_FOR_VERIFICATION';
       aggregationTxs: DepositAggregationState[][];
       finalizeBatchTx: L1Tx;
-      batchId: string;
+      hash: string;
       depositTx: L2Tx;
       verifyTx: L1Tx;
     } & DepositBatchCommon)
@@ -111,7 +112,7 @@ export type DepositBatch =
       status: 'COMPLETED';
       aggregationTxs: DepositAggregationState[][];
       finalizeBatchTx: L1Tx;
-      batchId: string;
+      hash: string;
       depositTx: L2Tx;
       verifyTx: L1Tx;
     } & DepositBatchCommon);
@@ -178,6 +179,7 @@ export type OperatorState = {
   l2BlockNumber: number;
   l1BridgeBalance: bigint;
   l2TotalSupply: bigint;
+  lastDepositBatchId: bigint;
   bridgeState: BridgeCovenantState;
   pendingDeposits: Deposit[];
   depositBatches: DepositBatch[];
@@ -256,7 +258,11 @@ export async function applyChange(
 ): Promise<OperatorState> {
   let li = i++;
 
-  logger.debug(change, 'change');
+  if(change.type === 'deposits' || change.type === 'withdrawal') {
+    logger.info(change, 'change');
+  } else {
+    logger.debug(change, 'change');
+  }
 
   const newState = cloneDeep(state);
   newState.recentChanges.unshift(change);
@@ -292,7 +298,7 @@ export async function applyChange(
       await manageAggregation(env, newState);
       await manageVerification(env, newState);
       await sendCloseWithdrawalBatch(env, newState);
-      await updateWithdrawalBatch(env, newState);
+      await initiateExpansion(env, newState);
       await manageExpansion(env, newState);
       break;
     }
@@ -302,7 +308,7 @@ export async function applyChange(
         change.blockNumber
       );
       await sendCloseWithdrawalBatch(env, newState);
-      await updateWithdrawalBatch(env, newState);
+      await initiateExpansion(env, newState);
       break;
     }
 
@@ -317,7 +323,7 @@ export async function applyChange(
     }
     case 'closeBatch': {
       await closeWithdrawalBatch(newState, change);
-      await updateWithdrawalBatch(env, newState);
+      await initiateExpansion(env, newState);
       break;
     }
     case 'l2tx': {
@@ -554,29 +560,35 @@ async function initiateAggregation(
 
     if (batchSize === 1) {
       if (state.bridgeState.latestTx.status === 'MINED') {
-        logger.info({ deposits, batchSize }, 'finalizing');
+        state.lastDepositBatchId += 1n;
+        const id = state.lastDepositBatchId;
+        logger.info({ deposits, id }, 'finalizing');
         // if there is only one deposit, we can finalize the batch directly
         const [bridgeState, batchId] = await env.finalizeDepositBatch(
           state.bridgeState,
           level0[0]
         );
         state.bridgeState = bridgeState;
-
+        
         state.depositBatches.push({
+          id,
           status: 'AGGREGATED',
           deposits,
           aggregationTxs: [level0],
           finalizeBatchTx: state.bridgeState.latestTx,
-          batchId,
+          hash: batchId,
         });
       }
     } else {
-      logger.info({ deposits, batchSize }, 'aggregating');
+      state.lastDepositBatchId += 1n;
+      const id = state.lastDepositBatchId;
+      logger.info({ deposits, id }, 'initiating aggregation');
       const aggregationTxs: DepositAggregationState[][] = [
         level0,
         await env.aggregateDeposits(level0),
       ];
       state.depositBatches.push({
+        id,
         status: 'BEING_AGGREGATED',
         deposits,
         aggregationTxs,
@@ -609,6 +621,7 @@ async function manageAggregation(env: BridgeEnvironment, state: OperatorState) {
       if (aggregationTxs.every((tx) => tx.tx.status === 'MINED')) {
         if (aggregationTxs.length === 1) {
           if (state.bridgeState.latestTx.status === 'MINED') {
+            logger.info({ id: batch.id, deposits: 1 }, 'finalizing');
             const [bridgeState, batchId] = await env.finalizeDepositBatch(
               state.bridgeState,
               aggregationTxs.at(0)!
@@ -618,10 +631,11 @@ async function manageAggregation(env: BridgeEnvironment, state: OperatorState) {
               ...batch,
               status: 'AGGREGATED',
               finalizeBatchTx: state.bridgeState.latestTx,
-              batchId,
+              hash: batchId,
             };
           }
         } else {
+          logger.info({ id: batch.id, level: batch.aggregationTxs.length }, 'continuing aggregation');
           const newAggregationLevel = await env.aggregateDeposits(
             batch.aggregationTxs.at(-1)!
           );
@@ -633,7 +647,7 @@ async function manageAggregation(env: BridgeEnvironment, state: OperatorState) {
       batch.status === 'AGGREGATED' &&
       batch.finalizeBatchTx.status === 'MINED'
     ) {
-      logger.debug({ batchId: batch.batchId }, 'Submitting to L2');
+      logger.info({ id: batch.id }, 'submitting to L2');
       state.depositBatches[i] = {
         ...batch,
         status: 'SUBMITTED_TO_L2',
@@ -653,7 +667,7 @@ function updateDeposits(state: OperatorState) {
       batch.status === 'SUBMITTED_TO_L2' &&
       batch.depositTx.status === 'SUCCEEDED'
     ) {
-      logger.debug({ batchId: batch.batchId }, 'Submitted to L2');
+      logger.info({ id: batch.id }, 'submitted to L2');
       state.depositBatches[i] = {
         ...batch,
         status: 'DEPOSITED',
@@ -674,9 +688,10 @@ async function manageVerification(
       batch.depositTx.status === 'SUCCEEDED' &&
       state.bridgeState.latestTx.status === 'MINED'
     ) {
+      logger.info({ id: batch.id }, 'verifing');
       state.bridgeState = await env.verifyDepositBatch(
         state.bridgeState,
-        batch.batchId
+        batch.hash
       );
       state.depositBatches[i] = {
         ...batch,
@@ -689,6 +704,7 @@ async function manageVerification(
       batch.status === 'SUBMITTED_FOR_VERIFICATION' &&
       batch.verifyTx.status === 'MINED'
     ) {
+      logger.info({ id: batch.id }, 'verified');
       state.depositBatches[i] = {
         ...batch,
         status: 'COMPLETED',
@@ -733,6 +749,7 @@ async function sendCloseWithdrawalBatch(
       (batch.withdrawals.length === env.MAX_WITHDRAWAL_BATCH_SIZE ||
         withdrawalsOldEnough(env, state.l2BlockNumber, batch.withdrawals))
     ) {
+      logger.info({ id: batch.id }, 'closing');
       state.withdrawalBatches[i] = {
         ...batch,
         status: 'CLOSE_SUBMITTED',
@@ -750,6 +767,7 @@ async function closeWithdrawalBatch(state: OperatorState, change: L2Event) {
         assert(
           batch.status === 'CLOSE_SUBMITTED' || batch.status === 'PENDING'
         );
+        logger.info({ id: batch.id }, 'closed');
         state.withdrawalBatches[i] = {
           ...batch,
           status: 'CLOSED',
@@ -760,7 +778,7 @@ async function closeWithdrawalBatch(state: OperatorState, change: L2Event) {
   }
 }
 
-async function updateWithdrawalBatch(
+async function initiateExpansion(
   env: BridgeEnvironment,
   state: OperatorState
 ) {
@@ -770,6 +788,8 @@ async function updateWithdrawalBatch(
   for (let i = 0; i < state.withdrawalBatches.length; i++) {
     const batch = state.withdrawalBatches[i];
     if (batch.status === 'CLOSED') {
+      logger.info({ id: batch.id }, 'expanding');
+
       const expansionTree = getExpansionTree(
         batch.withdrawals.map((w) => ({
           l1Address: w.recipient,
@@ -818,13 +838,17 @@ function withdrawalsOldEnough(
 
 async function distributeOrExpand(
   env: BridgeEnvironment,
+  id: bigint,
+  level: number,
   expansionLevel: WithdrawalExpansionNode[],
   expansionTxsLevel: L1Tx[]
 ): Promise<L1Tx[]> {
   if (expansionLevel.every((n) => n.type !== 'INNER')) {
+    logger.info({ id, level}, "distributing");
     return await env.distributeWithdrawals(expansionLevel, expansionTxsLevel);
   } else {
     assert(expansionLevel.every((n) => n.type === 'INNER'));
+    logger.info({ id, level}, "expanding");
     return await env.expandWithdrawals(expansionLevel, expansionTxsLevel);
   }
 }
@@ -837,9 +861,10 @@ async function manageExpansion(env: BridgeEnvironment, state: OperatorState) {
       batch.status === 'EXPANDER_SUBMITED' &&
       batch.createExpanderTx.status === 'MINED'
     ) {
-      console.log(`expander of batch: ${batch.id} created, starting expansion`);
       const level0Txs = await distributeOrExpand(
         env,
+        batch.id,
+        0,
         [batch.expansionTree],
         [batch.createExpanderTx]
       );
@@ -857,12 +882,11 @@ async function manageExpansion(env: BridgeEnvironment, state: OperatorState) {
             status: 'EXPANDED',
           };
         } else {
-          console.log(
-            `continuing expansion of batch: ${batch.id}, level: ${batch.expansionTxs.length}`
-          );
           batch.expansionTxs.push(
             await distributeOrExpand(
               env,
+              batch.id,
+              batch.expansionTxs.length,
               getNthLevelNodes(batch.expansionTree, batch.expansionTxs.length),
               expansionTxs
             )

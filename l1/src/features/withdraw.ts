@@ -36,8 +36,6 @@ export async function expandWithdrawal(
   //   throw new Error(`withdrawal expander level should be greater than ${WithdrawalExpanderCovenant.MAX_LEVEL_FOR_DISTRIBUTE}`)
   // }
 
-  console.log("expanding: ", expanderUtxo);
-
   const tracedWithdrawalExpander = await WithdrawalExpanderCovenant.backtrace(
     expanderUtxo,
     chainProvider
@@ -217,10 +215,6 @@ function buildExpandWithdrawalTx(
   expandWithdrawalTx.change(changeAddress, feeRate)
 
   const inputCtxs = expandWithdrawalTx.calculateInputCtxs()
-  console.log("tracedWithdrawalExpander.covenant")
-  console.dir( 
-    tracedWithdrawalExpander.covenant
-  );
 
   expandWithdrawalTx.updateCovenantInput(
     0,

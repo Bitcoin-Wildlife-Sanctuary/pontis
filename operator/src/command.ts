@@ -43,7 +43,7 @@ async function withdrawFromAlice() {
     'bc1pu9tujtamxpetkgsjyetwey8esgr2y35374ag4a9xy6j3kwwy4mzqnetae0'
   );
 
-  console.log(await withdraw(provider, btc, bridge, alice, recipient, 500n));
+  console.log(await withdraw(provider, btc, bridge, alice, recipient, 2000n));
 }
 
 async function closeBatch() {
