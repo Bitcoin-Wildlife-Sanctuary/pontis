@@ -1,5 +1,3 @@
-import {Fragment} from 'react';
-
 import {Col, Divider, ExplorerLink, Row, StatusChip, Table, Text, TreeView} from '@/components';
 import {DepositBatch} from '@/types';
 import {shortenHex} from '@/utils/format';
@@ -60,10 +58,11 @@ export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
               <Text.CardTitle>Aggregation Txs:</Text.CardTitle>
 
               <TreeView
+                inverted
                 items={deposit.aggregationTxs}
                 keyExtractor={(aggregationTx) => aggregationTx.tx.hash}
                 renderItem={(aggregationTx) => (
-                  <TransactionCard key={aggregationTx.tx.hash} $gap={4}>
+                  <TransactionCard $gap={4}>
                     <Row $justify="space-between" $alignItems="center" $gap="xsmall">
                       {aggregationTx.type === 'LEAF' && (
                         <Col>

@@ -16,3 +16,6 @@ export type StateWithDate = {
   state: OperatorState;
   lastUpdate: Date;
 };
+
+export type WithdrawalExpansionNode = (WithdrawalBatch & {status: 'EXPANDED'})['expansionTree'];
+export type WithdrawalExpansionInnerNode = WithdrawalExpansionNode & {type: 'INNER'};

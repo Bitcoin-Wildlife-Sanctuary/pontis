@@ -1,8 +1,7 @@
-import {Fragment} from 'react';
-
 import {Col, Divider, ExplorerLink, Row, StatusChip, Table, Text, TreeView} from '@/components';
 import {WithdrawalBatch} from '@/types';
 import {shortenHex} from '@/utils/format';
+import {convertTreeToArray} from '@/utils/json';
 
 import {Container, SectionTitle, SectionTitleContainer, TransactionCard} from './styled';
 
@@ -14,7 +13,8 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
   const hash = 'hash' in withdrawal ? withdrawal.hash : undefined;
   const closeTx = 'closeWithdrawalBatchTx' in withdrawal ? withdrawal.closeWithdrawalBatchTx : undefined;
   const createExpanderTx = 'createExpanderTx' in withdrawal ? withdrawal.createExpanderTx : undefined;
-  const expansionTxs = 'expansionTxs' in withdrawal ? withdrawal.expansionTxs : undefined;
+  const expansionTree = 'expansionTree' in withdrawal ? withdrawal.expansionTree : undefined;
+  const expansionTreeArray = expansionTree ? convertTreeToArray(expansionTree) : [];
 
   return (
     <Container>
@@ -85,18 +85,32 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
             </Col>
           </Row>
 
-          {expansionTxs && expansionTxs.length > 0 && (
+          {expansionTreeArray.length > 0 && (
             <>
               <Text.CardTitle>Expansion Txs:</Text.CardTitle>
 
               <TreeView
-                items={expansionTxs}
-                keyExtractor={(expansionTx) => expansionTx.hash}
+                items={expansionTreeArray}
+                keyExtractor={(expansionTx, index) => `${expansionTx.hash}-${index}`}
                 renderItem={(expansionTx) => (
-                  <TransactionCard key={expansionTx.hash} $gap={4}>
-                    <ExplorerLink tx={expansionTx}>
-                      <Text.CardValue $color="inherit">{shortenHex(expansionTx.hash)}</Text.CardValue>
-                    </ExplorerLink>
+                  <TransactionCard $gap={4}>
+                    <Row $justify="space-between" $alignItems="center" $gap="xsmall">
+                      <Col>
+                        <Text.CardValue>{expansionTx.total.toString()}</Text.CardValue>
+                      </Col>
+
+                      <Col $alignItems="flex-end">
+                        {expansionTx.type === 'LEAF' && (
+                          <ExplorerLink network="l1" address={expansionTx.l1Address}>
+                            <Text.CardValue $color="inherit">{shortenHex(expansionTx.l1Address)}</Text.CardValue>
+                          </ExplorerLink>
+                        )}
+
+                        <ExplorerLink tx={{type: 'l1tx', hash: expansionTx.hash}}>
+                          <Text.CardValue $color="inherit">{shortenHex(expansionTx.hash)}</Text.CardValue>
+                        </ExplorerLink>
+                      </Col>
+                    </Row>
                   </TransactionCard>
                 )}
               />
