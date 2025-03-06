@@ -61,7 +61,7 @@ async function initialState(
       l1BridgeBalance: 0n,
       l2TotalSupply: 0n,
       recentChanges: [],
-      lastDepositBatchId: 0n
+      lastDepositBatchId: 0n,
     };
   }
 }
