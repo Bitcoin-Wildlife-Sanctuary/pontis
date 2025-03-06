@@ -1,38 +1,40 @@
-import {Col, ExplorerLink, GridCol, GridRow, Row, Text} from '@/components';
+import {Col, ExplorerLink, GridCol, GridRow, Row} from '@/components';
 import {OperatorState} from '@/types';
 import {shortenHex} from '@/utils/format';
 import {isAllZeroHex} from '@/utils/hex';
 
 import {ContentCard} from '../styled';
+import {Title, Value} from './styled';
 
 export const StateHeader: React.FC<{state: OperatorState}> = ({state}) => {
   return (
-    <GridRow className="g-small">
+    <GridRow className="g-xsmall">
       <GridCol flex lg={3} md={6} sm={12}>
-        <Col $gap="small" $flex={1}>
+        <Col $gap="xsmall" $flex={1}>
           <ContentCard $padding="small" $flex="1 1 max-content">
-            <Col $flex={1} $justify="center">
-              <Row $gap="xsmall">
-                <Text.Subtitle>L1 Bridge Balance:</Text.Subtitle>
-                <Text.Subtitle $color="textStrong">{state.l1BridgeBalance}</Text.Subtitle>
+            <Col $flex={1} $justify="center" $gap="xxsmall">
+              <Row $gap="xsmall" $alignItems="center">
+                <Title>L1 Bridge Balance:</Title>
+                <Value>{state.l1BridgeBalance}</Value>
               </Row>
-              <Row $gap="xsmall">
-                <Text.Subtitle>L2 Total Supply:</Text.Subtitle>
-                <Text.Subtitle $color="textStrong">{state.l2TotalSupply}</Text.Subtitle>
+
+              <Row $gap="xsmall" $alignItems="center">
+                <Title>L2 Total Supply:</Title>
+                <Value>{state.l2TotalSupply}</Value>
               </Row>
             </Col>
           </ContentCard>
 
           <ContentCard $padding="small" $justify="center" $flex="1 1 max-content">
-            <Col $flex={1} $justify="center" $gap="small">
-              <Row $gap="xsmall">
-                <Text.Subtitle>L1 Block:</Text.Subtitle>
-                <Text.Subtitle $color="textStrong">{state.l1BlockNumber ?? 0}</Text.Subtitle>
+            <Col $flex={1} $justify="center" $gap="xxsmall">
+              <Row $gap="xsmall" $alignItems="center">
+                <Title>L1 Block:</Title>
+                <Value>{state.l1BlockNumber ?? 0}</Value>
               </Row>
 
-              <Row $gap="xsmall">
-                <Text.Subtitle>L2 Block:</Text.Subtitle>
-                <Text.Subtitle $color="textStrong">{state.l2BlockNumber ?? 0}</Text.Subtitle>
+              <Row $gap="xsmall" $alignItems="center">
+                <Title>L2 Block:</Title>
+                <Value>{state.l2BlockNumber ?? 0}</Value>
               </Row>
             </Col>
           </ContentCard>
@@ -41,22 +43,23 @@ export const StateHeader: React.FC<{state: OperatorState}> = ({state}) => {
 
       <GridCol flex lg={3} md={6} sm={12}>
         <ContentCard $padding="small" $flex={1}>
-          <Col $flex={1} $justify="center" $gap="small">
-            <Row $gap="xsmall" $justify="space-between">
-              <Text.Subtitle>Latest Tx:</Text.Subtitle>
+          <Col $flex={1} $justify="center" $gap="xsmall">
+            <Row $gap="xsmall" $justify="space-between" $alignItems="center">
+              <Title>Latest Tx:</Title>
+
               <ExplorerLink tx={state.bridgeState.latestTx}>
-                <Text.Subtitle $color="inherit">{shortenHex(state.bridgeState.latestTx.hash)}</Text.Subtitle>
+                <Value $color="inherit">{shortenHex(state.bridgeState.latestTx.hash)}</Value>
               </ExplorerLink>
             </Row>
 
-            <Row $gap="xsmall" $justify="space-between">
-              <Text.Subtitle>Batches Root:</Text.Subtitle>
-              <Text.Subtitle $color="textStrong">{shortenHex(state.bridgeState.batchesRoot)}</Text.Subtitle>
+            <Row $gap="xsmall" $justify="space-between" $alignItems="center">
+              <Title>Batches Root:</Title>
+              <Value>{shortenHex(state.bridgeState.batchesRoot)}</Value>
             </Row>
 
-            <Row $gap="xsmall" $justify="space-between">
-              <Text.Subtitle>Deposit SPK:</Text.Subtitle>
-              <Text.Subtitle $color="textStrong">{shortenHex(state.bridgeState.depositAggregatorSPK)}</Text.Subtitle>
+            <Row $gap="xsmall" $justify="space-between" $alignItems="center">
+              <Title>Deposit SPK:</Title>
+              <Value>{shortenHex(state.bridgeState.depositAggregatorSPK)}</Value>
             </Row>
           </Col>
         </ContentCard>
@@ -65,7 +68,7 @@ export const StateHeader: React.FC<{state: OperatorState}> = ({state}) => {
       <GridCol flex lg={6} md={12} sm={12}>
         <Col $gap="small" $flex={1}>
           <ContentCard $padding="small" $flex={1} $gap="xsmall">
-            <Text.Subtitle>Merkle Tree</Text.Subtitle>
+            <Title>Merkle Tree</Title>
 
             <Row $gap="xxsmall" $flex={1} style={{flexWrap: 'wrap'}}>
               {state.bridgeState.merkleTree.map((leaf, index) => {
@@ -73,11 +76,9 @@ export const StateHeader: React.FC<{state: OperatorState}> = ({state}) => {
 
                 return (
                   <Row key={leaf} $alignItems="center" $gap="xsmall" $flex={1}>
-                    <Text.Subtitle $color="textStrong" $fontSize={18}>
-                      {index + 1}:
-                    </Text.Subtitle>
+                    <Value $fontSize={18}>{index + 1}:</Value>
 
-                    <Text.Subtitle $color="textStrong">{shortenHex(leaf, 12)}</Text.Subtitle>
+                    <Value>{shortenHex(leaf, 12)}</Value>
                   </Row>
                 );
               })}

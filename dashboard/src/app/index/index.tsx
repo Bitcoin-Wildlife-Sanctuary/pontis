@@ -48,7 +48,7 @@ export default function Page({initialState}: {initialState: StateWithDate}) {
 
         <HistoryContainer>
           <SectionCard className="deposits">
-            <SectionCardTitle $textAlign="center" $elevated>
+            <SectionCardTitle $textAlign="start" $elevated>
               Deposits
             </SectionCardTitle>
 
@@ -79,7 +79,7 @@ export default function Page({initialState}: {initialState: StateWithDate}) {
           </SectionCard>
 
           <SectionCard className="withdrawals">
-            <SectionCardTitle $textAlign="center" $elevated>
+            <SectionCardTitle $textAlign="start" $elevated>
               Withdrawals
             </SectionCardTitle>
 

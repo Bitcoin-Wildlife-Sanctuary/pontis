@@ -24,6 +24,7 @@ export const darkThemeColors = {
   text: '#DEDEDE',
   textLight: '#A0A0A0',
   textStrong: '#FAFAFA',
+  textHighlight: '#FFFFFF',
 
   link: '#00C3F9',
   linkHover: '#2774D4',
@@ -47,8 +48,9 @@ export const lightThemeColors = {
   elevated: '#ffffff',
 
   text: '#242424',
-  textLight: '#9F9F9F',
+  textLight: '#6C757D',
   textStrong: '#212121',
+  textHighlight: '#212529',
 
   link: '#0098D6',
   linkHover: '#005190',

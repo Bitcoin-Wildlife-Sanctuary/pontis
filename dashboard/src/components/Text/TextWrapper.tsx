@@ -3,7 +3,7 @@
 import type {Globals, Property} from 'csstype';
 import styled from 'styled-components';
 
-import {rem} from '@/utils/units';
+import {px, rem} from '@/utils/units';
 
 import {Theme} from '../../types';
 
@@ -13,6 +13,7 @@ export type TextWrapperProps = {
   $fontWeight?: number;
   $fontSize?: number;
   $lineHeight?: number;
+  $letterSpacing?: number;
   $textAlign?: Property.TextAlign;
 };
 
@@ -22,5 +23,6 @@ export const TextWrapper = styled.span<TextWrapperProps>`
   ${({$fontWeight}) => ($fontWeight ? `font-weight: ${$fontWeight};` : '')}
   ${({$fontSize}) => ($fontSize ? `font-size: ${rem($fontSize)};` : '')}
   ${({$lineHeight}) => ($lineHeight ? `line-height: ${rem($lineHeight)};` : '')}
+  ${({$letterSpacing}) => ($letterSpacing ? `letter-spacing: ${px($letterSpacing)};` : '')}
   ${({$textAlign}) => ($textAlign ? `text-align: ${$textAlign};` : '')}
 `;
