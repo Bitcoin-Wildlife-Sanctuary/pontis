@@ -144,14 +144,14 @@ export type WithdrawalBatch =
   | ({
       status: 'CLOSED';
       hash: string;
-      closeWithdrawalBatchTx: L2Tx;
+      closeWithdrawalBatchTx?: L2Tx;
       createExpanderTx: L1Tx;
       expansionTree: WithdrawalExpansionNode;
     } & WithdrawalBatchCommon)
   | ({
       status: 'BEING_EXPANDED';
       hash: string;
-      closeWithdrawalBatchTx: L2Tx;
+      closeWithdrawalBatchTx?: L2Tx;
       createExpanderTx: L1Tx;
       expansionTree: WithdrawalExpansionNode;
       expansionTxs: L1Tx[][];
@@ -159,7 +159,7 @@ export type WithdrawalBatch =
   | ({
       status: 'EXPANDED';
       hash: string;
-      closeWithdrawalBatchTx: L2Tx;
+      closeWithdrawalBatchTx?: L2Tx;
       createExpanderTx: L1Tx;
       expansionTree: WithdrawalExpansionNode;
       expansionTxs: L1Tx[][];
@@ -178,6 +178,7 @@ export type OperatorState = {
   pendingDeposits: Deposit[];
   depositBatches: DepositBatch[];
   withdrawalBatches: WithdrawalBatch[];
+  recentChanges: OperatorChange[];
 };
 
 export type Deposits = {
@@ -250,11 +251,15 @@ export async function applyChange(
   change: OperatorChange
 ): Promise<OperatorState> {
   let li = i++;
-  console.log('================================');
-  console.log(li, 'change:');
-  console.dir(change, { depth: null });
+  // console.log('================================');
+  // console.log(li, 'change:');
+  // console.dir(change, { depth: null });
+
+  console.log("change:", JSON.stringify(change));
 
   const newState = cloneDeep(state);
+  newState.recentChanges.unshift(change);
+  newState.recentChanges.splice(10);
 
   switch (change.type) {
     case 'deposits': {
@@ -329,8 +334,8 @@ export async function applyChange(
     }
   }
 
-  console.log(li, 'state:');
-  console.dir(newState, { depth: null });
+  // console.log(li, 'state:');
+  // console.dir(newState, { depth: null });
 
   return newState;
 }
@@ -476,7 +481,9 @@ function updateL2TxStatus(state: OperatorState, status: L2TxStatus) {
       wb.status === 'BEING_EXPANDED' ||
       wb.status === 'EXPANDED'
     ) {
-      update(wb.closeWithdrawalBatchTx);
+      if(wb.closeWithdrawalBatchTx) {
+        update(wb.closeWithdrawalBatchTx);
+      }
     }
   }
 
@@ -504,7 +511,9 @@ export function getAllL2Txs(state: OperatorState): Set<L2TxId> {
       wb.status === 'BEING_EXPANDED' ||
       wb.status === 'EXPANDED'
     ) {
-      results.push(wb.closeWithdrawalBatchTx);
+      if(wb.closeWithdrawalBatchTx) {
+        results.push(wb.closeWithdrawalBatchTx);
+      }
     }
   }
 
@@ -738,8 +747,8 @@ async function updateWithdrawalBatch(
     for (let i = 0; i < state.withdrawalBatches.length; i++) {
       const batch = state.withdrawalBatches[i];
       if (batch.id === change.id) {
-        assert(batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED');
-        if (batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED') {
+        assert(batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED' || batch.status === 'PENDING');
+        if (batch.status === 'CLOSE_WITHDRAWAL_BATCH_SUBMITTED' || batch.status === 'PENDING') {
           const expansionTree = getExpansionTree(
             batch.withdrawals.map((w) => ({
               l1Address: w.recipient,
@@ -747,11 +756,7 @@ async function updateWithdrawalBatch(
             }))
           );
 
-          console.dir(expansionTree);
-
           const root = Sha256(change.root.substring(2));
-
-          console.log('root', root);
 
           assert(expansionTree.hash === root);
 
@@ -763,8 +768,6 @@ async function updateWithdrawalBatch(
             root,
             expectedWithdrawalState
           );
-
-          console.log('bridgeState', bridgeState);
 
           state.bridgeState = bridgeState;
 

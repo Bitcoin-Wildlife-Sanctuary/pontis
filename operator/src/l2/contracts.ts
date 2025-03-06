@@ -112,7 +112,7 @@ export async function submitDepositsToL2(
   };
 }
 
-export async function closePendingWithdrawalBatch(
+export async function closeWithdrawalBatch(
   admin: Account,
   bridge: Contract,
   id: bigint
@@ -135,6 +135,17 @@ function receipToStatus(receipt: GetTransactionReceiptResponse) {
       : receipt.isRejected()
         ? 'REJECTED'
         : 'ERROR';
+}
+
+export async function closePendingWithdrawalBatch(
+  admin: Account,
+  bridge: Contract
+): Promise<L2Tx> {
+  bridge.connect(admin);
+
+  const batchId = await bridge.pending_batch_id();
+
+  return await closeWithdrawalBatch(admin, bridge, batchId);
 }
 
 export function l2TxStatus(

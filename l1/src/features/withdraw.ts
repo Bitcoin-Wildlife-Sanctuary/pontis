@@ -217,6 +217,11 @@ function buildExpandWithdrawalTx(
   expandWithdrawalTx.change(changeAddress, feeRate)
 
   const inputCtxs = expandWithdrawalTx.calculateInputCtxs()
+  console.log("tracedWithdrawalExpander.covenant")
+  console.dir( 
+    tracedWithdrawalExpander.covenant
+  );
+
   expandWithdrawalTx.updateCovenantInput(
     0,
     tracedWithdrawalExpander.covenant,

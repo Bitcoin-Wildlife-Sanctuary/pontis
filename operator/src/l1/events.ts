@@ -19,7 +19,6 @@ import {
 import * as l1Api from './api';
 import * as env from './env';
 import { createL1Provider } from './deps/l1Provider';
-import { RpcProvider } from 'starknet';
 
 const POLL_INTERVAL = 5000;
 
@@ -75,6 +74,7 @@ async function depositsInRange(
   blockFrom: number,
   blockTo: number
 ): Promise<Deposit[]> {
+  console.log('looking for deposits:', JSON.stringify({blockFrom, blockTo}));
   const deposits = await l1Api.listDeposits(
     blockFrom,
     blockTo,
@@ -83,7 +83,7 @@ async function depositsInRange(
     createL1Provider(env.useRpc, env.rpcConfig, env.l1Network),
     env.createChainProvider()
   );
-  // console.log('deposits', blockFrom, blockTo, deposits)
+
   return deposits;
 }
 
