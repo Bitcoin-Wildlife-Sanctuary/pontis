@@ -1,8 +1,8 @@
 import {Fragment} from 'react';
 
-import {Col, Divider, ExplorerLink, Row, Table, Text, TreeView} from '@/components';
+import {Col, Divider, ExplorerLink, Row, StatusChip, Table, Text, TreeView} from '@/components';
 import {WithdrawalBatch} from '@/types';
-import {shortenHex, showWithdrawalStatus} from '@/utils/format';
+import {shortenHex} from '@/utils/format';
 
 import {Container, SectionTitle, SectionTitleContainer, TransactionCard} from './styled';
 
@@ -13,11 +13,12 @@ type WithdrawalCardProps = {
 export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
   const hash = 'hash' in withdrawal ? withdrawal.hash : undefined;
   const closeTx = 'closeWithdrawalBatchTx' in withdrawal ? withdrawal.closeWithdrawalBatchTx : undefined;
+  const createExpanderTx = 'createExpanderTx' in withdrawal ? withdrawal.createExpanderTx : undefined;
   const expansionTxs = 'expansionTxs' in withdrawal ? withdrawal.expansionTxs : undefined;
 
   return (
     <Container>
-      <SectionTitleContainer as={Row} $justify="space-between" $gap="none">
+      <SectionTitleContainer as={Row} $justify="space-between" $alignItems="center" $gap="none">
         <Col $gap="xxsmall">
           <Row $gap="xxsmall">
             <SectionTitle>Batch:</SectionTitle>
@@ -32,7 +33,7 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
           )}
         </Col>
 
-        <SectionTitle>{showWithdrawalStatus(withdrawal.status)}</SectionTitle>
+        <StatusChip type="withdrawal" status={withdrawal.status} />
       </SectionTitleContainer>
 
       <Col $padding="small">
@@ -64,13 +65,24 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
       <Col $padding="small" $gap="small">
         <Col $gap="xsmall">
           <Row $gap="xxlarge">
-            {closeTx && <Text.CardTitle>Close Tx:</Text.CardTitle>}
+            <Col $gap="xxsmall" $justify="center">
+              {closeTx && <Text.CardTitle>Close Tx:</Text.CardTitle>}
+              {createExpanderTx && <Text.CardTitle>Create Expander Tx:</Text.CardTitle>}
+            </Col>
 
-            {closeTx && (
-              <ExplorerLink tx={closeTx}>
-                <Text.CardValue $color="inherit">{shortenHex(closeTx.hash)}</Text.CardValue>
-              </ExplorerLink>
-            )}
+            <Col $gap="xxsmall" $justify="center">
+              {closeTx && (
+                <ExplorerLink tx={closeTx}>
+                  <Text.CardValue $color="inherit">{shortenHex(closeTx.hash)}</Text.CardValue>
+                </ExplorerLink>
+              )}
+
+              {createExpanderTx && (
+                <ExplorerLink tx={createExpanderTx}>
+                  <Text.CardValue $color="inherit">{shortenHex(createExpanderTx.hash)}</Text.CardValue>
+                </ExplorerLink>
+              )}
+            </Col>
           </Row>
 
           {expansionTxs && expansionTxs.length > 0 && (

@@ -1,6 +1,6 @@
 {
-  "l1BlockNumber": 457398,
-  "l2BlockNumber": 11,
+  "l1BlockNumber": 462514,
+  "l2BlockNumber": 22,
   "bridgeState": {
     "merkleTree": [
       "0000000000000000000000000000000000000000000000000000000000000000",
@@ -25,8 +25,8 @@
     "latestTx": {
       "type": "l1tx",
       "status": "MINED",
-      "hash": "8549253e0fbccc16c1329ef312d3dd06b26dda1f4cf78e99b67483bf8cc2e939",
-      "blockNumber": 457391
+      "hash": "c37a335e249851db5c7733869619c47c784298bbc3e1c28f13dadd81d12a8392",
+      "blockNumber": 462198
     }
   },
   "depositBatches": [
@@ -34,43 +34,13 @@
       "status": "COMPLETED",
       "deposits": [
         {
-          "amount": "509n",
+          "amount": "1000n",
           "recipient": "0x078662e7352d062084b0010068b99288486c2d8b914f6e2a55ce945f8792c8b1",
           "origin": {
-            "blockNumber": 455308,
+            "blockNumber": 462083,
             "status": "MINED",
             "type": "l1tx",
-            "hash": "605350f2011542376ac64cb75d219cbcfbeca59c95229ee326028a9f3dbaba09"
-          }
-        },
-        {
-          "amount": "509n",
-          "recipient": "0x078662e7352d062084b0010068b99288486c2d8b914f6e2a55ce945f8792c8b1",
-          "origin": {
-            "blockNumber": 455308,
-            "status": "MINED",
-            "type": "l1tx",
-            "hash": "746fb3ff63a8c519f50487f846ab6a5fd2a0cd0005d75c7c23c48c706c9606b4"
-          }
-        },
-        {
-          "amount": "509n",
-          "recipient": "0x078662e7352d062084b0010068b99288486c2d8b914f6e2a55ce945f8792c8b1",
-          "origin": {
-            "blockNumber": 455308,
-            "status": "MINED",
-            "type": "l1tx",
-            "hash": "9d2283ffaece812c74e356cbe8a510354db4f26fc1ade3cc8c5f321476e8be54"
-          }
-        },
-        {
-          "amount": "509n",
-          "recipient": "0x078662e7352d062084b0010068b99288486c2d8b914f6e2a55ce945f8792c8b1",
-          "origin": {
-            "blockNumber": 455308,
-            "status": "MINED",
-            "type": "l1tx",
-            "hash": "10b5f2e92589cb000ef76d8a6fac3fac0cf0eeefbc1ff1f95ffcf44fe808de42"
+            "hash": "594148fe2be98f2fdd848e0eecdc229984e16a96da2c9c3103646d2029d1a60c"
           }
         }
       ],
@@ -80,48 +50,127 @@
             "type": "LEAF",
             "level": "0",
             "tx": {
-              "blockNumber": 455308,
+              "blockNumber": 462083,
               "status": "MINED",
               "type": "l1tx",
-              "hash": "605350f2011542376ac64cb75d219cbcfbeca59c95229ee326028a9f3dbaba09"
+              "hash": "594148fe2be98f2fdd848e0eecdc229984e16a96da2c9c3103646d2029d1a60c"
             },
-            "depositAmt": "509n",
+            "depositAmt": "1000n",
+            "depositAddress": "078662e7352d062084b0010068b99288486c2d8b914f6e2a55ce945f8792c8b1"
+          }
+        ]
+      ],
+      "finalizeBatchTx": {
+        "type": "l1tx",
+        "status": "MINED",
+        "hash": "580df55052d301ceb069028a219bf8cf96704a2292dec6c274e15098ee302f1c",
+        "blockNumber": 462088
+      },
+      "batchId": "8113c6db276fe30fd15f0139d2d2eb69db53843bac0712165f737e6b5904306c",
+      "depositTx": {
+        "type": "l2tx",
+        "hash": "0x382ef2cf0f6759145a88cfa190489e9da41b42d46c5937a6eb6aa870fae70d6",
+        "status": "SUCCEEDED"
+      },
+      "verifyTx": {
+        "type": "l1tx",
+        "status": "MINED",
+        "hash": "0d625063a5263d984a5f772ecf19d2697b903e5baa562cbd2a9aab5268e82b9f",
+        "blockNumber": 462090
+      }
+    },
+    {
+      "status": "COMPLETED",
+      "deposits": [
+        {
+          "amount": "1000n",
+          "recipient": "0x078662e7352d062084b0010068b99288486c2d8b914f6e2a55ce945f8792c8b1",
+          "origin": {
+            "blockNumber": 462069,
+            "status": "MINED",
+            "type": "l1tx",
+            "hash": "7897fd3282037447639f36da0cd72319ff9fd4e041760137633b6f13641962f0"
+          }
+        },
+        {
+          "amount": "1000n",
+          "recipient": "0x078662e7352d062084b0010068b99288486c2d8b914f6e2a55ce945f8792c8b1",
+          "origin": {
+            "blockNumber": 462069,
+            "status": "MINED",
+            "type": "l1tx",
+            "hash": "3f2517a50ccebec0f818ed7151aacb5a74889a0e37fa041358c692cfe07ad144"
+          }
+        },
+        {
+          "amount": "1000n",
+          "recipient": "0x078662e7352d062084b0010068b99288486c2d8b914f6e2a55ce945f8792c8b1",
+          "origin": {
+            "blockNumber": 462069,
+            "status": "MINED",
+            "type": "l1tx",
+            "hash": "2efd3f3e79e2b6eacd9175f2f19ea7bd55fcbcdc548d49d996ea218837a0ea7f"
+          }
+        },
+        {
+          "amount": "1000n",
+          "recipient": "0x078662e7352d062084b0010068b99288486c2d8b914f6e2a55ce945f8792c8b1",
+          "origin": {
+            "blockNumber": 462069,
+            "status": "MINED",
+            "type": "l1tx",
+            "hash": "1e3898afb42d85cff194db4f260476a90f629f0a702293c4b5354ea4b790400b"
+          }
+        }
+      ],
+      "aggregationTxs": [
+        [
+          {
+            "type": "LEAF",
+            "level": "0",
+            "tx": {
+              "blockNumber": 462069,
+              "status": "MINED",
+              "type": "l1tx",
+              "hash": "7897fd3282037447639f36da0cd72319ff9fd4e041760137633b6f13641962f0"
+            },
+            "depositAmt": "1000n",
             "depositAddress": "078662e7352d062084b0010068b99288486c2d8b914f6e2a55ce945f8792c8b1"
           },
           {
             "type": "LEAF",
             "level": "0",
             "tx": {
-              "blockNumber": 455308,
+              "blockNumber": 462069,
               "status": "MINED",
               "type": "l1tx",
-              "hash": "746fb3ff63a8c519f50487f846ab6a5fd2a0cd0005d75c7c23c48c706c9606b4"
+              "hash": "3f2517a50ccebec0f818ed7151aacb5a74889a0e37fa041358c692cfe07ad144"
             },
-            "depositAmt": "509n",
+            "depositAmt": "1000n",
             "depositAddress": "078662e7352d062084b0010068b99288486c2d8b914f6e2a55ce945f8792c8b1"
           },
           {
             "type": "LEAF",
             "level": "0",
             "tx": {
-              "blockNumber": 455308,
+              "blockNumber": 462069,
               "status": "MINED",
               "type": "l1tx",
-              "hash": "9d2283ffaece812c74e356cbe8a510354db4f26fc1ade3cc8c5f321476e8be54"
+              "hash": "2efd3f3e79e2b6eacd9175f2f19ea7bd55fcbcdc548d49d996ea218837a0ea7f"
             },
-            "depositAmt": "509n",
+            "depositAmt": "1000n",
             "depositAddress": "078662e7352d062084b0010068b99288486c2d8b914f6e2a55ce945f8792c8b1"
           },
           {
             "type": "LEAF",
             "level": "0",
             "tx": {
-              "blockNumber": 455308,
+              "blockNumber": 462069,
               "status": "MINED",
               "type": "l1tx",
-              "hash": "10b5f2e92589cb000ef76d8a6fac3fac0cf0eeefbc1ff1f95ffcf44fe808de42"
+              "hash": "1e3898afb42d85cff194db4f260476a90f629f0a702293c4b5354ea4b790400b"
             },
-            "depositAmt": "509n",
+            "depositAmt": "1000n",
             "depositAddress": "078662e7352d062084b0010068b99288486c2d8b914f6e2a55ce945f8792c8b1"
           }
         ],
@@ -129,25 +178,25 @@
           {
             "type": "INTERNAL",
             "level": "1n",
-            "prevHashData0": "078662e7352d062084b0010068b99288486c2d8b914f6e2a55ce945f8792c8b1fd01000000000000",
-            "prevHashData1": "078662e7352d062084b0010068b99288486c2d8b914f6e2a55ce945f8792c8b1fd01000000000000",
+            "prevHashData0": "078662e7352d062084b0010068b99288486c2d8b914f6e2a55ce945f8792c8b1e803000000000000",
+            "prevHashData1": "078662e7352d062084b0010068b99288486c2d8b914f6e2a55ce945f8792c8b1e803000000000000",
             "tx": {
               "type": "l1tx",
               "status": "MINED",
-              "hash": "fb285900b190073c83749dcab451ef3dbead6d2fab00b0a95f07bce261b0c544",
-              "blockNumber": 457368
+              "hash": "1e34c8a47866093a84f5219ca5e87f44cb74eed7dbdf2fd3d1b7888674ef2c1f",
+              "blockNumber": 462096
             }
           },
           {
             "type": "INTERNAL",
             "level": "1n",
-            "prevHashData0": "078662e7352d062084b0010068b99288486c2d8b914f6e2a55ce945f8792c8b1fd01000000000000",
-            "prevHashData1": "078662e7352d062084b0010068b99288486c2d8b914f6e2a55ce945f8792c8b1fd01000000000000",
+            "prevHashData0": "078662e7352d062084b0010068b99288486c2d8b914f6e2a55ce945f8792c8b1e803000000000000",
+            "prevHashData1": "078662e7352d062084b0010068b99288486c2d8b914f6e2a55ce945f8792c8b1e803000000000000",
             "tx": {
               "type": "l1tx",
               "status": "MINED",
-              "hash": "727299aa0c644be1f54f7e7aac3a392c150d8b07294c98b8b1149c9d35d48bf5",
-              "blockNumber": 457368
+              "hash": "e5bfe1295d0caadf807a2f87d45e5312abe0a2b72db7211aa5094e5cd9b336fd",
+              "blockNumber": 462096
             }
           }
         ],
@@ -155,13 +204,13 @@
           {
             "type": "INTERNAL",
             "level": "2n",
-            "prevHashData0": "be39692ecc9c5ac53ec27ef2ea17772c399e3bf1d098189de0dc338218664c29",
-            "prevHashData1": "be39692ecc9c5ac53ec27ef2ea17772c399e3bf1d098189de0dc338218664c29",
+            "prevHashData0": "00db3031b886cb1308fa9fa7836ceed54e33cae9ff4c642a7406d2b0af7f8613",
+            "prevHashData1": "00db3031b886cb1308fa9fa7836ceed54e33cae9ff4c642a7406d2b0af7f8613",
             "tx": {
               "type": "l1tx",
               "status": "MINED",
-              "hash": "e80b7d851a09304dd4ffde964e960acc56e71de724f7c2761058f751c3413ea1",
-              "blockNumber": 457370
+              "hash": "86720de503e48bee3f24c65fab79f5c74044902606a3ef1473bab4630cc014f2",
+              "blockNumber": 462100
             }
           }
         ]
@@ -169,20 +218,20 @@
       "finalizeBatchTx": {
         "type": "l1tx",
         "status": "MINED",
-        "hash": "e80bc8c4b2a556b2571f08c78cf635127c81bd5f5d7d2c5423d363085b4a8539",
-        "blockNumber": 457374
+        "hash": "5b2e331446c7de413cdd5b3803eee5c4002b5bf064a7f73c0cb15ab42f8e27fc",
+        "blockNumber": 462102
       },
-      "batchId": "3688e9572f17e171cfd74358ab22cb8103cebee8c0b58951921ee87857c43a92",
+      "batchId": "4b784cbfdcecd890f7935f918a3dfcb606563f2173613e336386b44185e22899",
       "depositTx": {
         "type": "l2tx",
-        "hash": "0x723b8721d67c12b8a469648ebdd1bfdfe526441337bdeef91c8d39c1463618",
+        "hash": "0x6a807f1949de48dc9c002f57b7b6de1208e20636d87e31339339ea048e7f737",
         "status": "SUCCEEDED"
       },
       "verifyTx": {
         "type": "l1tx",
         "status": "MINED",
-        "hash": "f86f2ae5a8d70c18b2bf0dcbe0251e6c898db5067c44e9c0ca44f8f92e20c17f",
-        "blockNumber": 457378
+        "hash": "39498669ee9fceb7eb2813dc741169533b8fea6cc2afb2ba09f10dac529a15cc",
+        "blockNumber": 462104
       }
     }
   ],
@@ -192,201 +241,304 @@
       "id": "0",
       "withdrawals": [
         {
-          "amount": "501n",
+          "amount": "500n",
           "recipient": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4",
-          "origin": "0x6675cad2dbdd44008ef268fccd7f2820bb6ba48cbc9d4250c85ce2f687c99e9",
+          "origin": "0x7eb64626366658b798aabf0b2a06cfefcd9d38d45485955c8cd070c075a07c4",
           "blockNumber": 8
         },
         {
-          "amount": "501n",
+          "amount": "500n",
           "recipient": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4",
-          "origin": "0x106038667edd1fe1378f6f904d59f4ffd859d570969bc3b276e652d03ee2fb6",
+          "origin": "0x978f393ee436a4d022f660abb42cd7f334da803d1caf5ac87b244a742c9120",
           "blockNumber": 9
-        },
-        {
-          "amount": "501n",
-          "recipient": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4",
-          "origin": "0x49d100b3bce8d5f900c5a15b036f4398e5806e68ab19eaae1fa34035a14988c",
-          "blockNumber": 10
-        },
-        {
-          "amount": "501n",
-          "recipient": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4",
-          "origin": "0x51be3a67d62d0be21fb5c2f9ae8ed0556c1bd29577b31562a3c59e1f6b93bb1",
-          "blockNumber": 11
         }
       ],
       "closeWithdrawalBatchTx": {
         "type": "l2tx",
-        "hash": "0x7598e891f45c19338198e5806f69ce8368f82ea7402ff497168e69905b8229",
+        "hash": "0x2582bde1fad07f0bbb1b64f2c3990775724df3a81f133c3f500477486accb88",
         "status": "SUCCEEDED"
       },
       "createExpanderTx": {
         "type": "l1tx",
         "status": "MINED",
-        "hash": "8549253e0fbccc16c1329ef312d3dd06b26dda1f4cf78e99b67483bf8cc2e939",
-        "blockNumber": 457391
+        "hash": "2f56fdd917fde8d3bd4e72f5b35d49660a51533037789accc767ddf9ca678f6c",
+        "blockNumber": 462130
       },
       "expansionTree": {
-        "root": "58bb11647a93d67e9ee1cef33d05b02fedaaae0d5133566bb81ee9a55a37b172",
-        "levels": [
-          [
-            {
-              "hash": "58bb11647a93d67e9ee1cef33d05b02fedaaae0d5133566bb81ee9a55a37b172",
-              "amt": "2004n",
-              "level": 2,
-              "withdrawals": [
-                {
-                  "l1Address": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4",
-                  "amt": "501n"
-                },
-                {
-                  "l1Address": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4",
-                  "amt": "501n"
-                },
-                {
-                  "l1Address": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4",
-                  "amt": "501n"
-                },
-                {
-                  "l1Address": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4",
-                  "amt": "501n"
-                }
-              ]
-            }
-          ],
-          [
-            {
-              "hash": "e5c5263d63adf182b081f0f9c4abf0728b7d5d16d718aac87da215174f9fa8dd",
-              "amt": "1002n",
-              "level": 1,
-              "withdrawals": [
-                {
-                  "l1Address": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4",
-                  "amt": "501n"
-                },
-                {
-                  "l1Address": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4",
-                  "amt": "501n"
-                }
-              ]
-            },
-            {
-              "hash": "e5c5263d63adf182b081f0f9c4abf0728b7d5d16d718aac87da215174f9fa8dd",
-              "amt": "1002n",
-              "level": 1,
-              "withdrawals": [
-                {
-                  "l1Address": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4",
-                  "amt": "501n"
-                },
-                {
-                  "l1Address": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4",
-                  "amt": "501n"
-                }
-              ]
-            }
-          ],
-          [
-            {
-              "hash": "3b26d44bacb128c90dca7ef2581a8936d9f2703f488e2a9ae2451c08f2faa330",
-              "amt": "501n",
-              "level": 0,
-              "withdrawals": [
-                {
-                  "l1Address": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4",
-                  "amt": "501n"
-                }
-              ]
-            },
-            {
-              "hash": "3b26d44bacb128c90dca7ef2581a8936d9f2703f488e2a9ae2451c08f2faa330",
-              "amt": "501n",
-              "level": 0,
-              "withdrawals": [
-                {
-                  "l1Address": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4",
-                  "amt": "501n"
-                }
-              ]
-            },
-            {
-              "hash": "3b26d44bacb128c90dca7ef2581a8936d9f2703f488e2a9ae2451c08f2faa330",
-              "amt": "501n",
-              "level": 0,
-              "withdrawals": [
-                {
-                  "l1Address": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4",
-                  "amt": "501n"
-                }
-              ]
-            },
-            {
-              "hash": "3b26d44bacb128c90dca7ef2581a8936d9f2703f488e2a9ae2451c08f2faa330",
-              "amt": "501n",
-              "level": 0,
-              "withdrawals": [
-                {
-                  "l1Address": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4",
-                  "amt": "501n"
-                }
-              ]
-            }
-          ]
-        ]
+        "type": "INNER",
+        "hash": "ae8e6ec8788d2b6625b99d6eda0f0c2c7a3cee71f7ce0556dcf5eef67562c981",
+        "total": "1000n",
+        "left": {
+          "type": "LEAF",
+          "hash": "5cd52692ff2c941dd3ab26744cf69770aa20e8b5021748017fd2f5d1bb6a5f77",
+          "total": "500n",
+          "l1Address": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4"
+        },
+        "right": {
+          "type": "LEAF",
+          "hash": "5cd52692ff2c941dd3ab26744cf69770aa20e8b5021748017fd2f5d1bb6a5f77",
+          "total": "500n",
+          "l1Address": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4"
+        }
       },
-      "hash": "0x58bb11647a93d67e9ee1cef33d05b02fedaaae0d5133566bb81ee9a55a37b172",
+      "hash": "0xae8e6ec8788d2b6625b99d6eda0f0c2c7a3cee71f7ce0556dcf5eef67562c981",
       "expansionTxs": [
         [
           {
             "type": "l1tx",
-            "hash": "389de51ce96843e66eeb71b93320abc0a2e02f7e49125d25fffbdfb236df7bfe",
+            "hash": "52c3b40f3a87655a2284dd27717c17e5945c1ff1bbeca0013c6f1c114ab57baa",
             "status": "MINED",
-            "blockNumber": 457392
+            "blockNumber": 462132
           }
         ],
         [
           {
             "type": "l1tx",
-            "hash": "73dc6f1cf430a77b7de21355cdf9c10b95aadad558747682815e9bb68b29cb6d",
+            "hash": "5d3ace2b6ec6e078e4b0c2f1d642c2f4b36dfc37f0b57f5d0d1c41064330b239",
             "status": "MINED",
-            "blockNumber": 457395
+            "blockNumber": 462136
           },
           {
             "type": "l1tx",
-            "hash": "bf9542e950e1ebb2ffdb434bb411404b3a4501be55580b0006fb519723127396",
+            "hash": "1a8ac62f70861b0d7b2e24b1e1b15a3564aacce016b149a63d617266435586c7",
             "status": "MINED",
-            "blockNumber": 457395
-          }
-        ],
-        [
-          {
-            "type": "l1tx",
-            "hash": "a30a128093e231e0fa942fb2988f9e7f82f082ad1e3761d424ed234e7bc66464",
-            "status": "MINED",
-            "blockNumber": 457396
-          },
-          {
-            "type": "l1tx",
-            "hash": "80ebfc85a7e764272ebf31f76cbcf3ef5f2dafceddffa41bf387f6d89997ef8e",
-            "status": "MINED",
-            "blockNumber": 457396
-          },
-          {
-            "type": "l1tx",
-            "hash": "2b7e30cd39a2d8b61b7799352c1c494944ea413086585af70881ed02daa310d2",
-            "status": "MINED",
-            "blockNumber": 457396
-          },
-          {
-            "type": "l1tx",
-            "hash": "4c80c5fdfead384d90df2100d0649fd73dd9524eacafb3d754bd2b200100e663",
-            "status": "MINED",
-            "blockNumber": 457396
+            "blockNumber": 462136
           }
         ]
       ]
+    },
+    {
+      "status": "EXPANDED",
+      "id": "1n",
+      "withdrawals": [
+        {
+          "amount": "500n",
+          "recipient": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4",
+          "origin": "0x3b7f213976cc89fd75d63179c4ed6b3f0e8e166eb38eb96339b236af3739da5",
+          "blockNumber": 12
+        },
+        {
+          "amount": "500n",
+          "recipient": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4",
+          "origin": "0x7bd480120b2c28a1eb426f3a7d1bec2bcc57417971476e728d5448948c2f3e",
+          "blockNumber": 13
+        },
+        {
+          "amount": "500n",
+          "recipient": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4",
+          "origin": "0x5e1e7a92a24430352d075c77e5f268b3573b0a371b1b98634f4f3f92d522d7a",
+          "blockNumber": 14
+        }
+      ],
+      "closeWithdrawalBatchTx": {
+        "type": "l2tx",
+        "hash": "0x52ee219fc3a0e9bcb7b6423937697a8920b6474244c4a28a55005d4754ab426",
+        "status": "SUCCEEDED"
+      },
+      "createExpanderTx": {
+        "type": "l1tx",
+        "status": "MINED",
+        "hash": "0fb19dd595968b6b11ac64764953f8698726f46761c0de7982a7b40d1f9c0f94",
+        "blockNumber": 462143
+      },
+      "expansionTree": {
+        "type": "INNER",
+        "hash": "67ec83ab4dddda48f7e9152c758ae15d35a5115d41041a95157af4aa49b96aec",
+        "total": "1500n",
+        "left": {
+          "type": "INNER",
+          "hash": "ae8e6ec8788d2b6625b99d6eda0f0c2c7a3cee71f7ce0556dcf5eef67562c981",
+          "total": "1000n",
+          "left": {
+            "type": "LEAF",
+            "hash": "5cd52692ff2c941dd3ab26744cf69770aa20e8b5021748017fd2f5d1bb6a5f77",
+            "total": "500n",
+            "l1Address": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4"
+          },
+          "right": {
+            "type": "LEAF",
+            "hash": "5cd52692ff2c941dd3ab26744cf69770aa20e8b5021748017fd2f5d1bb6a5f77",
+            "total": "500n",
+            "l1Address": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4"
+          }
+        },
+        "right": {
+          "type": "INNER",
+          "hash": "919226da477959b21489e6eb9b4dd5d247795eda81aa5c2a3b0213c039036044",
+          "total": "500n",
+          "left": {
+            "type": "LEAF",
+            "hash": "5cd52692ff2c941dd3ab26744cf69770aa20e8b5021748017fd2f5d1bb6a5f77",
+            "total": "500n",
+            "l1Address": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4"
+          },
+          "right": {
+            "type": "EMPTY",
+            "hash": "af5570f5a1810b7af78caf4bc70a660f0df51e42baf91d4de5b2328de0e83dfc",
+            "total": "0"
+          }
+        }
+      },
+      "hash": "0x67ec83ab4dddda48f7e9152c758ae15d35a5115d41041a95157af4aa49b96aec",
+      "expansionTxs": [
+        [
+          {
+            "type": "l1tx",
+            "hash": "2201b4e22342a0908a0ba0ea2eb27e1fd5ffa643e559cd410b588b1d9668c2ab",
+            "status": "MINED",
+            "blockNumber": 462145
+          }
+        ],
+        [
+          {
+            "type": "l1tx",
+            "hash": "27e5b0d44e5e423f20666bbbebca25825b67857e981286bdf61c214ca6414ee0",
+            "status": "MINED",
+            "blockNumber": 462160
+          },
+          {
+            "type": "l1tx",
+            "hash": "244640bd4d205907cf717fbff1e06fdbdd75d1978680d258055f834291273f95",
+            "status": "MINED",
+            "blockNumber": 462160
+          }
+        ],
+        [
+          {
+            "type": "l1tx",
+            "hash": "4fbbe38f85bcb209009bde8c68e4c7ae17003fb6827a1a071c83805cd3f4f23b",
+            "status": "MINED",
+            "blockNumber": 462163
+          },
+          {
+            "type": "l1tx",
+            "hash": "9e1a98496fe16aee551003bfb3a43fe63d32743610879c0a9469beb1b8784a08",
+            "status": "MINED",
+            "blockNumber": 462163
+          },
+          {
+            "type": "l1tx",
+            "hash": "29d5942a17ce9c239236d069dda1dc07b36fe6f15612cbb6066c6373367dce75",
+            "status": "MINED",
+            "blockNumber": 462163
+          }
+        ]
+      ]
+    },
+    {
+      "status": "EXPANDED",
+      "id": "2n",
+      "withdrawals": [
+        {
+          "amount": "830n",
+          "recipient": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4",
+          "origin": "0xc8296b0a4a7710eecbc9f389c873c0b2ebd88abe812e76b73e72c18a372ea",
+          "blockNumber": 16
+        }
+      ],
+      "createExpanderTx": {
+        "type": "l1tx",
+        "status": "MINED",
+        "hash": "c37a335e249851db5c7733869619c47c784298bbc3e1c28f13dadd81d12a8392",
+        "blockNumber": 462198
+      },
+      "expansionTree": {
+        "type": "LEAF",
+        "hash": "c88649b8bcd9d689e3c37adffc5f238c119d6a7d2b23869e2c95b51cc8a006c7",
+        "total": "830n",
+        "l1Address": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4"
+      },
+      "hash": "0x5cd52692ff2c941dd3ab26744cf69770aa20e8b5021748017fd2f5d1bb6a5f77",
+      "expansionTxs": [
+        [
+          {
+            "type": "l1tx",
+            "hash": "a8e9d1b836abbde54dba41e0c236c5be040c301d9e871fe935915488dee3b6f8",
+            "status": "MINED",
+            "blockNumber": 462201
+          }
+        ]
+      ]
+    },
+    {
+      "status": "CLOSE_WITHDRAWAL_BATCH_SUBMITTED",
+      "id": "3n",
+      "withdrawals": [
+        {
+          "amount": "500n",
+          "recipient": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4",
+          "origin": "0x4932021c7a56929b7798f7c39d9b6c68aa437213cc169786693823fa5cdf209",
+          "blockNumber": 18
+        },
+        {
+          "amount": "500n",
+          "recipient": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4",
+          "origin": "0x6aa05c99508a1fb592fc01702a19b2da67b7b814eb8dc5e656871979b3811b4",
+          "blockNumber": 19
+        },
+        {
+          "amount": "500n",
+          "recipient": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4",
+          "origin": "0x66ec5635a0c9cfac968d8c720051edcccd73ed88ab5b1eb7636c5a85dcedf60",
+          "blockNumber": 20
+        },
+        {
+          "amount": "500n",
+          "recipient": "5120e157c92fbb3072bb22122656ec90f98206a24691f57a8af4a626a51b39c4aec4",
+          "origin": "0x3060b10a898be3d1006401214cabedb89da2e63e78a8eb3ed2cd924d689e7c0",
+          "blockNumber": 21
+        }
+      ],
+      "closeWithdrawalBatchTx": {
+        "type": "l2tx",
+        "hash": "0x7265a61c6d0b776e04b2a52e8c4893f4e2e193acde5651e9ee777476befc5d1",
+        "status": "SUCCEEDED"
+      }
     }
   ],
-  "pendingDeposits": []
+  "pendingDeposits": [],
+  "l1BridgeBalance": "2000n",
+  "l2TotalSupply": "0",
+  "recentChanges": [
+    {
+      "type": "l1BlockNumber",
+      "blockNumber": 462514
+    },
+    {
+      "type": "l1BlockNumber",
+      "blockNumber": 462513
+    },
+    {
+      "type": "l1BlockNumber",
+      "blockNumber": 462512
+    },
+    {
+      "type": "l1BlockNumber",
+      "blockNumber": 462510
+    },
+    {
+      "type": "l1BlockNumber",
+      "blockNumber": 462509
+    },
+    {
+      "type": "l1BlockNumber",
+      "blockNumber": 462508
+    },
+    {
+      "type": "l1BlockNumber",
+      "blockNumber": 462507
+    },
+    {
+      "type": "l1BlockNumber",
+      "blockNumber": 462506
+    },
+    {
+      "type": "l1BlockNumber",
+      "blockNumber": 462505
+    },
+    {
+      "type": "l1BlockNumber",
+      "blockNumber": 462504
+    }
+  ]
 }

@@ -7,11 +7,11 @@ import {parseOperatorState} from '@/utils/json';
 
 import {usePageVisibility} from './usePageVisibility';
 
-export const useAutoUpdateState = (initialState: StateWithDate) => {
+export const useAutoUpdateState = (initialState: StateWithDate, parse = true) => {
   const [state, setState] = useState<StateWithDate>(() => {
     return {
       lastUpdate: initialState.lastUpdate,
-      state: parseOperatorState(JSON.stringify(initialState.state)),
+      state: parse ? parseOperatorState(JSON.stringify(initialState.state)) : initialState.state,
     };
   });
 
@@ -40,7 +40,7 @@ export const useAutoUpdateState = (initialState: StateWithDate) => {
           }
 
           setState({
-            state: parseOperatorState(JSON.stringify(data.state)),
+            state: parse ? parseOperatorState(JSON.stringify(data.state)) : data.state,
             lastUpdate: new Date(data.timestamp) || new Date(),
           });
 
@@ -55,7 +55,7 @@ export const useAutoUpdateState = (initialState: StateWithDate) => {
     return () => {
       event.close();
     };
-  }, [visible]);
+  }, [visible, parse]);
 
   return state;
 };

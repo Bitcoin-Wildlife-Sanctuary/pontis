@@ -1,8 +1,8 @@
 import {Fragment} from 'react';
 
-import {Col, Divider, ExplorerLink, Row, Table, Text, TreeView} from '@/components';
+import {Col, Divider, ExplorerLink, Row, StatusChip, Table, Text, TreeView} from '@/components';
 import {DepositBatch} from '@/types';
-import {shortenHex, showDepositStatus} from '@/utils/format';
+import {shortenHex} from '@/utils/format';
 
 import {Container, SectionTitle, SectionTitleContainer, TransactionCard} from './styled';
 
@@ -18,15 +18,13 @@ export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
 
   return (
     <Container>
-      <SectionTitleContainer as={Row} $justify="space-between">
+      <SectionTitleContainer as={Row} $justify="space-between" $alignItems="center">
         <Row $gap="xxsmall">
           <SectionTitle>Batch:</SectionTitle>
           <SectionTitle>{batchId && shortenHex(batchId, 8)}</SectionTitle>
         </Row>
 
-        <Col>
-          <SectionTitle>{showDepositStatus(deposit.status)}</SectionTitle>
-        </Col>
+        <StatusChip type="deposit" status={deposit.status} />
       </SectionTitleContainer>
 
       <Col $padding="small">
