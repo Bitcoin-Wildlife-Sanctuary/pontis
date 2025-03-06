@@ -61,7 +61,7 @@ export type Deposit = {
 };
 
 type DepositBatchCommon = {
-  id: bigint
+  id: bigint;
   deposits: Deposit[];
 };
 
@@ -258,7 +258,7 @@ export async function applyChange(
 ): Promise<OperatorState> {
   let li = i++;
 
-  if(change.type === 'deposits' || change.type === 'withdrawal') {
+  if (change.type === 'deposits' || change.type === 'withdrawal') {
     logger.info(change, 'change');
   } else {
     logger.debug(change, 'change');
@@ -569,7 +569,7 @@ async function initiateAggregation(
           level0[0]
         );
         state.bridgeState = bridgeState;
-        
+
         state.depositBatches.push({
           id,
           status: 'AGGREGATED',
@@ -635,7 +635,10 @@ async function manageAggregation(env: BridgeEnvironment, state: OperatorState) {
             };
           }
         } else {
-          logger.info({ id: batch.id, level: batch.aggregationTxs.length }, 'continuing aggregation');
+          logger.info(
+            { id: batch.id, level: batch.aggregationTxs.length },
+            'continuing aggregation'
+          );
           const newAggregationLevel = await env.aggregateDeposits(
             batch.aggregationTxs.at(-1)!
           );
@@ -778,10 +781,7 @@ async function closeWithdrawalBatch(state: OperatorState, change: L2Event) {
   }
 }
 
-async function initiateExpansion(
-  env: BridgeEnvironment,
-  state: OperatorState
-) {
+async function initiateExpansion(env: BridgeEnvironment, state: OperatorState) {
   if (state.bridgeState.latestTx.status !== 'MINED') {
     return;
   }
@@ -844,11 +844,11 @@ async function distributeOrExpand(
   expansionTxsLevel: L1Tx[]
 ): Promise<L1Tx[]> {
   if (expansionLevel.every((n) => n.type !== 'INNER')) {
-    logger.info({ id, level}, "distributing");
+    logger.info({ id, level }, 'distributing');
     return await env.distributeWithdrawals(expansionLevel, expansionTxsLevel);
   } else {
     assert(expansionLevel.every((n) => n.type === 'INNER'));
-    logger.info({ id, level}, "expanding");
+    logger.info({ id, level }, 'expanding');
     return await env.expandWithdrawals(expansionLevel, expansionTxsLevel);
   }
 }
