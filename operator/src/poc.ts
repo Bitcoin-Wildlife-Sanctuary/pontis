@@ -1,7 +1,7 @@
 import { Account, RpcProvider } from 'starknet';
 import { importAddressesIntoNode } from './l1/prepare';
 import {
-  closePendingWithdrawalBatch,
+  closeWithdrawalBatch,
   contractFromAddress,
   submitDepositsToL2,
 } from './l2/contracts';
@@ -60,6 +60,8 @@ async function initialState(
       pendingDeposits: [],
       l1BridgeBalance: 0n,
       l2TotalSupply: 0n,
+      recentChanges: [],
+      lastDepositBatchId: 0n,
     };
   }
 }
@@ -80,7 +82,7 @@ async function pocOperator() {
   const btcAddress =
     '0x3bf13a2032fa2fe8652266e93fd5acf213d6ddd05509b185ee4edf0c4000d5d';
   const bridgeAddress =
-    '0x57b0b6ff4e5426725c049502bcf6362a09e6f7cca031494f39d6c569940dd43';
+    '0x20e5866c53e02141b1fd22d1e02ebaf520fddfa16321a39d7f1545dd59497ae';
 
   const bridge = await contractFromAddress(provider, bridgeAddress);
   const btc = await contractFromAddress(provider, btcAddress);
@@ -91,13 +93,13 @@ async function pocOperator() {
   const env: BridgeEnvironment = {
     DEPOSIT_BATCH_SIZE: 4,
     MAX_DEPOSIT_BLOCK_AGE: 2,
-    MAX_WITHDRAWAL_BLOCK_AGE: 2,
+    MAX_WITHDRAWAL_BLOCK_AGE: 4,
     MAX_WITHDRAWAL_BATCH_SIZE: 4,
     submitDepositsToL2: (hash: L1TxHash, deposits: Deposit[]) => {
       return submitDepositsToL2(admin, bridge, BigInt('0x' + hash), deposits);
     },
     closePendingWithdrawalBatch: (id: bigint) =>
-      closePendingWithdrawalBatch(admin, bridge, id),
+      closeWithdrawalBatch(admin, bridge, id),
     aggregateDeposits,
     finalizeDepositBatch,
     verifyDepositBatch,

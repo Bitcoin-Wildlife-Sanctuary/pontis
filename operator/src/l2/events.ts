@@ -18,6 +18,7 @@ import {
   L2TxHash,
 } from '../state';
 import { fromDigest, getTotalSupply, wordSpanToHex } from './contracts';
+import logger from '../logger';
 
 const POLL_INTERVAL = 5000;
 const CHUNK_SIZE = 10;
@@ -85,7 +86,7 @@ function contractEventsInRange(
   from: number,
   to: number
 ) {
-  console.log('contractEventsInRange', contractAddress, from, to);
+  logger.debug({ contractAddress, from, to }, 'looking for L2 events');
   return new Observable<L2Event>((subscriber) => {
     async function getEvents() {
       const parseEvents = await eventParser(provider, contractAddress);
