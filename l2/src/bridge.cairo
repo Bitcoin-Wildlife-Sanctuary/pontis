@@ -15,7 +15,7 @@ pub trait IBridge<TContractState> {
     fn deposit(ref self: TContractState, txid: Digest, deposits: Span<Deposit>);
     fn withdraw(ref self: TContractState, recipient: L1Address, amount: u32);
     fn close_withdrawal_batch(ref self: TContractState, id: u128);
-    fn current_withdrawal_batch_id(self: @TContractState) -> u128;
+    fn pending_batch_id(self: @TContractState) -> u128;
 }
 
 #[starknet::contract]
@@ -153,7 +153,7 @@ pub mod Bridge {
             self.close_batch_internal(id);
         }
 
-        fn current_withdrawal_batch_id(self: @ContractState) -> u128 {
+        fn pending_batch_id(self: @ContractState) -> u128 {
             self.batch.id.read()
         }
     }
