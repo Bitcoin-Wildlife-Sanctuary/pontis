@@ -1,84 +1,80 @@
 import { btcRpc, BridgeState } from 'l1';
-import * as env from './env';
 import { getFileOffChainDataProvider } from './deps/offchainDataProvider';
 import { createL1Provider } from './deps/l1Provider';
 import { getContractAddresses } from './utils/contractUtil';
 import * as api from './api';
 import { BridgeCovenantState } from '../state';
 import { loadContractArtifacts } from './utils/contractUtil';
+import logger from '../logger';
+import { Config } from '../config';
 
-export async function importAddressesIntoNode() {
+export async function importAddressesIntoNode(config: Config) {
   const addresses = await getContractAddresses(
-    env.operatorSigner,
-    env.l1Network
+    config.l1.operatorSigner,
+    config.l1.network
   );
 
-  console.log('l1 addresses:');
-  console.log('bridgeAddr', addresses.bridge);
-  console.log('depositAggregatorAddr', addresses.depositAggregator);
-  console.log('withdrawExpanderAddr', addresses.withdrawExpander);
-  console.log('operatorAddr', addresses.operator);
-  console.log('operatorPublicKey', await env.operatorSigner.getPublicKey());
+  logger.info(addresses, 'l1 addresses:');
 
-  if (!env.useRpc) {
+  if (!config.l1.useRpc) {
     return;
   }
 
-  console.log('importing addresses into node', addresses.bridge);
   await btcRpc.rpc_importaddress(
-    env.rpcConfig.host,
-    env.rpcConfig.user,
-    env.rpcConfig.password,
-    env.rpcConfig.wallet,
+    config.l1.rpcConfig.host!,
+    config.l1.rpcConfig.user!,
+    config.l1.rpcConfig.password!,
+    config.l1.rpcConfig.wallet!,
     addresses.bridge
   );
 
-  console.log('importing addresses into node', addresses.depositAggregator);
   await btcRpc.rpc_importaddress(
-    env.rpcConfig.host,
-    env.rpcConfig.user,
-    env.rpcConfig.password,
-    env.rpcConfig.wallet,
+    config.l1.rpcConfig.host!,
+    config.l1.rpcConfig.user!,
+    config.l1.rpcConfig.password!,
+    config.l1.rpcConfig.wallet!,
     addresses.depositAggregator
   );
 
-  console.log('importing addresses into node', addresses.withdrawExpander);
   await btcRpc.rpc_importaddress(
-    env.rpcConfig.host,
-    env.rpcConfig.user,
-    env.rpcConfig.password,
-    env.rpcConfig.wallet,
+    config.l1.rpcConfig.host!,
+    config.l1.rpcConfig.user!,
+    config.l1.rpcConfig.password!,
+    config.l1.rpcConfig.wallet!,
     addresses.withdrawExpander
   );
 
-  console.log('importing addresses into node', addresses.operator);
   await btcRpc.rpc_importaddress(
-    env.rpcConfig.host,
-    env.rpcConfig.user,
-    env.rpcConfig.password,
-    env.rpcConfig.wallet,
+    config.l1.rpcConfig.host!,
+    config.l1.rpcConfig.user!,
+    config.l1.rpcConfig.password!,
+    config.l1.rpcConfig.wallet!,
     addresses.operator
   );
 }
 
-export async function prepareL1(): Promise<BridgeCovenantState> {
+export async function prepareL1(config: Config): Promise<BridgeCovenantState> {
   // 1. load l1 contract artifacts
   loadContractArtifacts();
 
   // 2. add contract spks and operator signer to node if using rpc providers
-  await importAddressesIntoNode();
+  await importAddressesIntoNode(config);
 
   const offchainDataProvider = getFileOffChainDataProvider();
 
   // 4. create bridge contract instance if not exists
   await api.createBridgeContractIfNotExists(
-    env.operatorSigner,
-    env.l1Network,
-    env.createUtxoProvider(),
-    env.createChainProvider(),
+    config.l1.operatorSigner,
+    config.l1.network,
+    config.l1.createUtxoProvider(),
+    config.l1.createChainProvider(),
     offchainDataProvider,
-    createL1Provider(env.useRpc, env.rpcConfig, env.l1Network),
-    env.l1FeeRate
+    createL1Provider(
+      config.l1.useRpc,
+      config.l1.rpcConfig as any,
+      config.l1.network
+    ),
+    config.l1.feeRate
   );
 
   const latestBridgeTxid = await offchainDataProvider.getLatestBridgeTxid();

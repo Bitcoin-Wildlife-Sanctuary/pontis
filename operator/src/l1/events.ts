@@ -8,30 +8,37 @@ import {
   timer,
   filter,
   retry,
+  distinctUntilKeyChanged,
+  takeWhile,
 } from 'rxjs';
 import {
   BlockNumberEvent,
   BridgeEvent,
   Deposit,
   Deposits,
+  L1TxId,
+  L1TxStatus,
   OperatorState,
 } from '../state';
 import * as l1Api from './api';
-import * as env from './env';
-import { createL1Provider } from './deps/l1Provider';
+import { createL1Provider, L1Provider } from './deps/l1Provider';
 import logger from '../logger';
+import { Config } from '../config';
+import { getL1TransactionStatus } from './api';
 
 const POLL_INTERVAL = 5000;
 
-export function l1BlockNumber(): Observable<BlockNumberEvent> {
-  return currentBlock().pipe(
+export function l1BlockNumber(
+  provider: L1Provider
+): Observable<BlockNumberEvent> {
+  return currentBlock(provider).pipe(
     map((blockNumber) => ({ type: 'l1BlockNumber', blockNumber }))
   );
 }
 
-function currentBlock(): Observable<number> {
+function currentBlock(provider: L1Provider): Observable<number> {
   return timer(0, POLL_INTERVAL).pipe(
-    switchMap(() => from(getCurrentL1BlockNumber())),
+    switchMap(() => from(l1Api.getL1CurrentBlockNumber(provider))),
     retry({
       delay: (error, retryCount) => {
         console.warn(
@@ -45,9 +52,10 @@ function currentBlock(): Observable<number> {
 }
 
 export function currentBlockRange(
+  provider: L1Provider,
   initialBlockNumber: number
 ): Observable<[number, number]> {
-  return currentBlock().pipe(
+  return currentBlock(provider).pipe(
     scan(
       ([_, previous], current) => [previous + 1, current],
       [0, initialBlockNumber]
@@ -55,23 +63,24 @@ export function currentBlockRange(
   );
 }
 
-export function deposits(initialBlockNumber: number): Observable<Deposits> {
-  return currentBlockRange(initialBlockNumber).pipe(
+export function deposits(
+  config: Config,
+  initialBlockNumber: number
+): Observable<Deposits> {
+  return currentBlockRange(
+    config.l1.createL1Provider(),
+    initialBlockNumber
+  ).pipe(
     switchMap(([previous, current]) =>
-      from(depositsInRange(previous, current))
+      from(depositsInRange(config, previous, current))
     ),
     filter((deposits) => deposits.length > 0),
     map((deposits) => ({ type: 'deposits', deposits }))
   );
 }
 
-async function getCurrentL1BlockNumber(): Promise<number> {
-  return l1Api.getL1CurrentBlockNumber(
-    createL1Provider(env.useRpc, env.rpcConfig, env.l1Network)
-  );
-}
-
 async function depositsInRange(
+  config: Config,
   blockFrom: number,
   blockTo: number
 ): Promise<Deposit[]> {
@@ -79,16 +88,17 @@ async function depositsInRange(
   const deposits = await l1Api.listDeposits(
     blockFrom,
     blockTo,
-    env.operatorSigner,
-    env.l1Network,
-    createL1Provider(env.useRpc, env.rpcConfig, env.l1Network),
-    env.createChainProvider()
+    config.l1.operatorSigner,
+    config.l1.network,
+    config.l1.createL1Provider(),
+    config.l1.createChainProvider()
   );
 
   return deposits;
 }
 
 export function l1BridgeBalance(
+  config: Config,
   state: Observable<OperatorState>
 ): Observable<BridgeEvent> {
   return state.pipe(
@@ -97,12 +107,23 @@ export function l1BridgeBalance(
     distinctUntilChanged(),
     switchMap((txId) =>
       l1Api.getBridgeBalance(
-        env.operatorSigner,
+        config.l1.operatorSigner,
         txId,
-        env.createUtxoProvider(),
-        env.l1Network
+        config.l1.createUtxoProvider(),
+        config.l1.network
       )
     ),
     map((balance) => ({ type: 'l1BridgeBalance', balance }))
+  );
+}
+
+export function l1TransactionStatus(
+  l1Provider: L1Provider,
+  tx: L1TxId
+): Observable<L1TxStatus> {
+  return timer(0, 5000).pipe(
+    switchMap(() => from(getL1TransactionStatus(l1Provider, tx.hash))),
+    distinctUntilKeyChanged('status'),
+    takeWhile((tx) => tx.status !== 'MINED', true)
   );
 }
