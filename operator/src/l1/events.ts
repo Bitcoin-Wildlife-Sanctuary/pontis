@@ -8,18 +8,23 @@ import {
   timer,
   filter,
   retry,
+  distinctUntilKeyChanged,
+  takeWhile,
 } from 'rxjs';
 import {
   BlockNumberEvent,
   BridgeEvent,
   Deposit,
   Deposits,
+  L1TxId,
+  L1TxStatus,
   OperatorState,
 } from '../state';
 import * as l1Api from './api';
 import { createL1Provider, L1Provider } from './deps/l1Provider';
 import logger from '../logger';
 import { Config } from '../config';
+import { getL1TransactionStatus } from './api';
 
 const POLL_INTERVAL = 5000;
 
@@ -109,5 +114,16 @@ export function l1BridgeBalance(
       )
     ),
     map((balance) => ({ type: 'l1BridgeBalance', balance }))
+  );
+}
+
+export function l1TransactionStatus(
+  l1Provider: L1Provider,
+  tx: L1TxId
+): Observable<L1TxStatus> {
+  return timer(0, 5000).pipe(
+    switchMap(() => from(getL1TransactionStatus(l1Provider, tx.hash))),
+    distinctUntilKeyChanged('status'),
+    takeWhile((tx) => tx.status !== 'MINED', true)
   );
 }

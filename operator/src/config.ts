@@ -18,7 +18,9 @@ import { Account, RpcProvider } from 'starknet';
 import assert from 'assert';
 import { createL1Provider } from './l1/deps/l1Provider';
 
-dotenv.config({ path: path.join(__dirname, '../../.env') });
+dotenv.config({ path: path.join(__dirname, '../.env') });
+
+console.log(path.join(__dirname, '../.env'));
 
 const ECPair = ECPairFactory(ecc);
 bitcoinjs.initEccLib(ecc);
@@ -63,14 +65,23 @@ function createChainProvider(
   return new MempoolChainProvider(l1Network);
 }
 
+function getInt(property: string): number {
+  
+  const v = process.env[property];
+  assert(v, `${property} is not set`);
+
+  const r = parseInt(v);
+  if (isNaN(r)) {
+    throw new Error(`${property} ${v} is not a number`);
+  }
+
+  return r;
+}
+
 export async function getConfig() {
-  assert(process.env.L1_FEE_RATE, 'L1_FEE_RATE is not set');
-  const l1FeeRate = +process.env.L1_FEE_RATE as number;
+  const l1FeeRate = getInt('L1_FEE_RATE');
   if (l1FeeRate <= 0) {
     throw new Error(`L1_FEE_RATE ${l1FeeRate} is not positive`);
-  }
-  if (isNaN(l1FeeRate)) {
-    throw new Error(`L1_FEE_RATE ${l1FeeRate} is not a number`);
   }
 
   assert(process.env.L1_NETWORK, 'L1_NETWORK is not set');
@@ -127,8 +138,8 @@ export async function getConfig() {
   );
   const mockUserSigner = operatorSigner;
 
-  assert(process.env.L2_RPC_PROVIDER, 'L2_RPC_PROVIDER is not set');
-  const provider = new RpcProvider({ nodeUrl: process.env.L2_RPC_PROVIDER! });
+  assert(process.env.L2_NODE_URL, 'L2_NODE_URL is not set');
+  const provider = new RpcProvider({ nodeUrl: process.env.L2_NODE_URL! });
 
   assert(process.env.L2_BRIDGE_ADDRESS, 'L2_BRIDGE_ADDRESS is not set');
   const bridge = await contractFromAddress(
@@ -166,23 +177,10 @@ export async function getConfig() {
   assert(process.env.STATE_PATH, 'STATE_PATH is not set');
   const STATE_PATH = process.env.STATE_PATH!;
 
-  assert(process.env.DEPOSIT_BATCH_SIZE, 'DEPOSIT_BATCH_SIZE is not set');
-  const DEPOSIT_BATCH_SIZE = +process.env.DEPOSIT_BATCH_SIZE!;
-
-  assert(process.env.MAX_DEPOSIT_BLOCK_AGE, 'MAX_DEPOSIT_BLOCK_AGE is not set');
-  const MAX_DEPOSIT_BLOCK_AGE = +process.env.MAX_DEPOSIT_BLOCK_AGE!;
-
-  assert(
-    process.env.MAX_WITHDRAWAL_BLOCK_AGE,
-    'MAX_WITHDRAWAL_BLOCK_AGE is not set'
-  );
-  const MAX_WITHDRAWAL_BLOCK_AGE = +process.env.MAX_WITHDRAWAL_BLOCK_AGE!;
-
-  assert(
-    process.env.MAX_WITHDRAWAL_BATCH_SIZE,
-    'MAX_WITHDRAWAL_BATCH_SIZE is not set'
-  );
-  const MAX_WITHDRAWAL_BATCH_SIZE = +process.env.MAX_WITHDRAWAL_BATCH_SIZE!;
+  const DEPOSIT_BATCH_SIZE = getInt('DEPOSIT_BATCH_SIZE');
+  const MAX_DEPOSIT_BLOCK_AGE = getInt('MAX_DEPOSIT_BLOCK_AGE');
+  const MAX_WITHDRAWAL_BLOCK_AGE = getInt('MAX_WITHDRAWAL_BLOCK_AGE');
+  const MAX_WITHDRAWAL_BATCH_SIZE = getInt('MAX_WITHDRAWAL_BATCH_SIZE')!;
 
   return {
     STATE_PATH,
@@ -218,6 +216,22 @@ export async function getConfig() {
       bob,
     },
   };
+}
+
+export function getAdmin() {
+  assert(process.env.L2_NODE_URL, 'L2_NODE_URL is not set');
+  const provider = new RpcProvider({ nodeUrl: process.env.L2_NODE_URL! });
+
+  assert(process.env.L2_ADMIN_ADDRESS, 'L2_ADMIN_ADDRESS is not set');
+  assert(process.env.L2_ADMIN_PRIVATE_KEY, 'L2_ADMIN_PRIVATE_KEY is not set');
+  
+  const admin = new Account(
+    provider,
+    process.env.L2_ADMIN_ADDRESS!,
+    process.env.L2_ADMIN_PRIVATE_KEY!
+  );
+
+  return admin;
 }
 
 export type Config = Awaited<ReturnType<typeof getConfig>>;

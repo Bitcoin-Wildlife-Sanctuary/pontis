@@ -3,9 +3,10 @@ import assert from 'assert';
 import { loadContractArtifacts, WithdrawalExpander } from 'l1';
 import { PubKey } from 'scrypt-ts';
 import { createDeposit } from './l1/api';
-import { Config, getConfig } from './config';
+import { Config, getAdmin, getConfig } from './config';
 import { addressToScript } from './l1/utils/contractUtil';
 import { L2Address } from './state';
+import { Account } from 'starknet';
 
 async function withdrawFromAlice(config: Config) {
   /// convert the btc address to the withdrawal expander address
@@ -20,7 +21,7 @@ async function withdrawFromAlice(config: Config) {
     config.l2.bridge,
     config.l2.alice,
     recipient,
-    2000n
+    550n
   );
 
   console.log(withdrawal);
@@ -60,8 +61,8 @@ function printHash() {
   console.log('node hash:', node);
 }
 
-async function deploy(config: Config) {
-  const { btc, bridge } = await init(config.l2.admin);
+async function deploy(admin: Account) {
+  const { btc, bridge } = await init(admin);
   console.log(`deployed:\nbtc: ${btc.address}\nbridge: ${bridge.address} `);
 }
 
@@ -72,17 +73,18 @@ async function commands() {
 
   const command = args[0];
 
-  const config = await getConfig();
-
   if (command === 'withdraw') {
+    const config = await getConfig();
     await withdrawFromAlice(config);
   } else if (command === 'hash') {
     printHash();
   } else if (command === 'deposit') {
-    await deposit(config).catch(console.error);
+    const config = await getConfig();
+    await deposit(config);
   } else if (command === 'deploy') {
-    await deploy(config).catch(console.error);
+    await deploy(getAdmin());
   } else if (command === 'closeBatch') {
+    const config = await getConfig();
     await closeBatch(config);
   } else {
     throw new Error('wrong command!');
