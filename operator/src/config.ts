@@ -66,7 +66,6 @@ function createChainProvider(
 }
 
 function getInt(property: string): number {
-  
   const v = process.env[property];
   assert(v, `${property} is not set`);
 
@@ -224,7 +223,7 @@ export function getAdmin() {
 
   assert(process.env.L2_ADMIN_ADDRESS, 'L2_ADMIN_ADDRESS is not set');
   assert(process.env.L2_ADMIN_PRIVATE_KEY, 'L2_ADMIN_PRIVATE_KEY is not set');
-  
+
   const admin = new Account(
     provider,
     process.env.L2_ADMIN_ADDRESS!,

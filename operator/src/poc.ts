@@ -3,7 +3,12 @@ import { importAddressesIntoNode } from './l1/prepare';
 import { closeWithdrawalBatch, submitDepositsToL2 } from './l2/contracts';
 import { applyChange, BridgeEnvironment, OperatorState } from './state';
 import { setupOperator } from './operator';
-import { deposits, l1BlockNumber, l1BridgeBalance, l1TransactionStatus } from './l1/events';
+import {
+  deposits,
+  l1BlockNumber,
+  l1BridgeBalance,
+  l1TransactionStatus,
+} from './l1/events';
 import { existsSync } from 'fs';
 import { l2TransactionStatus } from './l2/transactions';
 import { l2BlockNumber, l2Events, totalSupply } from './l2/events';
@@ -138,7 +143,8 @@ async function pocOperator() {
       ),
   };
 
-  const l1TxStatus = tx => l1TransactionStatus(config.l1.createL1Provider(), tx);
+  const l1TxStatus = (tx) =>
+    l1TransactionStatus(config.l1.createL1Provider(), tx);
 
   const operator = setupOperator(
     startState,
