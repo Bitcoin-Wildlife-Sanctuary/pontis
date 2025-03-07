@@ -1,14 +1,13 @@
 name: Dashboard
 
-# todo restore changes
-on: push
-  # workflow_dispatch:
-  # push:
-  #   paths: [dashboard/**]
-  #   branches:
-  #     - main
-  # pull_request:
-  #   paths: [dashboard/**]
+on:
+  workflow_dispatch:
+  push:
+    paths: [dashboard/**]
+    branches:
+      - main
+  pull_request:
+    paths: [dashboard/**]
 permissions: read-all
 
 jobs:
@@ -29,22 +28,14 @@ jobs:
         run: yarn workspace l1 run build
       - name: Build operator
         run: yarn workspace operator run build
-
       - name: Format Check
-        run: yarn format:check
-        working-directory: dashboard
-
+        run: yarn workspace dashboard format:check
       - name: Type Checking
-        run: yarn ts:check
-        working-directory: dashboard
-
+        run: yarn workspace dashboard ts:check
       - name: Lint
-        run: yarn lint
-        working-directory: dashboard
-
+        run: yarn workspace dashboard lint
       - name: Build the project
-        run: yarn build
-        working-directory: dashboard
+        run: yarn workspace dashboard build
         env:
           OPERATOR_STATE_PATH: ./public/state.json
           NEXT_PUBLIC_L1_EXPLORER_LINK: https://mempool-testnet.fractalbitcoin.io

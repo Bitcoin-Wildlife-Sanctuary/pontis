@@ -14,7 +14,7 @@
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "yarn workspace l1 run build && yarn workspace operator run build && yarn workspace dashboard run build",
+    "build": "yarn workspace l1 run build && yarn workspace operator run build",
     "postinstall": "./node_modules/.bin/patch-package --patch-dir=./l1/patches --use-yarn"
   },
   "keywords": [],
