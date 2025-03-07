@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import {Fragment} from 'react';
 import {useTheme} from 'styled-components';
 
@@ -38,9 +39,15 @@ export default function Page({initialState}: {initialState: StateWithDate}) {
               <Text.BodyStrong>{lastUpdate.toLocaleString()}</Text.BodyStrong>
             </Row>
 
-            <ThemeButton onClick={toggleTheme}>
-              <Icon name={theme.dark ? 'Sun' : 'Moon'} color="primary" size={24} />
-            </ThemeButton>
+            <Row $gap="large" $alignItems="center">
+              <Link href="/state-json">
+                <Text.BodyStrong $color="inherit">See the state as JSON</Text.BodyStrong>
+              </Link>
+
+              <ThemeButton onClick={toggleTheme}>
+                <Icon name={theme.dark ? 'Sun' : 'Moon'} color="primary" size={24} />
+              </ThemeButton>
+            </Row>
           </Row>
 
           <StateHeader state={state} />
@@ -48,7 +55,7 @@ export default function Page({initialState}: {initialState: StateWithDate}) {
 
         <HistoryContainer>
           <SectionCard className="deposits">
-            <SectionCardTitle $textAlign="center" $elevated>
+            <SectionCardTitle $textAlign="start" $elevated>
               Deposits
             </SectionCardTitle>
 
@@ -79,7 +86,7 @@ export default function Page({initialState}: {initialState: StateWithDate}) {
           </SectionCard>
 
           <SectionCard className="withdrawals">
-            <SectionCardTitle $textAlign="center" $elevated>
+            <SectionCardTitle $textAlign="start" $elevated>
               Withdrawals
             </SectionCardTitle>
 

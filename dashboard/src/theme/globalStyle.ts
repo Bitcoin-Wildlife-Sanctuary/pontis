@@ -11,9 +11,24 @@ export const GlobalStyle = createGlobalStyle`
     --bs-gutter-y: 0;
   }
 
+  .g-xsmall,
+  .gy-xsmall {
+    --bs-gutter-y: ${({theme}) => rem(theme.spacings.xsmall)};
+  }
+
+  .g-xsmall,
+  .gx-xsmall {
+    --bs-gutter-x: ${({theme}) => rem(theme.spacings.xsmall)};
+  }
+  
   .g-small,
   .gy-small {
     --bs-gutter-y: ${({theme}) => rem(theme.spacings.small)};
+  }
+
+  .g-small,
+  .gx-small {
+    --bs-gutter-x: ${({theme}) => rem(theme.spacings.small)};
   }
 
   .g-medium,
@@ -24,11 +39,6 @@ export const GlobalStyle = createGlobalStyle`
   .g-medium,
   .gy-medium {
     --bs-gutter-y: ${({theme}) => rem(theme.spacings.medium)};
-  }
-
-  .g-small,
-  .gx-small {
-    --bs-gutter-x: ${({theme}) => rem(theme.spacings.small)};
   }
 
   .g-large,

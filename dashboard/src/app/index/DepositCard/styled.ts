@@ -15,12 +15,12 @@ export const Container = styled(Flex)`
 
 export const SectionTitleContainer = styled(Flex)`
   width: 100%;
-  padding: ${({theme}) => theme.spacings.medium}px;
+  padding: ${({theme}) => `${theme.spacings.small}px ${theme.spacings.medium}px`};
   background-color: ${({theme}) => theme.colors.background};
   border-bottom: 1px solid ${({theme}) => theme.colors.border};
 `;
 
-export const SectionTitle = styled(Text.CardValue)`
+export const SectionTitle = styled(Text.Title).attrs({$fontWeight: 600})`
   display: block;
 `;
 

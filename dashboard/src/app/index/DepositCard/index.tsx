@@ -1,8 +1,6 @@
-import {Fragment} from 'react';
-
-import {Col, Divider, ExplorerLink, Row, Table, Text, TreeView} from '@/components';
+import {Col, Divider, ExplorerLink, Row, StatusChip, Table, Text, TreeView} from '@/components';
 import {DepositBatch} from '@/types';
-import {shortenHex, showDepositStatus} from '@/utils/format';
+import {shortenHex} from '@/utils/format';
 
 import {Container, SectionTitle, SectionTitleContainer, TransactionCard} from './styled';
 
@@ -11,22 +9,29 @@ type DepositCardProps = {
 };
 
 export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
-  const batchId = 'batchId' in deposit ? deposit.batchId : undefined;
+  const hash = 'hash' in deposit ? deposit.hash : undefined;
   const finalizeBatchTx = 'finalizeBatchTx' in deposit ? deposit.finalizeBatchTx : undefined;
   const depositTx = 'depositTx' in deposit ? deposit.depositTx : undefined;
   const verifyTx = 'verifyTx' in deposit ? deposit.verifyTx : undefined;
 
   return (
     <Container>
-      <SectionTitleContainer as={Row} $justify="space-between">
-        <Row $gap="xxsmall">
-          <SectionTitle>Batch:</SectionTitle>
-          <SectionTitle>{batchId && shortenHex(batchId, 8)}</SectionTitle>
-        </Row>
+      <SectionTitleContainer as={Row} $justify="space-between" $alignItems="center" $gap="none">
+        <Col $gap="xxsmall">
+          <Row $gap="xxsmall">
+            <SectionTitle>Batch:</SectionTitle>
+            <SectionTitle>{deposit.id.toString()}</SectionTitle>
+          </Row>
 
-        <Col>
-          <SectionTitle>{showDepositStatus(deposit.status)}</SectionTitle>
+          {hash && (
+            <Row $gap="xxsmall">
+              <SectionTitle>Hash:</SectionTitle>
+              <SectionTitle>{shortenHex(hash, 10)}</SectionTitle>
+            </Row>
+          )}
         </Col>
+
+        <StatusChip type="deposit" status={deposit.status} />
       </SectionTitleContainer>
 
       <Col $padding="small">
@@ -62,10 +67,11 @@ export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
               <Text.CardTitle>Aggregation Txs:</Text.CardTitle>
 
               <TreeView
+                inverted
                 items={deposit.aggregationTxs}
                 keyExtractor={(aggregationTx) => aggregationTx.tx.hash}
                 renderItem={(aggregationTx) => (
-                  <TransactionCard key={aggregationTx.tx.hash} $gap={4}>
+                  <TransactionCard $gap={4}>
                     <Row $justify="space-between" $alignItems="center" $gap="xsmall">
                       {aggregationTx.type === 'LEAF' && (
                         <Col>
@@ -90,6 +96,7 @@ export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
               />
             </>
           )}
+
           <Row $gap="xxlarge">
             <Col $gap="xxsmall" $justify="center">
               {finalizeBatchTx && <Text.CardTitle>Finalize Tx:</Text.CardTitle>}

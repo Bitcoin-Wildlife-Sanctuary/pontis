@@ -1,15 +1,14 @@
 'use client';
 
-import {createElement} from 'react';
+import styled from 'styled-components';
 
 import {type TextWrapperProps, TextWrapper} from './TextWrapper';
 
 const createTextVariant = (variantProps: TextWrapperProps) => {
-  const TextVariant = (props: React.ComponentProps<typeof TextWrapper>) => {
-    return createElement(TextWrapper, {...variantProps, ...props}, props.children);
-  };
-
-  return TextVariant;
+  return styled(TextWrapper).attrs((props) => ({
+    ...variantProps,
+    ...props,
+  }))``;
 };
 
 export const HeadlineLarge = createTextVariant({
@@ -25,15 +24,16 @@ export const HeadlineSmall = createTextVariant({
 });
 
 export const Title = createTextVariant({
-  $color: 'textStrong',
-  $fontSize: 20,
-  $fontWeight: 600,
+  $color: 'textHighlight',
+  $fontSize: 15,
+  $fontWeight: 500,
 });
 
 export const Subtitle = createTextVariant({
   $color: 'textLight',
-  $fontSize: 14.5,
-  $fontWeight: 700,
+  $fontSize: 12,
+  $fontWeight: 400,
+  $letterSpacing: 0.5,
 });
 
 export const Body = createTextVariant({
@@ -43,19 +43,19 @@ export const Body = createTextVariant({
 });
 
 export const BodyStrong = createTextVariant({
-  $color: 'textStrong',
+  $color: 'textHighlight',
   $fontSize: 14.5,
-  $fontWeight: 600,
+  $fontWeight: 400,
 });
 
 export const CardTitle = createTextVariant({
   $color: 'textLight',
   $fontSize: 13.5,
-  $fontWeight: 700,
+  $fontWeight: 500,
 });
 
 export const CardValue = createTextVariant({
   $color: 'textStrong',
   $fontSize: 14.5,
-  $fontWeight: 700,
+  $fontWeight: 400,
 });

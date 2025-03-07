@@ -4,32 +4,37 @@ import cx from 'classnames';
 import {forwardRef, Fragment, useLayoutEffect, useRef} from 'react';
 import {useTheme} from 'styled-components';
 
+import {drawLineFromTo, getFromToCords} from '@/utils/svg';
+
 import {Icon} from '../Icon';
 import {Col, Row} from '../Layout';
 
-type TreeViewComponentProps<TItem extends object> = {
+type TreeViewComponentProps<TItem> = {
+  inverted?: boolean;
   items: TItem[][];
-  renderItem: (item: TItem, index: number) => React.ReactNode;
-  keyExtractor: (item: TItem, index: number) => string;
+  renderItem: (item: NonNullable<TItem>, index: number) => React.ReactNode;
+  keyExtractor: (item: NonNullable<TItem>, index: number) => string;
 };
 
-type TreeViewLevelProps<TItem extends object> = {
+type TreeViewLevelProps<TItem> = {
+  inverted?: boolean;
   level: TItem[];
   levelIdx: number;
-  renderItem: (item: TItem, index: number) => React.ReactNode;
-  keyExtractor: (item: TItem, index: number) => string;
+  renderItem: (item: NonNullable<TItem>, index: number) => React.ReactNode;
+  keyExtractor: (item: NonNullable<TItem>, index: number) => string;
   shouldRenderSeparator: boolean;
 };
 
 const horizontalClassName = 'd-none d-md-flex d-lg-none d-xxl-flex flex-shrink-0';
 const verticalClassName = 'd-flex d-md-none d-lg-flex d-xxl-none flex-shrink-0';
 
-const TreeViewComponent = <TItem extends object>({items, renderItem, keyExtractor}: TreeViewComponentProps<TItem>) => {
+const TreeViewComponent = <TItem,>({inverted, items, renderItem, keyExtractor}: TreeViewComponentProps<TItem>) => {
   return (
     <TreeViewContainer>
       {items.map((level, levelIdx) => (
         <TreeViewLevel
           key={levelIdx.toString()}
+          inverted={inverted}
           level={level}
           levelIdx={levelIdx}
           renderItem={renderItem}
@@ -41,7 +46,8 @@ const TreeViewComponent = <TItem extends object>({items, renderItem, keyExtracto
   );
 };
 
-const TreeViewLevel = <TItem extends object>({
+const TreeViewLevel = <TItem,>({
+  inverted,
   level,
   renderItem,
   keyExtractor,
@@ -55,71 +61,83 @@ const TreeViewLevel = <TItem extends object>({
       return;
     }
 
-    // If the level container doesn't have at least 2 children, we dont need to calculate the separator position
-    if (containerRef.current.children.length < 2) {
-      return;
+    const separator = separatorRef.current;
+    let leftContainer = containerRef.current as HTMLElement;
+
+    // We get the right, by skipping 2 siblings (2 svg separator elements).
+    // TODO: make it more robust
+    let rightContainer = leftContainer.nextSibling?.nextSibling?.nextSibling as HTMLElement;
+    if (!rightContainer) return;
+
+    const linePath = separator.querySelector('path.separator-line') as SVGPathElement;
+
+    if (inverted) {
+      [leftContainer, rightContainer] = [rightContainer, leftContainer];
     }
 
-    const container = containerRef.current;
-    const separator = separatorRef.current;
+    //
+    // Get the tree elements
+    //
+    const elems: [HTMLElement, HTMLElement?, HTMLElement?][] = [];
 
+    for (let i = 0; i < leftContainer.children.length; i += 1) {
+      const elem = leftContainer.children[i] as HTMLElement;
+
+      if (elem.getBoundingClientRect().height > 0) {
+        const leftElem = rightContainer.children[i * 2];
+        const rightElem = rightContainer.children[i * 2 + 1];
+
+        let left: HTMLElement | undefined;
+        if (leftElem && leftElem.getBoundingClientRect().height > 0) {
+          left = leftElem as HTMLElement;
+        }
+
+        let right: HTMLElement | undefined;
+        if (rightElem && rightElem.getBoundingClientRect().height > 0) {
+          right = rightElem as HTMLElement;
+        }
+
+        // make sure we have at least a start and an end element
+        if (!left && !right) continue;
+
+        elems.push([elem, left, right]);
+      }
+    }
+
+    //
+    // Draw the separator
+    //
     const drawSeparator = () => {
-      //
-      // Get the necessary elements
-      //
-      const left1 = container.children[0] as HTMLElement;
-      const left2 = container.children[container.children.length - 1] as HTMLElement;
-
-      // We get the right, by skipping 2 siblings (2 svg separator elements).
-      // TODO: make it more robust
-      const right = container.nextSibling?.nextSibling?.nextSibling as HTMLElement;
-      if (!right) return;
-
-      const placeholder = separator.parentElement?.querySelector('.separator-placeholder') as HTMLElement;
-      const linePath = separator.querySelector('path.separator-line') as SVGPathElement;
-      const arrowPath = separator.querySelector('path.separator-arrow') as SVGPathElement;
-
-      //
-      // Get and set the necessary rects of the elements
-      //
       const svgRect = separator.getBoundingClientRect();
-      const left1Rect = left1.getBoundingClientRect();
-      const left2Rect = left2.getBoundingClientRect();
-      const rightRect = right.getBoundingClientRect();
 
-      //
-      // Get middle points of the rects
-      //
-      const left1MidY = left1Rect.top + left1Rect.height / 2;
-      const left2MidY = left2Rect.top + left2Rect.height / 2;
-      const rightMidY = rightRect.top + rightRect.height / 2;
+      let linePathData = '';
 
-      //
-      // Coordinates are relative to the viewport, so we need to adjust them
-      //
-      const leftX = left1Rect.right - svgRect.left;
-      const rightX = rightRect.left - svgRect.left;
+      for (const elem of elems) {
+        const [from, to1, to2] = elem;
 
-      const left1Y = left1MidY - svgRect.top;
-      const left2Y = left2MidY - svgRect.top;
-      const rightY = rightMidY - svgRect.top;
+        const fromRect = from.getBoundingClientRect();
 
-      //
-      // Calculate and set the path data
-      //
-      const leftSideWidth = (rightX - leftX) / 3;
-      const arrowSize = 12.55;
+        if (to1) {
+          const to1Rect = to1.getBoundingClientRect();
+          const cords = inverted
+            ? getFromToCords(svgRect, to1Rect, fromRect)
+            : getFromToCords(svgRect, fromRect, to1Rect);
 
-      const linePathData = `
-        M${leftX},${left1Y} l ${leftSideWidth} 0 l 0 ${rightY - left1Y} l ${rightX - leftSideWidth - arrowSize} 0
-        M${leftX},${left2Y} l ${leftSideWidth} 0 l 0 ${rightY - left2Y} l ${rightX - leftSideWidth - arrowSize} 0
-      `;
+          linePathData += drawLineFromTo(cords.from, cords.to);
+        }
+
+        if (to2) {
+          const to2Rect = to2.getBoundingClientRect();
+          const cords = inverted
+            ? getFromToCords(svgRect, to2Rect, fromRect)
+            : getFromToCords(svgRect, fromRect, to2Rect);
+
+          linePathData += drawLineFromTo(cords.from, cords.to);
+        }
+      }
+
       linePath.setAttribute('d', linePathData);
 
-      arrowPath.setAttribute('transform', `translate(${rightX - 14}, ${rightY - 12})`);
-      arrowPath.style.display = 'initial';
-
-      if (placeholder) placeholder.style.display = 'none';
       separator.style.display = 'block';
     };
 
@@ -128,19 +146,23 @@ const TreeViewLevel = <TItem extends object>({
 
     // Draw on resize
     const resizeObserver = new ResizeObserver(() => drawSeparator());
-    resizeObserver.observe(container);
+    resizeObserver.observe(leftContainer);
 
     return () => {
-      resizeObserver.unobserve(container);
+      resizeObserver.unobserve(leftContainer);
     };
   });
 
   return (
     <Fragment>
-      <Col ref={containerRef} $gap="xxsmall" $justify="center">
-        {level.map((item, itemIdx) => (
-          <Fragment key={keyExtractor(item, itemIdx)}>{renderItem(item, itemIdx)}</Fragment>
-        ))}
+      <Col ref={containerRef} $gap="xxsmall" $justify="space-around">
+        {level.map((item, itemIdx) => {
+          if (!item || (typeof item === 'object' && 'type' in item && item.type === 'EMPTY')) {
+            return <div key={itemIdx} />;
+          }
+
+          return <Fragment key={keyExtractor(item, itemIdx)}>{renderItem(item, itemIdx)}</Fragment>;
+        })}
       </Col>
 
       {shouldRenderSeparator && <TreeViewSeparator ref={separatorRef} />}
@@ -184,23 +206,12 @@ const TreeViewSeparator = forwardRef<SVGSVGElement>((props, ref) => {
           ref={ref}
           xmlns="http://www.w3.org/2000/svg"
           color={theme.colors.border}
-          width={30}
+          width={20}
           height="100%"
           style={{display: 'none'}}
         >
           <path d="" fill="none" stroke="currentColor" strokeWidth="3" className="separator-line" />
-
-          <path
-            d="M13.0607 13.0607C13.6464 12.4749 13.6464 11.5251 13.0607 10.9393L3.51472 1.3934C2.92893 0.807612 1.97918 0.807612 1.3934 1.3934C0.807612 1.97918 0.807612 2.92893 1.3934 3.51472L9.87868 12L1.3934 20.4853C0.807612 21.0711 0.807612 22.0208 1.3934 22.6066C1.97918 23.1924 2.92893 23.1924 3.51472 22.6066L13.0607 13.0607ZM1 13.5H12V10.5H1V13.5Z"
-            fill="currentColor"
-            className="separator-arrow"
-            style={{display: 'none'}}
-          />
         </svg>
-
-        <Col className="separator-placeholder" $flex={1} $alignItems="center" $justify="center">
-          <Icon name="ArrowRight" color="border" width={32} />
-        </Col>
       </Col>
 
       <Icon className={cx(verticalClassName, 'align-self-center')} name="ArrowDown" color="border" width={32} />

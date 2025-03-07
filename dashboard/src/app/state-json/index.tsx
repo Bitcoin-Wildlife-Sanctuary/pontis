@@ -11,7 +11,7 @@ const DynamicReactJson = dynamic(() => import('react-json-view'), {
 });
 
 export default function Page({initialState}: {initialState: StateWithDate}) {
-  const {state, lastUpdate} = useAutoUpdateState(initialState);
+  const {state, lastUpdate} = useAutoUpdateState(initialState, false);
 
   const theme = useTheme();
 
