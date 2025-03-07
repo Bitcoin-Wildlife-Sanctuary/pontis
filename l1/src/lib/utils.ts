@@ -224,7 +224,7 @@ export function toBtcTransaction(
   psbt.data.inputs.forEach((input, index) => {
     tx.inputs[index].output = new btc.Transaction.Output({
       satoshis: Number(input.witnessUtxo?.value || 0),
-      script: new btc.Script(Buffer.from(input.witnessUtxo?.script || '')),
+      script: new btc.Script(Buffer.from(input.witnessUtxo?.script || [])),
     })
   })
   return tx

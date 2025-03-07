@@ -46,7 +46,7 @@ export const useAutoUpdateState = (initialState: StateWithDate, parse = true) =>
 
           return;
         }
-      } catch (error) {
+      } catch {
         console.error('Error parsing message:', message.data);
         return;
       }

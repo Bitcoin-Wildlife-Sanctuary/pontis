@@ -8,6 +8,7 @@ require('@uniswap/eslint-config/load');
  * @type {import("eslint").Linter.BaseConfig}
  */
 module.exports = {
+  root: true,
   extends: ['next/core-web-vitals', 'next/typescript', '@uniswap/eslint-config/node'],
   plugins: [],
 
@@ -17,6 +18,7 @@ module.exports = {
       rules: {
         'prettier/prettier': ['error', {semi: true}],
         'import/no-unused-modules': 'off',
+        'unused-imports/no-unused-imports': 'off',
       },
     },
     {

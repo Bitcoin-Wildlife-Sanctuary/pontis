@@ -21,18 +21,20 @@ jobs:
   prettier:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v2
-      - name: Install and build in l1
-        run: |
-          cd l1
-          npm install
-          npm run build
+      - name: Checkout code 
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Setup yarn
+        run: corepack enable
+      - name: Install dependencies
+        run: yarn install
+      - name: Build l1
+        run: yarn workspace l1 run build
       - name: Install and format check in operator
-        run: |
-          cd operator
-          npm install
-          npm run format:check
+        run: yarn workspace operator run format:check
 
   l2-test:
     runs-on: ubuntu-latest
