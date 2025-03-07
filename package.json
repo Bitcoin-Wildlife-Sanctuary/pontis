@@ -1,0 +1,24 @@
+{
+  "name": "pontis",
+  "private": true,
+  "version": "1.0.0",
+  "description": "`OP_CAT` enabled Bitcoin &lt;> Starknet Bridge POC",
+  "main": "index.js",
+  "workspaces": [
+    "l1",
+    "operator",
+    "dashboard"
+  ],
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "yarn workspace l1 run build && yarn workspace operator run build && yarn workspace dashboard run build",
+    "postinstall": "./node_modules/.bin/patch-package --patch-dir=./l1/patches --use-yarn"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "yarn@4.6.0+sha512.5383cc12567a95f1d668fbe762dfe0075c595b4bfff433be478dbbe24e05251a8e8c3eb992a986667c1d53b6c3a9c85b8398c35a960587fbd9fa3a0915406728"
+}

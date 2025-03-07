@@ -1,8 +1,7 @@
 {
   "name": "dashboard",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "private": true,
-  "packageManager": "yarn@4.6.0",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
@@ -21,6 +20,7 @@
     "color": "^5.0.0",
     "csstype": "^3.1.3",
     "next": "15.2.0",
+    "operator": "0.0.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-json-view": "^1.21.3",
@@ -37,7 +37,6 @@
     "@uniswap/eslint-config": "^1.2.0",
     "eslint": "^8.55.0",
     "eslint-config-next": "15.2.0",
-    "operator": "file:../operator",
     "prettier": "^3.5.2",
     "typescript": "^5.7.3"
   },

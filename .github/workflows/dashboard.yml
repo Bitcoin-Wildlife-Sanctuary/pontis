@@ -1,48 +1,34 @@
 name: Dashboard
 
-on:
-  workflow_dispatch:
-  push:
-    paths: [dashboard/**]
-    branches:
-      - main
-  pull_request:
-    paths: [dashboard/**]
+# todo restore changes
+on: push
+  # workflow_dispatch:
+  # push:
+  #   paths: [dashboard/**]
+  #   branches:
+  #     - main
+  # pull_request:
+  #   paths: [dashboard/**]
 permissions: read-all
 
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
+      - name: Checkout code 
+        uses: actions/checkout@v4
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-
-      - name: Install yarn
-        run: npm install -g yarn
-
-      - name: Prepare L1
-        run: |
-          npm install
-          npm run build
-        working-directory: l1
-
-      - name: Prepare Operator
-        run: |
-          npm install
-          npm run compile
-        working-directory: operator
-
+      - name: Setup yarn
+        run: corepack enable
       - name: Install dependencies
         run: yarn install
-        working-directory: dashboard
-        env:
-          # We have to disable immutable installs because the hash of operator will change
-          YARN_ENABLE_IMMUTABLE_INSTALLS: false
+      - name: Build l1
+        run: yarn workspace l1 run build
+      - name: Build operator
+        run: yarn workspace operator run build
 
       - name: Format Check
         run: yarn format:check
