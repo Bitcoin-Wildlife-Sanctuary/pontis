@@ -9,3 +9,4 @@ operator/out
 .env
 offchain_db.json
 state.json
+*.tgz

@@ -27,7 +27,7 @@
     "postinstall": "patch-package",
     "cli": "ts-node cli.ts",
     "prebuild": "npm run clean",
-    "build": "npm run build:cjs && npm run build:esm && npm run compile",
+    "build": "npm run build:cjs && npm run build:esm && npm run compile && npm pack",
     "build:cjs": "tsc -p tsconfig.cjs.json",
     "build:esm": "tsc -p tsconfig.esm.json",
     "deploy": "npx ts-node ./deploy.ts",
@@ -71,6 +71,7 @@
     "bitcore-lib-inquisition": "^10.3.1",
     "js-sha256": "^0.11.0",
     "ecpair": "^2.1.0",
+    "patch-package": "^8.0.0",
     "ecurve": "^1.0.6"
   },
   "devDependencies": {
@@ -90,7 +91,6 @@
     "lint-staged": "^13.1.0",
     "mocha": "^10.1.0",
     "node-fetch": "^3.3.2",
-    "patch-package": "^8.0.0",
     "prettier": "^2.8.2",
     "regtest-client": "^0.2.1",
     "rimraf": "^3.0.2",

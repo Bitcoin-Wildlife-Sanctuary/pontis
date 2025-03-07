@@ -44,7 +44,7 @@
     "dotenv": "16",
     "ecpair": "^2.1.0",
     "fs": "^0.0.1-security",
-    "l1": "file:../l1",
+    "l1": "file:../l1/l1-0.1.0.tgz",
     "lodash": "^4.17.21",
     "pino": "^9.6.0",
     "pino-pretty": "^13.0.0",
