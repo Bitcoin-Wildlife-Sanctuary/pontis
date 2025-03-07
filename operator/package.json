@@ -30,12 +30,9 @@
     "posttest": "yarn lint",
     "test": "yarn td",
     "td": "mocha --config=.mocharc.json --no-timeouts",
-    "devnet": "docker run -p 5050:5050 shardlabs/starknet-devnet-rs --seed 0 --lite-mode",
-    "main": "tsx src/main.ts",
+    "devnet": "docker run -p 5050:5050 shardlabs/starknet-devnet-rs --seed 0 --lite-mode --block-generation-on 10",
     "poc": "tsx src/poc.ts",
-    "deploy": "tsx src/deploy.ts",
-    "command": "tsx src/command.ts",
-    "deposit": "tsx src/l1/makeADeposit.ts"
+    "command": "tsx src/commands.ts"
   },
   "dependencies": {
     "@bitcoinerlab/secp256k1": "^1.1.1",

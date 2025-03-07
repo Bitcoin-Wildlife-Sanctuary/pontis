@@ -1,7 +1,7 @@
 const pino = require('pino');
 
 const logger = pino({
-  level: 'debug', // set desired log level
+  level: 'debug',
   transport: {
     target: 'pino-pretty',
     options: {

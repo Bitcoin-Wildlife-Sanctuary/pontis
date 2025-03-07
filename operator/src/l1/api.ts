@@ -33,7 +33,11 @@ import {
   L2Address,
 } from '../state';
 import { PubKey, Sha256 } from 'scrypt-ts';
-import { l2AddressToHex, getContractAddresses } from './utils/contractUtil';
+import {
+  l2AddressToHex,
+  getContractAddresses,
+  addressToScript,
+} from './utils/contractUtil';
 import {
   UNCONFIRMED_BLOCK_NUMBER,
   L1Provider,

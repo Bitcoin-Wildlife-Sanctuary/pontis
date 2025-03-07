@@ -1,58 +1,45 @@
-import { Account, RpcProvider } from 'starknet';
+import { RpcProvider } from 'starknet';
 import { importAddressesIntoNode } from './l1/prepare';
-import {
-  closeWithdrawalBatch,
-  contractFromAddress,
-  submitDepositsToL2,
-} from './l2/contracts';
-import * as devnet from './l2/devnet';
-import {
-  applyChange,
-  BridgeEnvironment,
-  Deposit,
-  L1TxHash,
-  OperatorState,
-} from './state';
+import { closeWithdrawalBatch, submitDepositsToL2 } from './l2/contracts';
+import { applyChange, BridgeEnvironment, OperatorState } from './state';
 import { setupOperator } from './operator';
-// import { aggregateDeposits, finalizeBatch } from './l1/l1mocks';
-import {
-  l1TransactionStatus,
-  aggregateDeposits,
-  finalizeDepositBatch,
-  verifyDepositBatch,
-  expandWithdrawals,
-  createWithdrawalExpander,
-  distributeWithdrawals,
-} from './l1/transactions';
 import { deposits, l1BlockNumber, l1BridgeBalance } from './l1/events';
-import { createBridgeContract } from './l1/api';
 import { existsSync } from 'fs';
-import * as env from './l1/env';
 import { l2TransactionStatus } from './l2/transactions';
 import { l2BlockNumber, l2Events, totalSupply } from './l2/events';
 import { loadContractArtifacts } from './l1/utils/contractUtil';
 import { load, save } from './persistence';
-import { first, firstValueFrom, merge, Observable } from 'rxjs';
+import { firstValueFrom, from, merge } from 'rxjs';
+import { Config, getConfig } from './config';
+import {
+  aggregateLevelDeposits,
+  createBridgeContract,
+  createWithdrawal,
+  distributeLevelWithdrawals,
+  expandLevelWithdrawals,
+  finalizeDepositBatchOnL1,
+  getL1TransactionStatus,
+  verifyDepositBatch,
+} from './l1/api';
 
-async function initialState(
-  path: string,
-  provider: RpcProvider
-): Promise<OperatorState> {
+async function initialState(config: Config): Promise<OperatorState> {
   loadContractArtifacts();
-  await importAddressesIntoNode();
-  if (existsSync(path)) {
-    return load(path);
+  await importAddressesIntoNode(config);
+  if (existsSync(config.STATE_PATH)) {
+    return load(config.STATE_PATH);
   } else {
     const bridgeState = await createBridgeContract(
-      env.operatorSigner,
-      env.l1Network,
-      env.createUtxoProvider(),
-      env.createChainProvider(),
-      env.l1FeeRate
+      config.l1.operatorSigner,
+      config.l1.network,
+      config.l1.createUtxoProvider(),
+      config.l1.createChainProvider(),
+      config.l1.feeRate
     );
     return {
-      l1BlockNumber: (await firstValueFrom(l1BlockNumber())).blockNumber,
-      l2BlockNumber: (await firstValueFrom(l2BlockNumber(provider)))
+      l1BlockNumber: (
+        await firstValueFrom(l1BlockNumber(config.l1.createL1Provider()))
+      ).blockNumber,
+      l2BlockNumber: (await firstValueFrom(l2BlockNumber(config.l2.provider)))
         .blockNumber,
       bridgeState,
       depositBatches: [],
@@ -67,65 +54,110 @@ async function initialState(
 }
 
 async function pocOperator() {
-  const path = './state.json';
+  const config = await getConfig();
 
-  const provider = new RpcProvider({ nodeUrl: 'http://127.0.0.1:5050/rpc' });
+  const startState = await initialState(config);
 
-  const admin = new Account(
-    provider,
-    devnet.admin.address,
-    devnet.admin.privateKey
-    // undefined,
-    // constants.TRANSACTION_VERSION.V3
-  );
-
-  const btcAddress =
-    '0x3bf13a2032fa2fe8652266e93fd5acf213d6ddd05509b185ee4edf0c4000d5d';
-  const bridgeAddress =
-    '0x20e5866c53e02141b1fd22d1e02ebaf520fddfa16321a39d7f1545dd59497ae';
-
-  const bridge = await contractFromAddress(provider, bridgeAddress);
-  const btc = await contractFromAddress(provider, btcAddress);
-  bridge.connect(admin);
-
-  const startState = await initialState(path, provider);
-
-  const env: BridgeEnvironment = {
-    DEPOSIT_BATCH_SIZE: 4,
-    MAX_DEPOSIT_BLOCK_AGE: 2,
-    MAX_WITHDRAWAL_BLOCK_AGE: 4,
-    MAX_WITHDRAWAL_BATCH_SIZE: 4,
-    submitDepositsToL2: (hash: L1TxHash, deposits: Deposit[]) => {
-      return submitDepositsToL2(admin, bridge, BigInt('0x' + hash), deposits);
-    },
-    closePendingWithdrawalBatch: (id: bigint) =>
-      closeWithdrawalBatch(admin, bridge, id),
-    aggregateDeposits,
-    finalizeDepositBatch,
-    verifyDepositBatch,
-    createWithdrawalExpander,
-    expandWithdrawals,
-    distributeWithdrawals,
+  const operatorEnv: BridgeEnvironment = {
+    DEPOSIT_BATCH_SIZE: config.DEPOSIT_BATCH_SIZE,
+    MAX_DEPOSIT_BLOCK_AGE: config.MAX_DEPOSIT_BLOCK_AGE,
+    MAX_WITHDRAWAL_BLOCK_AGE: config.MAX_WITHDRAWAL_BLOCK_AGE,
+    MAX_WITHDRAWAL_BATCH_SIZE: config.MAX_WITHDRAWAL_BATCH_SIZE,
+    submitDepositsToL2: (hash, deposits) =>
+      submitDepositsToL2(
+        config.l2.admin,
+        config.l2.bridge,
+        BigInt('0x' + hash),
+        deposits
+      ),
+    closePendingWithdrawalBatch: (id) =>
+      closeWithdrawalBatch(config.l2.admin, config.l2.bridge, id),
+    aggregateDeposits: (level) =>
+      aggregateLevelDeposits(
+        config.l1.operatorSigner,
+        config.l1.network,
+        config.l1.createEnhancedProvider(),
+        config.l1.feeRate,
+        level
+      ),
+    finalizeDepositBatch: (bridgeState, root) =>
+      finalizeDepositBatchOnL1(
+        config.l1.operatorSigner,
+        config.l1.network,
+        config.l1.createUtxoProvider(),
+        config.l1.createChainProvider(),
+        config.l1.createL1Provider(),
+        config.l1.feeRate,
+        root,
+        bridgeState
+      ),
+    verifyDepositBatch: async (bridgeState, batchId) =>
+      verifyDepositBatch(
+        config.l1.operatorSigner,
+        config.l1.network,
+        config.l1.createUtxoProvider(),
+        config.l1.createChainProvider(),
+        config.l1.createL1Provider(),
+        config.l1.feeRate,
+        bridgeState,
+        batchId
+      ),
+    createWithdrawalExpander: async (
+      bridgeState,
+      hash,
+      expectedWithdrawalState
+    ) =>
+      createWithdrawal(
+        config.l1.operatorSigner,
+        config.l1.network,
+        config.l1.createUtxoProvider(),
+        config.l1.createChainProvider(),
+        config.l1.createL1Provider(),
+        config.l1.feeRate,
+        bridgeState,
+        hash,
+        expectedWithdrawalState
+      ),
+    expandWithdrawals: async (level, expansionTxs) =>
+      expandLevelWithdrawals(
+        config.l1.operatorSigner,
+        config.l1.network,
+        config.l1.createEnhancedProvider(),
+        config.l1.feeRate,
+        level,
+        expansionTxs
+      ),
+    distributeWithdrawals: async (level, expansionTxs) =>
+      distributeLevelWithdrawals(
+        config.l1.operatorSigner,
+        config.l1.network,
+        config.l1.createEnhancedProvider(),
+        config.l1.feeRate,
+        level,
+        expansionTxs
+      ),
   };
 
-  // l2Events(provider, startState.l2BlockNumber, [bridgeAddress]).subscribe(console.log);
+  const l1TxStatus = (tx: { hash: string }) =>
+    from(getL1TransactionStatus(config.l1.createL1Provider(), tx.hash));
 
   const operator = setupOperator(
     startState,
-    env,
-    l1BlockNumber(),
-    deposits(startState.l1BlockNumber),
+    operatorEnv,
+    l1BlockNumber(config.l1.createL1Provider()),
+    deposits(config, startState.l1BlockNumber),
     merge(
-      l2Events(provider, startState.l2BlockNumber, [bridgeAddress]),
-      l2BlockNumber(provider),
-      totalSupply(provider, btc)
+      l2Events(config.l2.provider, startState.l2BlockNumber, [
+        config.l2.bridge.address,
+      ]),
+      l2BlockNumber(config.l2.provider),
+      totalSupply(config.l2.provider, config.l2.btc)
     ),
-    // l2Events(provider, startState.l2BlockNumber, [bridgeAddress]),
-    l1TransactionStatus,
-    (tx) => l2TransactionStatus(provider, tx),
-    (state) => l1BridgeBalance(state),
+    l1TxStatus,
+    (tx) => l2TransactionStatus(config.l2.provider, tx),
+    (state) => l1BridgeBalance(config, state),
     applyChange,
-    (state) => save(path, state)
+    (state) => save(config.STATE_PATH, state)
   );
   operator.subscribe((_) => {});
 }
