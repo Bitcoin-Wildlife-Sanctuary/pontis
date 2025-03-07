@@ -5,20 +5,6 @@ It is built using [NextJS](https://nextjs.org/), [React](https://react.dev/), [T
 
 ## Development
 
-### Prepare L1 package
-
-- CD into the `l1` directory
-- Run `npm install`
-- Run `npm run build`
-
-### Prepare Operator package
-
-- CD into the `operator` directory
-- Run `npm install`
-- Run `npm run compile`
-
-### Run Dashboard
-
 Create an `.env` file in the root directory of the dashboard and fill in the required values from the `.env.example` file.
 
 Install the dependencies by running:
@@ -55,16 +41,3 @@ yarn start
 - Set up the deployment environment variables in the cloud service provider's dashboard.
 - Either deploy the project manually or set up automatic deployments from git branches.
 - If the project is not recognized as a NextJS project, you may need to set up the build command and the output directory manually.
-- Setup **install script** to include the L1 and Operator packages in the build process.
-
-> [!WARNING]  
-> L1 and Operator packages should be prepared at install scripts, not build scripts. While deploying to cloud services, the install scripts are run before the build scripts. This is important because the L1 and Operator packages are required to be built before the dependencies of the dashboard are installed.
-
-> [!NOTE]  
-> You may need to disable yarn's immutable installs to avoid issues with the installation of the L1 and Operator packages, since the hash of the package may change if there are changes made since the last build.
-
-A working example of the **install script** would be:
-
-```bash
-cd ../l1 && npm install && npm run build && cd ../operator && npm install && npm run compile && cd ../dashboard && YARN_ENABLE_IMMUTABLE_INSTALLS=false yarn install
-```
