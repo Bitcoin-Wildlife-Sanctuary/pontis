@@ -26,6 +26,8 @@ jobs:
       - name: Install and build in l1
         run: |
           cd l1
+          npm -v
+          node -v
           npm install
           npm run build
       - name: Install and format check in operator
