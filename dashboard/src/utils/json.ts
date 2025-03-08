@@ -1,5 +1,11 @@
 /* eslint-disable prettier/prettier */
-import type {OperatorState, WithdrawalExpansionInnerNode, WithdrawalExpansionNode} from '@/types';
+import type {
+  AccumulatedExpansionTx,
+  L1Tx,
+  OperatorState,
+  WithdrawalExpansionInnerNode,
+  WithdrawalExpansionNode,
+} from '@/types';
 
 export function parseOperatorState(raw: string): OperatorState {
   return JSON.parse(raw, (key, value) => {
@@ -54,4 +60,38 @@ export function convertTreeToArray(root: WithdrawalExpansionNode): (WithdrawalEx
     },
     [] as typeof result,
   );
+}
+
+export function fillExpansionTxs(
+  expansionTree: WithdrawalExpansionNode,
+  expansionTxs: L1Tx[][],
+): AccumulatedExpansionTx[][] {
+  const treeArray = convertTreeToArray(expansionTree);
+
+  const result: AccumulatedExpansionTx[][] = [];
+
+  treeArray.forEach((level, levelIdx) => {
+    const levelTxs: AccumulatedExpansionTx[] = [];
+
+    level.forEach((node, nodeIdx) => {
+      const tx = expansionTxs[levelIdx][nodeIdx];
+
+      if (!node || node.type === 'EMPTY' || !tx) {
+        levelTxs.push(null);
+        return;
+      }
+
+      levelTxs.push({
+        ...tx,
+        nodeType: node.type,
+        nodeHash: node.hash,
+        address: 'l1Address' in node ? node.l1Address : undefined,
+        total: 'total' in node ? node.total : undefined,
+      });
+    });
+
+    result.push(levelTxs);
+  });
+
+  return result;
 }

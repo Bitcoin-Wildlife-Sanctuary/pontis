@@ -1,7 +1,9 @@
+import {useMemo} from 'react';
+
 import {Col, Divider, ExplorerLink, Row, StatusChip, Table, Text, TreeView} from '@/components';
 import {WithdrawalBatch} from '@/types';
 import {shortenHex} from '@/utils/format';
-import {convertTreeToArray} from '@/utils/json';
+import {fillExpansionTxs} from '@/utils/json';
 
 import {Container, SectionTitle, SectionTitleContainer, TransactionCard} from './styled';
 
@@ -13,8 +15,14 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
   const hash = 'hash' in withdrawal ? withdrawal.hash : undefined;
   const closeTx = 'closeWithdrawalBatchTx' in withdrawal ? withdrawal.closeWithdrawalBatchTx : undefined;
   const createExpanderTx = 'createExpanderTx' in withdrawal ? withdrawal.createExpanderTx : undefined;
-  const expansionTree = 'expansionTree' in withdrawal ? withdrawal.expansionTree : undefined;
-  const expansionTreeArray = expansionTree ? convertTreeToArray(expansionTree) : [];
+  const rawExpansionTree = 'expansionTree' in withdrawal ? withdrawal.expansionTree : undefined;
+  const rawExpansionTxs = 'expansionTxs' in withdrawal ? withdrawal.expansionTxs : undefined;
+
+  const expansionTxs = useMemo(() => {
+    if (!rawExpansionTxs || !rawExpansionTree) return undefined;
+
+    return fillExpansionTxs(rawExpansionTree, rawExpansionTxs);
+  }, [rawExpansionTxs, rawExpansionTree]);
 
   return (
     <Container>
@@ -85,28 +93,28 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
             </Col>
           </Row>
 
-          {expansionTreeArray.length > 0 && (
+          {expansionTxs && expansionTxs.length > 0 && (
             <>
               <Text.CardTitle>Expansion Txs:</Text.CardTitle>
 
               <TreeView
-                items={expansionTreeArray}
+                items={expansionTxs}
                 keyExtractor={(expansionTx, index) => `${expansionTx.hash}-${index}`}
                 renderItem={(expansionTx) => (
                   <TransactionCard $gap={4}>
                     <Row $justify="space-between" $alignItems="center" $gap="xsmall">
                       <Col>
-                        <Text.CardValue>{expansionTx.total.toString()}</Text.CardValue>
+                        <Text.CardValue>{expansionTx.total?.toString()}</Text.CardValue>
                       </Col>
 
                       <Col $alignItems="flex-end">
-                        {expansionTx.type === 'LEAF' && (
-                          <ExplorerLink network="l1" address={expansionTx.l1Address}>
-                            <Text.CardValue $color="inherit">{shortenHex(expansionTx.l1Address)}</Text.CardValue>
+                        {expansionTx.nodeType === 'LEAF' && (
+                          <ExplorerLink network="l1" address={expansionTx.address}>
+                            <Text.CardValue $color="inherit">{shortenHex(expansionTx.address)}</Text.CardValue>
                           </ExplorerLink>
                         )}
 
-                        <ExplorerLink tx={{type: 'l1tx', hash: expansionTx.hash}}>
+                        <ExplorerLink tx={expansionTx}>
                           <Text.CardValue $color="inherit">{shortenHex(expansionTx.hash)}</Text.CardValue>
                         </ExplorerLink>
                       </Col>
