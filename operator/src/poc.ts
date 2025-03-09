@@ -1,7 +1,7 @@
 import { RpcProvider } from 'starknet';
 import { importAddressesIntoNode } from './l1/prepare';
 import { closeWithdrawalBatch, submitDepositsToL2 } from './l2/contracts';
-import { applyChange, BridgeEnvironment, OperatorState } from './state';
+import { applyChange, BridgeEnvironment, L1TxId, OperatorState } from './state';
 import { setupOperator } from './operator';
 import {
   deposits,
@@ -143,7 +143,7 @@ async function pocOperator() {
       ),
   };
 
-  const l1TxStatus = (tx) =>
+  const l1TxStatus = (tx: L1TxId) =>
     l1TransactionStatus(config.l1.createL1Provider(), tx);
 
   const operator = setupOperator(

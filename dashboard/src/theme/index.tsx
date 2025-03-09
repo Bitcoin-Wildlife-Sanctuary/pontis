@@ -5,6 +5,7 @@ import {ThemeProvider as SCThemeProvider} from 'styled-components';
 
 import {ToggleThemeContext} from '@/hooks/useToggleTheme';
 
+import * as animations from './animations';
 import {darkThemeColors, lightThemeColors} from './colors';
 
 type Size = 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl';
@@ -69,6 +70,7 @@ const misc = {
   },
   transitions,
   spacings,
+  animations,
 };
 
 export function getTheme(theme: 'dark' | 'light') {

@@ -31,10 +31,10 @@ export const darkThemeColors = {
 
   border: '#343434',
 
+  // Status colors
   success: '#55E065',
   error: '#FF495C',
-  info: '#00C3F9',
-  warning: '#FFC43A',
+  pending: '#FFC43A',
 };
 
 export const lightThemeColors = {
@@ -57,8 +57,8 @@ export const lightThemeColors = {
 
   border: '#ebebeb',
 
+  // Status colors
   success: '#55E065',
   error: '#FF495C',
-  info: '#00C3F9',
-  warning: '#FFC43A',
+  pending: '#FFC43A',
 };
