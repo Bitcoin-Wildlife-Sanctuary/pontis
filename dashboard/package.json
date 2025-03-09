@@ -36,7 +36,7 @@
     "@uniswap/eslint-config": "^1.2.0",
     "eslint": "^8.55.0",
     "eslint-config-next": "15.2.0",
-    "operator": "workflow:*",
+    "operator": "workspace:*",
     "prettier": "^3.5.2",
     "typescript": "^5.7.3"
   },
