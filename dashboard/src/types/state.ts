@@ -23,8 +23,8 @@ export type WithdrawalExpansionLeafNode = WithdrawalExpansionNode & {type: 'LEAF
 
 export type AccumulatedExpansionTx =
   | (L1Tx & {
-      nodeType: WithdrawalExpansionNode['type'];
-      nodeHash: WithdrawalExpansionNode['hash'];
+      nodeType?: WithdrawalExpansionNode['type'];
+      nodeHash?: WithdrawalExpansionNode['hash'];
       total?: WithdrawalExpansionLeafNode['total'];
       address?: WithdrawalExpansionLeafNode['l1Address'];
     })
