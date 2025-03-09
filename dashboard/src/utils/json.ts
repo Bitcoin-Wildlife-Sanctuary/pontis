@@ -70,14 +70,17 @@ export function fillExpansionTxs(
 
   const result: AccumulatedExpansionTx[][] = [];
 
-  treeArray.forEach((level, levelIdx) => {
+  expansionTxs.forEach((level, levelIdx) => {
     const levelTxs: AccumulatedExpansionTx[] = [];
 
-    level.forEach((node, nodeIdx) => {
-      const tx = expansionTxs[levelIdx][nodeIdx];
+    // for each tx in the current level, check if there is a corresponding node in the tree
+    // if there is, add the node's type, hash, address, and total to the tx
+    // if there isn't, add the tx as is
+    level.forEach((tx, txIdx) => {
+      const node = treeArray[levelIdx]?.[txIdx];
 
-      if (!node || node.type === 'EMPTY' || !tx) {
-        levelTxs.push(null);
+      if (!node || node.type === 'EMPTY') {
+        levelTxs.push(tx ?? null);
         return;
       }
 

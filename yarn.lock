@@ -2743,7 +2743,7 @@ __metadata:
     eslint: "npm:^8.55.0"
     eslint-config-next: "npm:15.2.0"
     next: "npm:15.2.0"
-    operator: "workflow:*"
+    operator: "workspace:*"
     prettier: "npm:^3.5.2"
     react: "npm:^19.0.0"
     react-dom: "npm:^19.0.0"
@@ -6617,7 +6617,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"operator@workflow:*, operator@workspace:operator":
+"operator@workspace:*, operator@workspace:operator":
   version: 0.0.0-use.local
   resolution: "operator@workspace:operator"
   dependencies:
