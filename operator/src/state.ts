@@ -282,10 +282,7 @@ export async function applyChange(
       break;
     }
     case 'l1BlockNumber': {
-      newState.l1BlockNumber = Math.max(
-        newState.l1BlockNumber,
-        change.blockNumber
-      );
+      newState.l1BlockNumber = change.blockNumber;
       await initiateAggregation(env, newState);
       await manageAggregation(env, newState);
       await manageVerification(env, newState);
@@ -295,20 +292,13 @@ export async function applyChange(
       break;
     }
     case 'l2BlockNumber': {
-      newState.l2BlockNumber = Math.max(
-        newState.l2BlockNumber,
-        change.blockNumber
-      );
+      newState.l2BlockNumber = change.blockNumber;
       await sendCloseWithdrawalBatch(env, newState);
       await initiateExpansion(env, newState);
       break;
     }
 
     case 'withdrawal': {
-      newState.l2BlockNumber = Math.max(
-        newState.l2BlockNumber,
-        change.blockNumber
-      );
       await handleWithdrawal(newState, change);
       await sendCloseWithdrawalBatch(env, newState);
       break;

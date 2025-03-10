@@ -241,6 +241,7 @@ export async function finalizeL2Deposit(
   }
   const feeUtxo = pickLargeFeeUtxo(utxos)
   if (feeUtxo.satoshis < total) {
+    console.log("bridgeUtxo.utxo", bridgeUtxo.utxo);
     throw new Error(
       `Insufficient satoshis input amount: fee utxo(${feeUtxo.satoshis}) < total(${total})`
     )
