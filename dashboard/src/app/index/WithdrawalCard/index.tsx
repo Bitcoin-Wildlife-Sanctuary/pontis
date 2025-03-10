@@ -35,7 +35,6 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
 
           {hash && (
             <Row $gap="xxsmall">
-              <SectionTitle>Hash:</SectionTitle>
               <SectionTitle>{shortenHex(hash, 10)}</SectionTitle>
             </Row>
           )}

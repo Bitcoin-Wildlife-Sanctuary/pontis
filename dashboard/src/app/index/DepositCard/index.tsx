@@ -25,7 +25,6 @@ export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
 
           {hash && (
             <Row $gap="xxsmall">
-              <SectionTitle>Hash:</SectionTitle>
               <SectionTitle>{shortenHex(hash, 10)}</SectionTitle>
             </Row>
           )}

@@ -24,7 +24,11 @@ export const StateHeader: React.FC<{state: OperatorState}> = ({state}) => {
               </Row>
             </Col>
           </ContentCard>
+        </Col>
+      </GridCol>
 
+      <GridCol flex lg={2} md={6} sm={12}>
+        <Col $gap="xsmall" $flex={1}>
           <ContentCard $padding="small" $justify="center" $flex="1 1 max-content">
             <Col $flex={1} $justify="center" $gap="xxsmall">
               <Row $gap="xsmall" $alignItems="center">
@@ -41,9 +45,26 @@ export const StateHeader: React.FC<{state: OperatorState}> = ({state}) => {
         </Col>
       </GridCol>
 
-      <GridCol flex lg={3} md={6} sm={12}>
+      {/* <GridCol flex lg={3} md={6} sm={12}>
         <ContentCard $padding="small" $flex={1}>
           <Col $flex={1} $justify="center" $gap="xsmall">
+            <Row $gap="xsmall" $justify="space-between" $alignItems="center">
+              <Title>Batches Root:</Title>
+              <Value>{shortenHex(state.bridgeState.batchesRoot)}</Value>
+            </Row> 
+
+            <Row $gap="xsmall" $justify="space-between" $alignItems="center"> 
+              <Title>Deposit SPK:</Title>
+              <Value>{shortenHex(state.bridgeState.depositAggregatorSPK)}</Value>
+            </Row>
+          </Col>
+        </ContentCard>
+      </GridCol> */}
+
+      <GridCol flex lg={7} md={12} sm={12}>
+        <Col $gap="small" $flex={1}>
+          <ContentCard $padding="small" $flex={1} $gap="xsmall">
+            {/* <Title>Bridge State</Title> */}
             <Row $gap="xsmall" $justify="space-between" $alignItems="center">
               <Title>Latest Tx:</Title>
 
@@ -53,24 +74,12 @@ export const StateHeader: React.FC<{state: OperatorState}> = ({state}) => {
             </Row>
 
             <Row $gap="xsmall" $justify="space-between" $alignItems="center">
-              <Title>Batches Root:</Title>
+              <Title>Root:</Title>
               <Value>{shortenHex(state.bridgeState.batchesRoot)}</Value>
             </Row>
 
-            <Row $gap="xsmall" $justify="space-between" $alignItems="center">
-              <Title>Deposit SPK:</Title>
-              <Value>{shortenHex(state.bridgeState.depositAggregatorSPK)}</Value>
-            </Row>
-          </Col>
-        </ContentCard>
-      </GridCol>
-
-      <GridCol flex lg={6} md={12} sm={12}>
-        <Col $gap="small" $flex={1}>
-          <ContentCard $padding="small" $flex={1} $gap="xsmall">
-            <Title>Merkle Tree</Title>
-
             <Row $gap="xxsmall" $flex={1} style={{flexWrap: 'wrap'}}>
+            <Title>Leafs:</Title>
               {state.bridgeState.merkleTree.map((leaf, index) => {
                 if (isAllZeroHex(leaf)) return null;
 
