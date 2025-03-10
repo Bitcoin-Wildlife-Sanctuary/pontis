@@ -20,12 +20,11 @@ export const DepositCard: React.FC<DepositCardProps> = ({deposit}) => {
         <Col $gap="xxsmall">
           <Row $gap="xxsmall">
             <SectionTitle>Batch:</SectionTitle>
-            <SectionTitle>{deposit.id.toString()}</SectionTitle>
+            <SectionTitle>#{deposit.id.toString()}</SectionTitle>
           </Row>
 
           {hash && (
             <Row $gap="xxsmall">
-              <SectionTitle>Hash:</SectionTitle>
               <SectionTitle>{shortenHex(hash, 10)}</SectionTitle>
             </Row>
           )}

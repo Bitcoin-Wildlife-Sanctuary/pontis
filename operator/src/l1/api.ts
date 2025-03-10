@@ -21,6 +21,7 @@ import {
   WithdrawalExpansionNode,
   withdrawalExpandedStateFromNode,
   leafNodes,
+  Postage,
 } from 'l1';
 import {
   BridgeCovenantState,
@@ -496,7 +497,7 @@ export async function verifyDepositBatch(
     l1Network,
     utxoProvider,
     chainProvider,
-    Sha256(batchId), // extra hash here seems strange...
+    Sha256(batchId),
     bridgeTraceableUtxo,
     feeRate
   );
@@ -547,6 +548,9 @@ export async function createWithdrawal(
 
   const operatorPubKey = await operatorSigner.getPublicKey();
   const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
+
+  console.log('outputWithdrawalState', outputWithdrawalState);
+  console.log('bridgeUtxo', bridgeUtxo);
 
   const res = await bridgeFeatures.createWithdrawalExpander(
     operatorSigner,
@@ -719,5 +723,5 @@ export async function getBridgeBalance(
   if (!bridgeUtxo) {
     throw new Error('bridge utxo not found');
   }
-  return BigInt(bridgeUtxo.satoshis);
+  return BigInt(bridgeUtxo.satoshis - Postage.BRIDGE_POSTAGE);
 }

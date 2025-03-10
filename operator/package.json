@@ -30,7 +30,7 @@
     "posttest": "yarn lint",
     "test": "yarn td",
     "td": "mocha --config=.mocharc.json --no-timeouts",
-    "devnet": "docker run -p 5050:5050 shardlabs/starknet-devnet-rs --seed 0 --lite-mode --block-generation-on 10",
+    "devnet": "docker run -p 5050:5050 shardlabs/starknet-devnet-rs --seed 0 --lite-mode --block-generation-on 30",
     "poc": "tsx src/poc.ts",
     "command": "tsx src/commands.ts"
   },

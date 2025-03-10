@@ -271,14 +271,6 @@ export async function applyChange(
   switch (change.type) {
     case 'deposits': {
       newState.pendingDeposits.push(...change.deposits);
-      newState.l1BlockNumber = Math.max(
-        newState.l1BlockNumber,
-        max(
-          change.deposits.map(
-            (d) => (d.origin.status === 'MINED' && d.origin.blockNumber) || 0
-          )
-        ) || 0
-      );
       await initiateAggregation(env, newState);
       break;
     }
@@ -290,10 +282,7 @@ export async function applyChange(
       break;
     }
     case 'l1BlockNumber': {
-      newState.l1BlockNumber = Math.max(
-        newState.l1BlockNumber,
-        change.blockNumber
-      );
+      newState.l1BlockNumber = change.blockNumber;
       await initiateAggregation(env, newState);
       await manageAggregation(env, newState);
       await manageVerification(env, newState);
@@ -303,20 +292,13 @@ export async function applyChange(
       break;
     }
     case 'l2BlockNumber': {
-      newState.l2BlockNumber = Math.max(
-        newState.l2BlockNumber,
-        change.blockNumber
-      );
+      newState.l2BlockNumber = change.blockNumber;
       await sendCloseWithdrawalBatch(env, newState);
       await initiateExpansion(env, newState);
       break;
     }
 
     case 'withdrawal': {
-      newState.l2BlockNumber = Math.max(
-        newState.l2BlockNumber,
-        change.blockNumber
-      );
       await handleWithdrawal(newState, change);
       await sendCloseWithdrawalBatch(env, newState);
       break;
@@ -683,6 +665,7 @@ async function manageVerification(
   env: BridgeEnvironment,
   state: OperatorState
 ) {
+  return;
   for (let i = 0; i < state.depositBatches.length; i++) {
     const batch = state.depositBatches[i];
 
@@ -844,11 +827,11 @@ async function distributeOrExpand(
   expansionTxsLevel: L1Tx[]
 ): Promise<L1Tx[]> {
   if (expansionLevel.every((n) => n.type !== 'INNER')) {
-    logger.info({ id, level }, 'distributing');
+    logger.info({ id, expansionLevel: level }, 'distributing');
     return await env.distributeWithdrawals(expansionLevel, expansionTxsLevel);
   } else {
     assert(expansionLevel.every((n) => n.type === 'INNER'));
-    logger.info({ id, level }, 'expanding');
+    logger.info({ id, expansionLevel: level }, 'expanding');
     return await env.expandWithdrawals(expansionLevel, expansionTxsLevel);
   }
 }
