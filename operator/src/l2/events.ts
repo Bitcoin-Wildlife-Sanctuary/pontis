@@ -142,11 +142,11 @@ function contractEventsInRange(
               });
             }
             if (
-              parsedEvent.hasOwnProperty(
-                'pontis::bridge::Bridge::DepositEvent'
-              )
+              parsedEvent.hasOwnProperty('pontis::bridge::Bridge::DepositEvent')
             ) {
-              const id = '0x' + fromDigest(rawEvent.data.slice(0, 8).map(BigInt)).toString(16);
+              const id =
+                '0x' +
+                fromDigest(rawEvent.data.slice(0, 8).map(BigInt)).toString(16);
               const total = BigInt(rawEvent.data[8]);
 
               logger.debug({ id, total, raw: rawEvent.data }, 'DepositEvent');
