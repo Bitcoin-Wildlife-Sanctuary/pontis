@@ -156,13 +156,13 @@ pub mod Bridge {
     pub impl DepositHelpersImpl of DepositHelpersTrait {
         fn merkle_root(deposits: Span<Deposit>) -> Digest {
             let mut deposits = deposits;
-            
-            let mut hashes = array![];            
+
+            let mut hashes = array![];
             while let Option::Some(Deposit { recipient, amount }) = deposits.pop_front() {
                 let recipient: felt252 = (*recipient).into();
                 let recipient: u256 = recipient.into();
                 let recipient: Digest = recipient.into();
-    
+
                 let mut leaf: WordArray = Default::default();
                 leaf.append_span(recipient.value.span());
                 leaf.append_u64_le((*amount).into());
@@ -376,66 +376,45 @@ mod merkle_tree_tests {
 
     #[test]
     fn test_merkle_root1() {
-        DepositHelpersImpl::merkle_root(array![
-            Deposit {
-                recipient: 123.try_into().unwrap(),
-                amount: 123,
-            }
-        ].span());
+        DepositHelpersImpl::merkle_root(
+            array![Deposit { recipient: 123.try_into().unwrap(), amount: 123 }].span(),
+        );
     }
 
     #[test]
     fn test_merkle_root2() {
-        DepositHelpersImpl::merkle_root(array![
-            Deposit {
-                recipient: 123.try_into().unwrap(),
-                amount: 123,
-            },
-            Deposit {
-                recipient: 345.try_into().unwrap(),
-                amount: 356,
-            }
-        ].span());
+        DepositHelpersImpl::merkle_root(
+            array![
+                Deposit { recipient: 123.try_into().unwrap(), amount: 123 },
+                Deposit { recipient: 345.try_into().unwrap(), amount: 356 },
+            ]
+                .span(),
+        );
     }
 
     #[test]
     #[should_panic(expected: "Number of hashes should be a power of 2")]
     fn test_merkle_root3() {
-        DepositHelpersImpl::merkle_root(array![
-            Deposit {
-                recipient: 123.try_into().unwrap(),
-                amount: 123,
-            },
-            Deposit {
-                recipient: 345.try_into().unwrap(),
-                amount: 356,
-            },
-            Deposit {
-                recipient: 678.try_into().unwrap(),
-                amount: 678,
-            }
-        ].span());
+        DepositHelpersImpl::merkle_root(
+            array![
+                Deposit { recipient: 123.try_into().unwrap(), amount: 123 },
+                Deposit { recipient: 345.try_into().unwrap(), amount: 356 },
+                Deposit { recipient: 678.try_into().unwrap(), amount: 678 },
+            ]
+                .span(),
+        );
     }
     #[test]
     fn test_merkle_root4() {
-        DepositHelpersImpl::merkle_root(array![
-            Deposit {
-                recipient: 123.try_into().unwrap(),
-                amount: 123,
-            },
-            Deposit {
-                recipient: 345.try_into().unwrap(),
-                amount: 356,
-            },
-            Deposit {
-                recipient: 678.try_into().unwrap(),
-                amount: 678,
-            },
-            Deposit {
-                recipient: 901.try_into().unwrap(),
-                amount: 901,
-            }
-        ].span());
+        DepositHelpersImpl::merkle_root(
+            array![
+                Deposit { recipient: 123.try_into().unwrap(), amount: 123 },
+                Deposit { recipient: 345.try_into().unwrap(), amount: 356 },
+                Deposit { recipient: 678.try_into().unwrap(), amount: 678 },
+                Deposit { recipient: 901.try_into().unwrap(), amount: 901 },
+            ]
+                .span(),
+        );
     }
 }
 

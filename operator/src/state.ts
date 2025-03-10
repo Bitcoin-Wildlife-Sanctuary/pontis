@@ -665,6 +665,7 @@ async function manageVerification(
   env: BridgeEnvironment,
   state: OperatorState
 ) {
+  return;
   for (let i = 0; i < state.depositBatches.length; i++) {
     const batch = state.depositBatches[i];
 
