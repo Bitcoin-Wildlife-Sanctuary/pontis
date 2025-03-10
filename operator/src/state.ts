@@ -836,11 +836,11 @@ async function distributeOrExpand(
   expansionTxsLevel: L1Tx[]
 ): Promise<L1Tx[]> {
   if (expansionLevel.every((n) => n.type !== 'INNER')) {
-    logger.info({ id, level }, 'distributing');
+    logger.info({ id, expansionLevel: level }, 'distributing');
     return await env.distributeWithdrawals(expansionLevel, expansionTxsLevel);
   } else {
     assert(expansionLevel.every((n) => n.type === 'INNER'));
-    logger.info({ id, level }, 'expanding');
+    logger.info({ id, expansionLevel: level }, 'expanding');
     return await env.expandWithdrawals(expansionLevel, expansionTxsLevel);
   }
 }
