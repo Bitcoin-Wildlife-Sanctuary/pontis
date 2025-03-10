@@ -271,14 +271,6 @@ export async function applyChange(
   switch (change.type) {
     case 'deposits': {
       newState.pendingDeposits.push(...change.deposits);
-      newState.l1BlockNumber = Math.max(
-        newState.l1BlockNumber,
-        max(
-          change.deposits.map(
-            (d) => (d.origin.status === 'MINED' && d.origin.blockNumber) || 0
-          )
-        ) || 0
-      );
       await initiateAggregation(env, newState);
       break;
     }

@@ -41,7 +41,7 @@ export default function Page({initialState}: {initialState: StateWithDate}) {
 
             <Row $gap="large" $alignItems="center">
               <Link href="/state-json">
-                <Text.BodyStrong $color="inherit">See the state as JSON</Text.BodyStrong>
+                <Text.BodyStrong $color="inherit">as JSON</Text.BodyStrong>
               </Link>
 
               <ThemeButton onClick={toggleTheme}>

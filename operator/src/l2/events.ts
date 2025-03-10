@@ -1,15 +1,15 @@
 import { Provider, events, CallData, ParsedEvent, Contract } from 'starknet';
-import { EMPTY, Observable, from, timer } from 'rxjs';
+import { Observable, from, timer } from 'rxjs';
 import {
   switchMap,
   scan,
   distinctUntilChanged,
   mergeMap,
   map,
+  filter,
 } from 'rxjs/operators';
 import {
   EMITTED_EVENT,
-  EVENT,
 } from 'starknet-types-07/dist/types/api/components';
 import {
   BlockNumberEvent,
@@ -36,9 +36,10 @@ export function currentBlockRange(
 ): Observable<[number, number]> {
   return currentBlock(provider).pipe(
     scan(
-      ([_, previous], current) => [previous + 1, current],
-      [0, initialBlockNumber]
-    )
+      ([_, previous], current) => [previous + 1, current] as [number, number],
+      [0, initialBlockNumber] as [number, number]
+    ),
+    filter(([previous, current]) => previous <= current)
   );
 }
 
@@ -163,11 +164,7 @@ export function contractEvents(
 ): Observable<L2Event> {
   return currentBlockRange(provider, initialBlockNumber).pipe(
     switchMap(([previous, current]) =>
-      previous <= current
-        ? from(
-            contractEventsInRange(provider, contractAddress, previous, current)
-          )
-        : EMPTY
+      from(contractEventsInRange(provider, contractAddress, previous, current))
     )
   );
 }
