@@ -548,6 +548,9 @@ export async function createWithdrawal(
   const operatorPubKey = await operatorSigner.getPublicKey();
   const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
 
+  console.log('outputWithdrawalState', outputWithdrawalState);
+  console.log('bridgeUtxo', bridgeUtxo);
+
   const res = await bridgeFeatures.createWithdrawalExpander(
     operatorSigner,
     l1Network,

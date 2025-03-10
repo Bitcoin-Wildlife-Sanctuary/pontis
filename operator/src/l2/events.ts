@@ -8,9 +8,7 @@ import {
   map,
   filter,
 } from 'rxjs/operators';
-import {
-  EMITTED_EVENT,
-} from 'starknet-types-07/dist/types/api/components';
+import { EMITTED_EVENT } from 'starknet-types-07/dist/types/api/components';
 import {
   BlockNumberEvent,
   L1Address,
