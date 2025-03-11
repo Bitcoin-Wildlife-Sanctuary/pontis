@@ -1,4 +1,4 @@
-import { RpcProvider } from 'starknet';
+import { logger, RpcProvider } from 'starknet';
 import { importAddressesIntoNode } from './l1/prepare';
 import { closeWithdrawalBatch, submitDepositsToL2 } from './l2/contracts';
 import { applyChange, BridgeEnvironment, L1TxId, OperatorState } from './state';
@@ -167,4 +167,4 @@ async function pocOperator() {
   operator.subscribe((_) => {});
 }
 
-pocOperator().catch(console.error);
+pocOperator().catch(logger.error);

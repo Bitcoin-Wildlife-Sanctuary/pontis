@@ -271,47 +271,30 @@ export async function applyChange(
   switch (change.type) {
     case 'deposits': {
       newState.pendingDeposits.push(...change.deposits);
-      await initiateAggregation(env, newState);
       break;
     }
     case 'l1tx': {
       updateL1TxStatus(newState, change);
-      await manageAggregation(env, newState);
-      await manageVerification(env, newState);
-      await manageExpansion(env, newState);
       break;
     }
     case 'l1BlockNumber': {
       newState.l1BlockNumber = change.blockNumber;
-      await initiateAggregation(env, newState);
-      await manageAggregation(env, newState);
-      await manageVerification(env, newState);
-      await sendCloseWithdrawalBatch(env, newState);
-      await initiateExpansion(env, newState);
-      await manageExpansion(env, newState);
       break;
     }
     case 'l2BlockNumber': {
       newState.l2BlockNumber = change.blockNumber;
-      await sendCloseWithdrawalBatch(env, newState);
-      await initiateExpansion(env, newState);
       break;
     }
-
     case 'withdrawal': {
       await handleWithdrawal(newState, change);
-      await sendCloseWithdrawalBatch(env, newState);
       break;
     }
     case 'closeBatch': {
       await closeWithdrawalBatch(newState, change);
-      await initiateExpansion(env, newState);
       break;
     }
     case 'l2tx': {
       updateL2TxStatus(newState, change);
-      updateDeposits(newState);
-      await manageVerification(env, newState);
       break;
     }
     case 'l1BridgeBalance':
@@ -325,6 +308,17 @@ export async function applyChange(
       return _exhaustiveCheck;
     }
   }
+
+  await initiateAggregation(env, newState);
+  await manageAggregation(env, newState);
+  await manageVerification(env, newState);
+  await sendCloseWithdrawalBatch(env, newState);
+  await initiateExpansion(env, newState);
+  await manageExpansion(env, newState);
+  await initiateExpansion(env, newState);
+  updateDeposits(newState);
+  await manageVerification(env, newState);
+  await sendCloseWithdrawalBatch(env, newState);
 
   return newState;
 }
@@ -665,7 +659,6 @@ async function manageVerification(
   env: BridgeEnvironment,
   state: OperatorState
 ) {
-  return;
   for (let i = 0; i < state.depositBatches.length; i++) {
     const batch = state.depositBatches[i];
 

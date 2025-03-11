@@ -274,6 +274,14 @@ pub impl WordArrayImpl of WordArrayTrait {
         }
     }
 
+    fn append_word_array(ref self: WordArray, other: WordArray) {
+        let (words, word, num_bytes) = other.into_components();
+        self.append_span(words.span());
+        if num_bytes != 0 {
+            self.append_word(word, num_bytes);
+        }
+    }
+
     /// Split word array into components:
     /// (array of full 4-byte words, last word, number of bytes in the last word)
     fn into_components(self: WordArray) -> (Array<u32>, u32, u32) {

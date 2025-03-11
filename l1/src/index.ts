@@ -24,7 +24,8 @@ export {
     TraceableDepositAggregatorUtxo,
     TracedDepositAggregator,
     DepositAggregatorState,
-    stateHashToBatchID
+    stateHashToBatchID,
+    stateToBatchID
 } from './covenants/depositAggregatorCovenant'
 export { 
     WithdrawalExpanderCovenant,

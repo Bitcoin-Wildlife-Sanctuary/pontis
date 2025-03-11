@@ -116,7 +116,6 @@ pub mod Bridge {
         fn deposit(ref self: ContractState, txid: Digest, deposits: Span<Deposit>) {
             self.ownable.assert_only_owner();
 
-            let root = DepositHelpersTrait::merkle_root(deposits);
             let btc = self.btc.read();
             let mut total = 0_u32;
             let mut deposits_ = deposits;
@@ -126,7 +125,7 @@ pub mod Bridge {
                 total = total + amount;
             };
 
-            let id = double_sha256_parent(@txid, @root);
+            let id = DepositHelpersTrait::get_deposit_id(txid, deposits);
 
             self.emit(DepositEvent { id, total });
         }
@@ -154,10 +153,25 @@ pub mod Bridge {
 
     #[generate_trait]
     pub impl DepositHelpersImpl of DepositHelpersTrait {
-        fn merkle_root(deposits: Span<Deposit>) -> Digest {
+        fn get_deposit_id(txid: Digest, deposits: Span<Deposit>) -> Digest {
             let mut deposits = deposits;
 
-            let mut hashes = array![];
+            if deposits.len() == 1 {
+                if let Option::Some(Deposit { recipient, amount }) = deposits.pop_front() {
+                    let recipient: felt252 = (*recipient).into();
+                    let recipient: u256 = recipient.into();
+                    let recipient: Digest = recipient.into();
+
+                    let mut w: WordArray = Default::default();
+                    w.append_span(txid.value.span());
+                    w.append_span(recipient.value.span());
+                    w.append_u64_le((*amount).into());
+
+                    return double_sha256_word_array(w);
+                };
+            }
+
+            let mut leafs = array![];
             while let Option::Some(Deposit { recipient, amount }) = deposits.pop_front() {
                 let recipient: felt252 = (*recipient).into();
                 let recipient: u256 = recipient.into();
@@ -166,29 +180,42 @@ pub mod Bridge {
                 let mut leaf: WordArray = Default::default();
                 leaf.append_span(recipient.value.span());
                 leaf.append_u64_le((*amount).into());
-                hashes.append(double_sha256_word_array(leaf));
+                leafs.append(leaf.span());
             };
 
             let mut level: u8 = 1;
 
-            let mut hashes = hashes.span();
+            let mut hashes = leafs.span();
             while hashes.len() > 1 {
-                let mut next_hashes: Array<Digest> = array![];
+                let mut next_hashes = array![];
                 while let Option::Some(v) = hashes.multi_pop_front::<2>() {
                     let [a, b] = (*v).unbox();
                     let mut w: WordArray = Default::default();
                     w.append_u8(level);
-                    w.append_span(a.value.span());
-                    w.append_span(b.value.span());
+                    w.append_word_array(a.into());
+                    w.append_word_array(b.into());
                     let hash = double_sha256_word_array(w);
-                    next_hashes.append(hash);
+                    let mut w: WordArray = Default::default();
+                    w.append_span(hash.value.span());
+                    next_hashes.append(w.span());
                 };
                 assert!(hashes.len() == 0, "Number of hashes should be a power of 2");
                 hashes = next_hashes.span();
                 level += 1;
             };
 
-            *hashes.at(0)
+            let (words, _, num_bytes) = (*hashes.at(0)).into().into_components();
+            assert!(words.len() == 8 && num_bytes == 0, "hash should be 8 u32s");
+
+            double_sha256_parent(
+                @txid,
+                @DigestTrait::new(
+                    [
+                        *words.at(0), *words.at(1), *words.at(2), *words.at(3), *words.at(4),
+                        *words.at(5), *words.at(6), *words.at(7),
+                    ],
+                ),
+            )
         }
     }
 
@@ -280,7 +307,7 @@ pub mod Bridge {
             let mut hashes = hashes;
 
             while hashes.len() > 1 {
-                let mut next_hashes: Array<WithdrawalsTreeNode> = array![];
+                let mut next_hashes = array![];
                 while let Option::Some(v) = hashes.multi_pop_front::<2>() {
                     let [a, b] = (*v).unbox();
                     next_hashes.append(Self::hash256_inner_nodes(@a, @b));
@@ -372,18 +399,21 @@ pub mod Bridge {
 mod merkle_tree_tests {
     use super::Bridge::DepositHelpersImpl;
     use super::Deposit;
-
+    use crate::utils::hash::{Digest};
+    use core::num::traits::zero::Zero;
 
     #[test]
-    fn test_merkle_root1() {
-        DepositHelpersImpl::merkle_root(
+    fn test_get_deposit_id1() {
+        DepositHelpersImpl::get_deposit_id(
+            Zero::zero(),
             array![Deposit { recipient: 123.try_into().unwrap(), amount: 123 }].span(),
         );
     }
 
     #[test]
-    fn test_merkle_root2() {
-        DepositHelpersImpl::merkle_root(
+    fn test_get_deposit_id2() {
+        DepositHelpersImpl::get_deposit_id(
+            Zero::zero(),
             array![
                 Deposit { recipient: 123.try_into().unwrap(), amount: 123 },
                 Deposit { recipient: 345.try_into().unwrap(), amount: 356 },
@@ -394,8 +424,9 @@ mod merkle_tree_tests {
 
     #[test]
     #[should_panic(expected: "Number of hashes should be a power of 2")]
-    fn test_merkle_root3() {
-        DepositHelpersImpl::merkle_root(
+    fn test_get_deposit_id3() {
+        DepositHelpersImpl::get_deposit_id(
+            Zero::zero(),
             array![
                 Deposit { recipient: 123.try_into().unwrap(), amount: 123 },
                 Deposit { recipient: 345.try_into().unwrap(), amount: 356 },
@@ -405,8 +436,9 @@ mod merkle_tree_tests {
         );
     }
     #[test]
-    fn test_merkle_root4() {
-        DepositHelpersImpl::merkle_root(
+    fn test_get_deposit_id4() {
+        DepositHelpersImpl::get_deposit_id(
+            Zero::zero(),
             array![
                 Deposit { recipient: 123.try_into().unwrap(), amount: 123 },
                 Deposit { recipient: 345.try_into().unwrap(), amount: 356 },
