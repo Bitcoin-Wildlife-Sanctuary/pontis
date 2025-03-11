@@ -76,7 +76,7 @@ export const StateHeader: React.FC<{state: OperatorState}> = ({state}) => {
 
                 return (
                   <Row key={leaf} $alignItems="center" $gap="xsmall" $flex={1}>
-                    <Value $fontSize={18}>{index + 1}:</Value>
+                    <Value>{index + 1}:</Value>
 
                     <Value>{shortenHex(leaf, 12)}</Value>
                   </Row>
