@@ -34,9 +34,9 @@ pub mod Bridge {
     };
     use crate::btc::{IBTCDispatcher, IBTCDispatcherTrait};
     use crate::utils::{
-        double_sha256::{double_sha256_parent, double_sha256_word_array},
-        word_array::{WordArray, WordArrayTrait},
+        double_sha256::double_sha256_word_array, word_array::{WordArray, WordArrayTrait},
     };
+
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
 
@@ -116,13 +116,6 @@ pub mod Bridge {
         fn deposit(ref self: ContractState, txid: Digest, deposits: Span<Deposit>) {
             self.ownable.assert_only_owner();
 
-            let mut deposits_ = deposits;
-            let mut leafs: Array<Digest> = array![];
-            while let Option::Some(Deposit { recipient, amount }) = deposits_.pop_front() {
-                leafs.append(DepositHelpersTrait::hash256_deposit(*recipient, *amount));
-            };
-
-            let root = DepositHelpersTrait::merkle_root(leafs.span());
             let btc = self.btc.read();
             let mut total = 0_u32;
             let mut deposits_ = deposits;
@@ -132,7 +125,7 @@ pub mod Bridge {
                 total = total + amount;
             };
 
-            let id = double_sha256_parent(@txid, @root);
+            let id = DepositHelpersTrait::get_deposit_id(txid, deposits);
 
             self.emit(DepositEvent { id, total });
         }
@@ -160,63 +153,64 @@ pub mod Bridge {
 
     #[generate_trait]
     pub impl DepositHelpersImpl of DepositHelpersTrait {
-        fn hash256_deposit(recipient: ContractAddress, amount: u32) -> Digest {
-            let mut b: WordArray = Default::default();
+        fn get_deposit_id(txid: Digest, deposits: Span<Deposit>) -> Digest {
+            let mut deposits = deposits;
 
-            let recipient: felt252 = recipient.into();
-            let recipient: u256 = recipient.into();
-            let recipient: Digest = recipient.into();
+            if deposits.len() == 1 {
+                if let Option::Some(Deposit { recipient, amount }) = deposits.pop_front() {
+                    let recipient: felt252 = (*recipient).into();
+                    let recipient: u256 = recipient.into();
 
-            b.append_span(recipient.value.span());
-            b.append_bytes(amount.into(), 4);
+                    let mut w: WordArray = Default::default();
+                    w.append_span(txid.value.span());
+                    w.append_u256(recipient);
+                    w.append_u64_le((*amount).into());
 
-            double_sha256_word_array(b)
-        }
+                    return w.compute_sha256();
+                };
+            }
 
-        fn hash256_inner_nodes(level: u8, a: @Digest, b: @Digest) -> Digest {
-            let mut input: WordArray = Default::default();
-            input.append_u8(level);
-            input.append_span(a.value.span());
-            input.append_span(b.value.span());
+            let mut leafs = array![];
+            while let Option::Some(Deposit { recipient, amount }) = deposits.pop_front() {
+                let recipient: felt252 = (*recipient).into();
+                let recipient: u256 = recipient.into();
 
-            double_sha256_word_array(input)
-        }
+                let mut leaf: WordArray = Default::default();
+                leaf.append_u256(recipient);
+                leaf.append_u64_le((*amount).into());
 
-        fn merkle_root(hashes: Span<Digest>) -> Digest {
-            let mut hashes = hashes;
+                leafs.append(leaf.span());
+            };
 
             let mut level: u8 = 1;
 
+            let mut hashes = leafs.span();
             while hashes.len() > 1 {
-                let mut next_hashes: Array<Digest> = array![];
+                let mut next_hashes = array![];
                 while let Option::Some(v) = hashes.multi_pop_front::<2>() {
                     let [a, b] = (*v).unbox();
-                    next_hashes.append(Self::hash256_inner_nodes(level, @a, @b));
+                    let mut w: WordArray = Default::default();
+                    w.append_u8(level);
+                    w.append_word_array(a.into());
+                    w.append_word_array(b.into());
+                    let hash = double_sha256_word_array(w);
+                    let mut w: WordArray = Default::default();
+                    w.append_span(hash.value.span());
+                    next_hashes.append(w.span());
                 };
                 assert!(hashes.len() == 0, "Number of hashes should be a power of 2");
                 hashes = next_hashes.span();
                 level += 1;
             };
 
-            *hashes.at(0)
-        }
-        fn merkle_root_with_levels(hashes: Span<Digest>) -> Digest {
-            let mut hashes = hashes;
+            let (words, _, num_bytes) = (*hashes.at(0)).into().into_components();
+            assert!(words.len() == 8 && num_bytes == 0, "hash should be 8 u32s");
 
-            let mut level: u8 = 1;
+            let mut w: WordArray = Default::default();
+            w.append_span(txid.value.span());
+            w.append_span(words.span());
 
-            while hashes.len() > 1 {
-                let mut next_hashes: Array<Digest> = array![];
-                while let Option::Some(v) = hashes.multi_pop_front::<2>() {
-                    let [a, b] = (*v).unbox();
-                    next_hashes.append(Self::hash256_inner_nodes(level, @a, @b));
-                };
-                assert!(hashes.len() == 0, "Number of hashes should be a power of 2");
-                hashes = next_hashes.span();
-                level += 1;
-            };
-
-            *hashes.at(0)
+            return w.compute_sha256();
         }
     }
 
@@ -308,7 +302,7 @@ pub mod Bridge {
             let mut hashes = hashes;
 
             while hashes.len() > 1 {
-                let mut next_hashes: Array<WithdrawalsTreeNode> = array![];
+                let mut next_hashes = array![];
                 while let Option::Some(v) = hashes.multi_pop_front::<2>() {
                     let [a, b] = (*v).unbox();
                     next_hashes.append(Self::hash256_inner_nodes(@a, @b));
@@ -398,43 +392,56 @@ pub mod Bridge {
 
 #[cfg(test)]
 mod merkle_tree_tests {
-    use crate::utils::hash::Digest;
     use super::Bridge::DepositHelpersImpl;
+    use super::Deposit;
+    use core::num::traits::zero::Zero;
 
-    fn data(size: u256) -> Array<Digest> {
-        let x = 0x8000000000000000000000000000000000000000000000000000000000000000;
-        let mut r = array![];
-        for i in 1..size + 1 {
-            r.append((x + i).into());
-        };
-        r
+    #[test]
+    fn test_get_deposit_id1() {
+        DepositHelpersImpl::get_deposit_id(
+            Zero::zero(),
+            array![Deposit { recipient: 123.try_into().unwrap(), amount: 123 }].span(),
+        );
     }
 
     #[test]
-    fn test_merkle_root1() {
-        let data = data(1).span();
-        assert_eq!(DepositHelpersImpl::merkle_root(data), *data.at(0), "merkle root mismatch");
+    fn test_get_deposit_id2() {
+        DepositHelpersImpl::get_deposit_id(
+            Zero::zero(),
+            array![
+                Deposit { recipient: 123.try_into().unwrap(), amount: 123 },
+                Deposit { recipient: 345.try_into().unwrap(), amount: 356 },
+            ]
+                .span(),
+        );
     }
 
     #[test]
     #[should_panic(expected: "Number of hashes should be a power of 2")]
-    fn test_merkle_root3() {
-        DepositHelpersImpl::merkle_root(data(3).span());
+    fn test_get_deposit_id3() {
+        DepositHelpersImpl::get_deposit_id(
+            Zero::zero(),
+            array![
+                Deposit { recipient: 123.try_into().unwrap(), amount: 123 },
+                Deposit { recipient: 345.try_into().unwrap(), amount: 356 },
+                Deposit { recipient: 678.try_into().unwrap(), amount: 678 },
+            ]
+                .span(),
+        );
     }
 
     #[test]
-    #[should_panic(expected: "Number of hashes should be a power of 2")]
-    fn test_merkle_root7() {
-        DepositHelpersImpl::merkle_root(data(7).span());
-    }
-
-    #[test]
-    fn test_merkle_root() {
-        DepositHelpersImpl::merkle_root(data(1).span());
-        DepositHelpersImpl::merkle_root(data(2).span());
-        DepositHelpersImpl::merkle_root(data(4).span());
-        DepositHelpersImpl::merkle_root(data(8).span());
-        DepositHelpersImpl::merkle_root(data(16).span());
+    fn test_get_deposit_id4() {
+        DepositHelpersImpl::get_deposit_id(
+            Zero::zero(),
+            array![
+                Deposit { recipient: 123.try_into().unwrap(), amount: 123 },
+                Deposit { recipient: 345.try_into().unwrap(), amount: 356 },
+                Deposit { recipient: 678.try_into().unwrap(), amount: 678 },
+                Deposit { recipient: 901.try_into().unwrap(), amount: 901 },
+            ]
+                .span(),
+        );
     }
 }
 

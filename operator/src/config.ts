@@ -20,8 +20,6 @@ import { createL1Provider } from './l1/deps/l1Provider';
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
-console.log(path.join(__dirname, '../.env'));
-
 const ECPair = ECPairFactory(ecc);
 bitcoinjs.initEccLib(ecc);
 

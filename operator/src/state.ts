@@ -271,65 +271,30 @@ export async function applyChange(
   switch (change.type) {
     case 'deposits': {
       newState.pendingDeposits.push(...change.deposits);
-      newState.l1BlockNumber = Math.max(
-        newState.l1BlockNumber,
-        max(
-          change.deposits.map(
-            (d) => (d.origin.status === 'MINED' && d.origin.blockNumber) || 0
-          )
-        ) || 0
-      );
-      await initiateAggregation(env, newState);
       break;
     }
     case 'l1tx': {
       updateL1TxStatus(newState, change);
-      await manageAggregation(env, newState);
-      await manageVerification(env, newState);
-      await manageExpansion(env, newState);
       break;
     }
     case 'l1BlockNumber': {
-      newState.l1BlockNumber = Math.max(
-        newState.l1BlockNumber,
-        change.blockNumber
-      );
-      await initiateAggregation(env, newState);
-      await manageAggregation(env, newState);
-      await manageVerification(env, newState);
-      await sendCloseWithdrawalBatch(env, newState);
-      await initiateExpansion(env, newState);
-      await manageExpansion(env, newState);
+      newState.l1BlockNumber = change.blockNumber;
       break;
     }
     case 'l2BlockNumber': {
-      newState.l2BlockNumber = Math.max(
-        newState.l2BlockNumber,
-        change.blockNumber
-      );
-      await sendCloseWithdrawalBatch(env, newState);
-      await initiateExpansion(env, newState);
+      newState.l2BlockNumber = change.blockNumber;
       break;
     }
-
     case 'withdrawal': {
-      newState.l2BlockNumber = Math.max(
-        newState.l2BlockNumber,
-        change.blockNumber
-      );
       await handleWithdrawal(newState, change);
-      await sendCloseWithdrawalBatch(env, newState);
       break;
     }
     case 'closeBatch': {
       await closeWithdrawalBatch(newState, change);
-      await initiateExpansion(env, newState);
       break;
     }
     case 'l2tx': {
       updateL2TxStatus(newState, change);
-      updateDeposits(newState);
-      await manageVerification(env, newState);
       break;
     }
     case 'l1BridgeBalance':
@@ -343,6 +308,17 @@ export async function applyChange(
       return _exhaustiveCheck;
     }
   }
+
+  await initiateAggregation(env, newState);
+  await manageAggregation(env, newState);
+  await manageVerification(env, newState);
+  await sendCloseWithdrawalBatch(env, newState);
+  await initiateExpansion(env, newState);
+  await manageExpansion(env, newState);
+  await initiateExpansion(env, newState);
+  updateDeposits(newState);
+  await manageVerification(env, newState);
+  await sendCloseWithdrawalBatch(env, newState);
 
   return newState;
 }
@@ -636,7 +612,7 @@ async function manageAggregation(env: BridgeEnvironment, state: OperatorState) {
           }
         } else {
           logger.info(
-            { id: batch.id, level: batch.aggregationTxs.length },
+            { id: batch.id, aggregationLevel: batch.aggregationTxs.length },
             'continuing aggregation'
           );
           const newAggregationLevel = await env.aggregateDeposits(
@@ -655,7 +631,7 @@ async function manageAggregation(env: BridgeEnvironment, state: OperatorState) {
         ...batch,
         status: 'SUBMITTED_TO_L2',
         depositTx: await env.submitDepositsToL2(
-          batch.finalizeBatchTx.hash,
+          batch.aggregationTxs.at(-1)![0]!.tx.hash,
           batch.deposits
         ),
       };
@@ -844,11 +820,11 @@ async function distributeOrExpand(
   expansionTxsLevel: L1Tx[]
 ): Promise<L1Tx[]> {
   if (expansionLevel.every((n) => n.type !== 'INNER')) {
-    logger.info({ id, level }, 'distributing');
+    logger.info({ id, expansionLevel: level }, 'distributing');
     return await env.distributeWithdrawals(expansionLevel, expansionTxsLevel);
   } else {
     assert(expansionLevel.every((n) => n.type === 'INNER'));
-    logger.info({ id, level }, 'expanding');
+    logger.info({ id, expansionLevel: level }, 'expanding');
     return await env.expandWithdrawals(expansionLevel, expansionTxsLevel);
   }
 }

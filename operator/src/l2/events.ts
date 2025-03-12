@@ -1,16 +1,14 @@
 import { Provider, events, CallData, ParsedEvent, Contract } from 'starknet';
-import { EMPTY, Observable, from, timer } from 'rxjs';
+import { Observable, from, timer } from 'rxjs';
 import {
   switchMap,
   scan,
   distinctUntilChanged,
   mergeMap,
   map,
+  filter,
 } from 'rxjs/operators';
-import {
-  EMITTED_EVENT,
-  EVENT,
-} from 'starknet-types-07/dist/types/api/components';
+import { EMITTED_EVENT } from 'starknet-types-07/dist/types/api/components';
 import {
   BlockNumberEvent,
   L1Address,
@@ -36,9 +34,10 @@ export function currentBlockRange(
 ): Observable<[number, number]> {
   return currentBlock(provider).pipe(
     scan(
-      ([_, previous], current) => [previous + 1, current],
-      [0, initialBlockNumber]
-    )
+      ([_, previous], current) => [previous + 1, current] as [number, number],
+      [0, initialBlockNumber] as [number, number]
+    ),
+    filter(([previous, current]) => previous <= current)
   );
 }
 
@@ -142,6 +141,16 @@ function contractEventsInRange(
                 blockNumber,
               });
             }
+            if (
+              parsedEvent.hasOwnProperty('pontis::bridge::Bridge::DepositEvent')
+            ) {
+              const id =
+                '0x' +
+                fromDigest(rawEvent.data.slice(0, 8).map(BigInt)).toString(16);
+              const total = BigInt(rawEvent.data[8]);
+
+              logger.debug({ id, total, raw: rawEvent.data }, 'DepositEvent');
+            }
           }
           continuationToken = response.continuation_token;
         } while (continuationToken);
@@ -163,11 +172,7 @@ export function contractEvents(
 ): Observable<L2Event> {
   return currentBlockRange(provider, initialBlockNumber).pipe(
     switchMap(([previous, current]) =>
-      previous <= current
-        ? from(
-            contractEventsInRange(provider, contractAddress, previous, current)
-          )
-        : EMPTY
+      from(contractEventsInRange(provider, contractAddress, previous, current))
     )
   );
 }

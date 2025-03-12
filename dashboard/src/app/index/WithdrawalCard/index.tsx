@@ -30,12 +30,11 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
         <Col $gap="xxsmall">
           <Row $gap="xxsmall">
             <SectionTitle>Batch:</SectionTitle>
-            <SectionTitle>{withdrawal.id.toString()}</SectionTitle>
+            <SectionTitle>#{withdrawal.id.toString()}</SectionTitle>
           </Row>
 
           {hash && (
             <Row $gap="xxsmall">
-              <SectionTitle>Hash:</SectionTitle>
               <SectionTitle>{shortenHex(hash, 10)}</SectionTitle>
             </Row>
           )}
