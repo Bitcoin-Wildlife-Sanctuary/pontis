@@ -1,7 +1,13 @@
 import { closePendingWithdrawalBatch, init, withdraw } from './l2/contracts';
 import assert from 'assert';
-import { loadContractArtifacts, stateToBatchID, WithdrawalExpander } from 'l1';
-import { PubKey } from 'scrypt-ts';
+import {
+  BatchId,
+  DepositAggregator,
+  DepositAggregatorState,
+  loadContractArtifacts,
+  WithdrawalExpander,
+} from 'l1';
+import { int2ByteString, len, PubKey, sha256, Sha256 } from 'scrypt-ts';
 import { createDeposit } from './l1/api';
 import { Config, getAdmin, getConfig } from './config';
 import { addressToScript, l2AddressToHex } from './l1/utils/contractUtil';
@@ -64,19 +70,95 @@ function printWithdrawalHashes() {
 //   return tools.toHex(tools.fromHex(txId).reverse())
 // }
 
+export function stateToBatchID(
+  state: DepositAggregatorState,
+  prevTxid: string
+): BatchId {
+  const hash =
+    state.type === 'LEAF'
+      ? DepositAggregator.hashDepositData(
+          state.depositAddress,
+          state.depositAmt
+        )
+      : DepositAggregator.hashAggregatorData(
+          state.level,
+          state.prevHashData0,
+          state.prevHashData1
+        );
+
+  if (state.type === 'LEAF') {
+    console.log('state.depositAddress', state.depositAddress);
+    console.log('state.depositAmt', state.depositAmt);
+    console.log(
+      'DepositAggregator.hashDepositData',
+      DepositAggregator.hashDepositData(state.depositAddress, state.depositAmt)
+    );
+  } else {
+    console.log('state.level', state.level);
+    console.log('state.prevHashData0', state.prevHashData0);
+    console.log('state.prevHashData1', state.prevHashData1);
+    console.log(
+      'hash input: ',
+      int2ByteString(state.level) + state.prevHashData0 + state.prevHashData1
+    );
+    console.log(
+      'DepositAggregator.hashAggregatorData',
+      DepositAggregator.hashAggregatorData(
+        state.level,
+        state.prevHashData0,
+        state.prevHashData1
+      )
+    );
+  }
+
+  /// add prevTxid to the hash to make it unique
+
+  console.log('prevTxid:', prevTxid);
+  console.log('sha256 input:', prevTxid + hash);
+  console.log('sha256', sha256(prevTxid + hash));
+
+  return sha256(prevTxid + hash);
+}
+
 function printDepositBatchId(config: Config) {
-  const deposit = stateToBatchID(
+  const txId =
+    'a8de6515270565a06d378922ac42278d5fd5b1ffee9fe53594f8914204167743';
+  // const txId = 'bc0b9a4a67e2bea27991d6401dcb5ecaf7262b2c21f3e767367f6fa9dae65dbf';
+  const reversedTxId = utils.reverseTxId(txId);
+  const depositAddress = l2AddressToHex(config.l2.alice.address as L2Address);
+  const depositAmt = 3000n;
+
+  // const deposit = stateToBatchID(
+  //   {
+  //     type: 'LEAF',
+  //     level: 0n,
+  //     depositAddress,
+  //     depositAmt,
+  //   },
+  //   reversedTxId
+  // );
+
+  const deposit2 = stateToBatchID(
     {
-      type: 'LEAF',
-      level: 0n,
-      depositAddress: l2AddressToHex(config.l2.alice.address as L2Address),
-      depositAmt: 3000n,
+      type: 'INTERNAL',
+      level: 1n,
+      prevHashData0: Sha256(
+        DepositAggregator.hashDepositData(depositAddress, depositAmt)
+      ),
+      prevHashData1: Sha256(
+        DepositAggregator.hashDepositData(depositAddress, depositAmt)
+      ),
     },
-    utils.reverseTxId(
-      'bc0b9a4a67e2bea27991d6401dcb5ecaf7262b2c21f3e767367f6fa9dae65dbf'
-    )
+    reversedTxId
   );
-  console.log('deposit hash:', deposit);
+
+  console.log(
+    'l2Address:',
+    l2AddressToHex(config.l2.alice.address as L2Address)
+  );
+  console.log('reversedTxId:', reversedTxId);
+  // console.log('deposit hash:', deposit);
+  console.log('deposit2 hash:', deposit2);
 }
 
 async function deploy(admin: Account) {

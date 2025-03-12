@@ -6,6 +6,8 @@
 
 use core::traits::DivRem;
 use crate::utils::bit_shifts::pow256;
+use crate::utils::hash::{Digest, DigestTrait};
+use core::sha256::compute_sha256_u32_array;
 
 /// Array of 4-byte words where the last word can be partial.
 #[derive(Drop, Debug, Default, PartialEq)]
@@ -71,6 +73,12 @@ pub impl WordSpanImpl of WordSpanTrait {
         }
     }
 }
+
+const POW_2_32: u128 = 0x100000000;
+const POW_2_64: u128 = 0x10000000000000000;
+const POW_2_96: u128 = 0x1000000000000000000000000;
+const NZ_POW2_32_128: NonZero<u128> = 0x100000000;
+const NZ_POW2_32_64: NonZero<u64> = 0x100000000;
 
 #[generate_trait]
 pub impl WordArrayImpl of WordArrayTrait {
@@ -153,6 +161,30 @@ pub impl WordArrayImpl of WordArrayTrait {
             self.input.append(self.last_input_word * 0x100 + r0);
             self.last_input_word = r1 * 0x10000 + r2 * 0x100 + q2;
         }
+    }
+
+    fn append_u256(ref self: WordArray, value: u256) {
+        let low: u128 = value.low;
+        let high: u128 = value.high;
+
+        let (q_96, high_32_0) = DivRem::div_rem(high, NZ_POW2_32_128);
+        let (q_64, high_64_32) = DivRem::div_rem(q_96, NZ_POW2_32_128);
+        let q_64_t: u64 = q_64.try_into().unwrap();
+        let (high_128_96, high_96_64) = DivRem::div_rem(q_64_t, NZ_POW2_32_64);
+
+        let (q_96, low_32_0) = DivRem::div_rem(low, NZ_POW2_32_128);
+        let (q_64, low_64_32) = DivRem::div_rem(q_96, NZ_POW2_32_128);
+        let q_64_t: u64 = q_64.try_into().unwrap();
+        let (low_128_96, low_96_64) = DivRem::div_rem(q_64_t, NZ_POW2_32_64);
+
+        self.append_word(high_128_96.try_into().unwrap(), 4);
+        self.append_word(high_96_64.try_into().unwrap(), 4);
+        self.append_word(high_64_32.try_into().unwrap(), 4);
+        self.append_word(high_32_0.try_into().unwrap(), 4);
+        self.append_word(low_128_96.try_into().unwrap(), 4);
+        self.append_word(low_96_64.try_into().unwrap(), 4);
+        self.append_word(low_64_32.try_into().unwrap(), 4);
+        self.append_word(low_32_0.try_into().unwrap(), 4);
     }
 
     /// Append a u64 number, reversing the byte order (little endian).
@@ -282,6 +314,12 @@ pub impl WordArrayImpl of WordArrayTrait {
         }
     }
 
+    fn compute_sha256(self: WordArray) -> Digest {
+        return DigestTrait::new(
+            compute_sha256_u32_array(self.input, self.last_input_word, self.last_input_num_bytes),
+        );
+    }
+
     /// Split word array into components:
     /// (array of full 4-byte words, last word, number of bytes in the last word)
     fn into_components(self: WordArray) -> (Array<u32>, u32, u32) {
@@ -331,7 +369,6 @@ impl WordSpanDefault of Default<WordSpan> {
         Default::<WordArray>::default().span()
     }
 }
-
 
 #[cfg(target: 'test')]
 pub mod hex {

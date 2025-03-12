@@ -34,9 +34,9 @@ pub mod Bridge {
     };
     use crate::btc::{IBTCDispatcher, IBTCDispatcherTrait};
     use crate::utils::{
-        double_sha256::{double_sha256_parent, double_sha256_word_array},
-        word_array::{WordArray, WordArrayTrait},
+        double_sha256::double_sha256_word_array, word_array::{WordArray, WordArrayTrait},
     };
+
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
 
@@ -160,14 +160,13 @@ pub mod Bridge {
                 if let Option::Some(Deposit { recipient, amount }) = deposits.pop_front() {
                     let recipient: felt252 = (*recipient).into();
                     let recipient: u256 = recipient.into();
-                    let recipient: Digest = recipient.into();
 
                     let mut w: WordArray = Default::default();
                     w.append_span(txid.value.span());
-                    w.append_span(recipient.value.span());
+                    w.append_u256(recipient);
                     w.append_u64_le((*amount).into());
 
-                    return double_sha256_word_array(w);
+                    return w.compute_sha256();
                 };
             }
 
@@ -175,11 +174,11 @@ pub mod Bridge {
             while let Option::Some(Deposit { recipient, amount }) = deposits.pop_front() {
                 let recipient: felt252 = (*recipient).into();
                 let recipient: u256 = recipient.into();
-                let recipient: Digest = recipient.into();
 
                 let mut leaf: WordArray = Default::default();
-                leaf.append_span(recipient.value.span());
+                leaf.append_u256(recipient);
                 leaf.append_u64_le((*amount).into());
+
                 leafs.append(leaf.span());
             };
 
@@ -207,15 +206,11 @@ pub mod Bridge {
             let (words, _, num_bytes) = (*hashes.at(0)).into().into_components();
             assert!(words.len() == 8 && num_bytes == 0, "hash should be 8 u32s");
 
-            double_sha256_parent(
-                @txid,
-                @DigestTrait::new(
-                    [
-                        *words.at(0), *words.at(1), *words.at(2), *words.at(3), *words.at(4),
-                        *words.at(5), *words.at(6), *words.at(7),
-                    ],
-                ),
-            )
+            let mut w: WordArray = Default::default();
+            w.append_span(txid.value.span());
+            w.append_span(words.span());
+
+            return w.compute_sha256();
         }
     }
 
@@ -399,7 +394,6 @@ pub mod Bridge {
 mod merkle_tree_tests {
     use super::Bridge::DepositHelpersImpl;
     use super::Deposit;
-    use crate::utils::hash::{Digest};
     use core::num::traits::zero::Zero;
 
     #[test]
@@ -435,6 +429,7 @@ mod merkle_tree_tests {
                 .span(),
         );
     }
+
     #[test]
     fn test_get_deposit_id4() {
         DepositHelpersImpl::get_deposit_id(

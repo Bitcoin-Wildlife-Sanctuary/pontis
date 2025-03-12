@@ -612,7 +612,7 @@ async function manageAggregation(env: BridgeEnvironment, state: OperatorState) {
           }
         } else {
           logger.info(
-            { id: batch.id, level: batch.aggregationTxs.length },
+            { id: batch.id, aggregationLevel: batch.aggregationTxs.length },
             'continuing aggregation'
           );
           const newAggregationLevel = await env.aggregateDeposits(
@@ -631,7 +631,7 @@ async function manageAggregation(env: BridgeEnvironment, state: OperatorState) {
         ...batch,
         status: 'SUBMITTED_TO_L2',
         depositTx: await env.submitDepositsToL2(
-          batch.finalizeBatchTx.hash,
+          batch.aggregationTxs.at(-1)![0]!.tx.hash,
           batch.deposits
         ),
       };

@@ -12,6 +12,8 @@ import * as fs from 'fs';
 import { Deposit, L2Tx, L2TxId, L2TxStatus } from '../state';
 import { from, map, Observable } from 'rxjs';
 import assert from 'assert';
+import logger from '../logger';
+import { utils } from 'l1';
 
 async function declareAndDeploy(
   account: Account,
@@ -67,11 +69,13 @@ export async function init(admin: Account) {
 }
 
 export function toDigest(x: bigint): { value: bigint[] } {
+  const v = BigInt('0x' + utils.reverseTxId(x.toString(16)));
+
   const value = new Array<bigint>(8);
 
   for (let i = 0; i < 8; i++) {
-    const shift = 32n * BigInt(i);
-    value[i] = (x >> shift) & 0xffffffffn;
+    const shift = 32n * BigInt(7 - i);
+    value[i] = (v >> shift) & 0xffffffffn;
   }
 
   return { value };
