@@ -79,7 +79,7 @@ export const StateHeader: React.FC<{state: OperatorState}> = ({state}) => {
             </Row>
 
             <Row $gap="xxsmall" $flex={1} style={{flexWrap: 'wrap'}}>
-            <Title>Leafs:</Title>
+              <Title>Leafs:</Title>
               {state.bridgeState.merkleTree.map((leaf, index) => {
                 if (isAllZeroHex(leaf)) return null;
 
