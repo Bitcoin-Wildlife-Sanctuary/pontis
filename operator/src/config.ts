@@ -14,7 +14,7 @@ import * as ecc from '@bitcoinerlab/secp256k1';
 import { ECPairFactory } from 'ecpair';
 import * as path from 'path';
 import { contractFromAddress } from './l2/contracts';
-import { Account, RpcProvider } from 'starknet';
+import { Account, constants, RpcProvider } from 'starknet';
 import assert from 'assert';
 import { createL1Provider } from './l1/deps/l1Provider';
 
@@ -147,20 +147,16 @@ export async function getConfig() {
   assert(process.env.L2_BTC_ADDRESS, 'L2_BTC_ADDRESS is not set');
   const btc = await contractFromAddress(provider, process.env.L2_BTC_ADDRESS!);
 
-  assert(process.env.L2_ADMIN_ADDRESS, 'L2_ADMIN_ADDRESS is not set');
-  assert(process.env.L2_ADMIN_PRIVATE_KEY, 'L2_ADMIN_PRIVATE_KEY is not set');
-  const admin = new Account(
-    provider,
-    process.env.L2_ADMIN_ADDRESS!,
-    process.env.L2_ADMIN_PRIVATE_KEY!
-  );
+  const admin = getAdmin();
 
   assert(process.env.L2_ALICE_ADDRESS, 'L2_ALICE_ADDRESS is not set');
   assert(process.env.L2_ALICE_PRIVATE_KEY, 'L2_ALICE_PRIVATE_KEY is not set');
   const alice = new Account(
     provider,
     process.env.L2_ALICE_ADDRESS!,
-    process.env.L2_ALICE_PRIVATE_KEY!
+    process.env.L2_ALICE_PRIVATE_KEY!,
+    undefined,
+    constants.TRANSACTION_VERSION.V3
   );
 
   assert(process.env.L2_BOB_ADDRESS, 'L2_BOB_ADDRESS is not set');
@@ -168,7 +164,9 @@ export async function getConfig() {
   const bob = new Account(
     provider,
     process.env.L2_BOB_ADDRESS!,
-    process.env.L2_BOB_PRIVATE_KEY!
+    process.env.L2_BOB_PRIVATE_KEY!,
+    undefined,
+    constants.TRANSACTION_VERSION.V3
   );
 
   assert(process.env.STATE_PATH, 'STATE_PATH is not set');
@@ -225,7 +223,9 @@ export function getAdmin() {
   const admin = new Account(
     provider,
     process.env.L2_ADMIN_ADDRESS!,
-    process.env.L2_ADMIN_PRIVATE_KEY!
+    process.env.L2_ADMIN_PRIVATE_KEY!,
+    undefined,
+    constants.TRANSACTION_VERSION.V3
   );
 
   return admin;

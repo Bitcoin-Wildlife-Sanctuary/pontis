@@ -184,7 +184,6 @@ export type OperatorState = {
   pendingDeposits: Deposit[];
   depositBatches: DepositBatch[];
   withdrawalBatches: WithdrawalBatch[];
-  recentChanges: OperatorChange[];
 };
 
 export type Deposits = {
@@ -265,8 +264,6 @@ export async function applyChange(
   }
 
   const newState = cloneDeep(state);
-  newState.recentChanges.unshift(change);
-  newState.recentChanges.splice(10);
 
   switch (change.type) {
     case 'deposits': {
