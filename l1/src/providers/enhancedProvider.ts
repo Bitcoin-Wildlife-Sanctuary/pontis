@@ -82,6 +82,7 @@ export class EnhancedProvider implements UtxoProvider, ChainProvider {
         console.error("broadcast failed:", tx.getId(), error);
         failedBroadcastTxids = this.pendingBroadcastTxs.slice(i).map(v => v.getId())
         failedBroadcastTxError = error as Error
+        
         break
       }
     }

@@ -1,4 +1,3 @@
-import { L2Event } from './l2/events';
 import assert from 'assert';
 import { cloneDeep, max } from 'lodash';
 import {
@@ -40,15 +39,15 @@ export type L1Tx = L1TxStatus;
 
 export type L2TxId = {
   type: 'l2tx';
-  hash: L1TxHash;
+  hash: L2TxHash;
 };
 
 export type L2TxStatus = L2TxId &
   (
-    | { status: 'PENDING' }
+    | { status: 'PENDING' | 'REJECTED' | 'ERROR' }
     | {
-        status: 'SUCCEEDED' | 'REJECTED' | 'REVERTED' | 'ERROR';
-        // receipt: ReceiptTx;
+        status: 'SUCCEEDED' | 'REVERTED';
+        blockNumber: number;
       }
   );
 
@@ -120,8 +119,7 @@ export type DepositBatch =
 export type Withdrawal = {
   amount: bigint;
   recipient: L1Address;
-  origin: L2TxHash;
-  blockNumber: number;
+  origin: L2Tx;
 };
 
 export type WithdrawalExpansionState = WithdrawalExpanderState & {
@@ -196,14 +194,38 @@ export type BlockNumberEvent =
   | { type: 'l2BlockNumber'; blockNumber: number };
 
 export type L2TotalSupplyEvent = { type: 'l2TotalSupply'; totalSupply: bigint };
-export type L1BridgeBalance = { type: 'l1BridgeBalance'; balance: bigint };
+export type L1BridgeBalanceEvent = { type: 'l1BridgeBalance'; balance: bigint };
+
+export interface L2EventCommon {
+  origin: L2Tx;
+}
+
+export interface WithdrawalEvent extends L2EventCommon {
+  type: 'withdrawal';
+  id: bigint;
+  amount: bigint;
+  recipient: L1Address;
+}
+
+export interface CloseBatchEvent extends L2EventCommon {
+  type: 'closeBatch';
+  id: bigint;
+  root: string;
+}
+
+export interface BatchDepositedEvent extends L2EventCommon {
+  type: 'batchDeposited';
+  id: string;
+}
+
+export type L2Event = WithdrawalEvent | CloseBatchEvent | BatchDepositedEvent;
 
 export type BridgeEvent =
   | L2Event
   | Deposits
   | BlockNumberEvent
   | L2TotalSupplyEvent
-  | L1BridgeBalance;
+  | L1BridgeBalanceEvent;
 
 export type TransactionId = L1TxId | L2TxId;
 
@@ -300,6 +322,9 @@ export async function applyChange(
     case 'l2TotalSupply':
       newState.l2TotalSupply = change.totalSupply;
       break;
+    case 'batchDeposited':
+      handleBatchDeposited(newState, change);
+      break;
     default: {
       const _exhaustiveCheck: never = change;
       return _exhaustiveCheck;
@@ -313,7 +338,6 @@ export async function applyChange(
   await initiateExpansion(env, newState);
   await manageExpansion(env, newState);
   await initiateExpansion(env, newState);
-  updateDeposits(newState);
   await manageVerification(env, newState);
   await sendCloseWithdrawalBatch(env, newState);
 
@@ -636,20 +660,22 @@ async function manageAggregation(env: BridgeEnvironment, state: OperatorState) {
   }
 }
 
-function updateDeposits(state: OperatorState) {
+function handleBatchDeposited(
+  state: OperatorState,
+  change: BatchDepositedEvent
+) {
   for (let i = 0; i < state.depositBatches.length; i++) {
     const batch = state.depositBatches[i];
-    if (
-      batch.status === 'SUBMITTED_TO_L2' &&
-      batch.depositTx.status === 'SUCCEEDED'
-    ) {
+    if (batch.status === 'SUBMITTED_TO_L2' && batch.hash === change.id) {
       logger.info({ id: batch.id }, 'submitted to L2');
       state.depositBatches[i] = {
         ...batch,
         status: 'DEPOSITED',
       };
+      return;
     }
   }
+  throw new Error("Can't find batch: " + change.id);
 }
 
 async function manageVerification(
@@ -689,7 +715,7 @@ async function manageVerification(
   }
 }
 
-async function handleWithdrawal(state: OperatorState, change: L2Event) {
+async function handleWithdrawal(state: OperatorState, change: WithdrawalEvent) {
   if (change.type === 'withdrawal') {
     let batch = state.withdrawalBatches.find((b) => b.id === change.id);
     if (!batch) {
@@ -709,7 +735,6 @@ async function handleWithdrawal(state: OperatorState, change: L2Event) {
       amount: change.amount,
       recipient: change.recipient,
       origin: change.origin,
-      blockNumber: change.blockNumber,
     });
   }
 }
@@ -735,7 +760,10 @@ async function sendCloseWithdrawalBatch(
   }
 }
 
-async function closeWithdrawalBatch(state: OperatorState, change: L2Event) {
+async function closeWithdrawalBatch(
+  state: OperatorState,
+  change: CloseBatchEvent
+) {
   if (change.type === 'closeBatch') {
     for (let i = 0; i < state.withdrawalBatches.length; i++) {
       const batch = state.withdrawalBatches[i];
@@ -802,7 +830,11 @@ function withdrawalsOldEnough(
   withdrawals: Withdrawal[]
 ): boolean {
   for (const withdrawal of withdrawals) {
-    if (withdrawal.blockNumber + env.MAX_WITHDRAWAL_BLOCK_AGE <= blockNumber) {
+    if (
+      withdrawal.origin.status === 'SUCCEEDED' &&
+      withdrawal.origin.blockNumber + env.MAX_WITHDRAWAL_BLOCK_AGE <=
+        blockNumber
+    ) {
       return true;
     }
   }

@@ -41,8 +41,9 @@ function currentBlock(provider: L1Provider): Observable<number> {
     switchMap(() => from(l1Api.getL1CurrentBlockNumber(provider))),
     retry({
       delay: (error, retryCount) => {
-        console.warn(
-          `CurrentBlock retry attempt #${retryCount}, due to: ${error.message}`
+        logger.warn(
+          { retryCount, message: error.message },
+          'CurrentBlock retry attempt'
         );
         return timer(POLL_INTERVAL);
       },
@@ -71,6 +72,7 @@ export function deposits(
     config.l1.createL1Provider(),
     initialBlockNumber
   ).pipe(
+    filter(([previous, current]) => previous <= current),
     switchMap(([previous, current]) =>
       from(depositsInRange(config, previous, current))
     ),
