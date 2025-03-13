@@ -7,13 +7,17 @@ import {
   mergeMap,
   map,
   filter,
+  retry,
+  shareReplay,
 } from 'rxjs/operators';
 import { EMITTED_EVENT } from 'starknet-types-07/dist/types/api/components';
 import {
   BlockNumberEvent,
   L1Address,
   L2TotalSupplyEvent,
-  L2TxHash,
+  L2Tx,
+  L2EventCommon,
+  L2Event,
 } from '../state';
 import { fromDigest, getTotalSupply, wordSpanToHex } from './contracts';
 import logger from '../logger';
@@ -24,7 +28,17 @@ const CHUNK_SIZE = 10;
 export function currentBlock(provider: Provider): Observable<number> {
   return timer(0, POLL_INTERVAL).pipe(
     switchMap(async () => (await provider.getBlock('latest')).block_number),
-    distinctUntilChanged()
+    retry({
+      delay: (error, retryCount) => {
+        logger.warn(
+          { retryCount, message: error.message },
+          'CurrentBlock retry attempt'
+        );
+        return timer(POLL_INTERVAL);
+      },
+    }),
+    distinctUntilChanged(),
+    shareReplay(1)
   );
 }
 
@@ -59,26 +73,6 @@ async function eventParser(
     events.parseEvents([rawEvent], abiEvents, abiStructs, abiEnums)[0];
 }
 
-type L2EventCommon = {
-  blockNumber: number;
-  origin: L2TxHash;
-};
-
-export type L2Event = (
-  | {
-      type: 'withdrawal';
-      id: bigint;
-      amount: bigint;
-      recipient: L1Address;
-    }
-  | {
-      type: 'closeBatch';
-      id: bigint;
-      root: string;
-    }
-) &
-  L2EventCommon;
-
 function contractEventsInRange(
   provider: Provider,
   contractAddress: string,
@@ -103,8 +97,13 @@ function contractEventsInRange(
 
           const events = response.events;
           for (const rawEvent of events) {
-            const blockNumber = rawEvent.block_number;
-            const origin: L2TxHash = rawEvent.transaction_hash as any;
+            const origin: L2Tx = {
+              type: 'l2tx',
+              hash: rawEvent.transaction_hash as any,
+              blockNumber: rawEvent.block_number,
+              status: 'SUCCEEDED',
+            };
+
             const parsedEvent = parseEvents(rawEvent);
             // console.log('parsedEvent', parsedEvent);
             // console.log('rawEvent', rawEvent);
@@ -122,7 +121,6 @@ function contractEventsInRange(
                 amount: BigInt(amount.toString()),
                 recipient: wordSpanToHex(recipient as any),
                 origin,
-                blockNumber,
               });
             }
             if (
@@ -138,18 +136,21 @@ function contractEventsInRange(
                 id: BigInt(rawEvent.data[0]),
                 root,
                 origin,
-                blockNumber,
               });
             }
             if (
               parsedEvent.hasOwnProperty('pontis::bridge::Bridge::DepositEvent')
             ) {
-              const id =
-                '0x' +
-                fromDigest(rawEvent.data.slice(0, 8).map(BigInt)).toString(16);
+              const id = fromDigest(
+                rawEvent.data.slice(0, 8).map(BigInt)
+              ).toString(16);
               const total = BigInt(rawEvent.data[8]);
 
-              logger.debug({ id, total, raw: rawEvent.data }, 'DepositEvent');
+              subscriber.next({
+                type: 'batchDeposited',
+                id,
+                origin,
+              });
             }
           }
           continuationToken = response.continuation_token;

@@ -3,10 +3,14 @@ import {
   cairo,
   CallData,
   Contract,
+  EstimateFee,
   GetTransactionReceiptResponse,
   json,
+  num,
   Provider,
   RawArgs,
+  RPC,
+  UniversalDetails,
 } from 'starknet';
 import * as fs from 'fs';
 import { Deposit, L2Tx, L2TxId, L2TxStatus } from '../state';
@@ -14,6 +18,11 @@ import { from, map, Observable } from 'rxjs';
 import assert from 'assert';
 import logger from '../logger';
 import { utils } from 'l1';
+
+const defaultDetails: UniversalDetails = {
+  version: 3,
+  feeDataAvailabilityMode: RPC.EDataAvailabilityMode.L1,
+};
 
 async function declareAndDeploy(
   account: Account,
@@ -33,13 +42,16 @@ async function declareAndDeploy(
       .toString('ascii')
   );
 
-  const deployResponse = await account.declareAndDeploy({
-    contract,
-    casm,
-    constructorCalldata,
-    salt: '123',
-    unique: true,
-  });
+  const deployResponse = await account.declareAndDeploy(
+    {
+      contract,
+      casm,
+      constructorCalldata,
+      salt: '123',
+      unique: true,
+    },
+    defaultDetails
+  );
 
   return new Contract(
     contract.abi,
@@ -62,8 +74,10 @@ export async function init(admin: Account) {
     btc_address: btc.address,
     owner: admin.address,
   });
-  btc.connect(admin);
-  await btc.transferOwnership(bridge.address);
+
+  const call = btc.populate('transferOwnership', [bridge.address]);
+  const txDetails = estimateToDetails(await admin.estimateInvokeFee(call));
+  await admin.execute(call, txDetails);
 
   return { btc, bridge };
 }
@@ -90,6 +104,15 @@ export function fromDigest(value: bigint[]): bigint {
   return result;
 }
 
+function estimateToDetails(estimate: EstimateFee): UniversalDetails {
+  return {
+    ...defaultDetails,
+    maxFee: estimate.suggestedMaxFee,
+    resourceBounds: estimate.resourceBounds,
+    tip: (estimate.suggestedMaxFee * 10n) / 100n,
+  };
+}
+
 export async function submitDepositsToL2(
   admin: Account,
   bridge: Contract,
@@ -107,7 +130,8 @@ export async function submitDepositsToL2(
   // fixed array parameters in starknetjs
   call.calldata = (call.calldata as any).slice(1);
 
-  const { transaction_hash } = await admin.execute(call);
+  const txDetails = estimateToDetails(await admin.estimateInvokeFee(call));
+  const { transaction_hash } = await admin.execute(call, txDetails);
 
   return {
     type: 'l2tx',
@@ -121,8 +145,9 @@ export async function closeWithdrawalBatch(
   bridge: Contract,
   id: bigint
 ): Promise<L2Tx> {
-  bridge.connect(admin);
-  const { transaction_hash } = await bridge.close_withdrawal_batch(id);
+  const call = bridge.populate('close_withdrawal_batch', [id]);
+  const txDetails = estimateToDetails(await admin.estimateInvokeFee(call));
+  const { transaction_hash } = await admin.execute(call, txDetails);
 
   return {
     type: 'l2tx',
@@ -227,7 +252,7 @@ export async function withdraw(
   recipient: string, // as hex
   amount: bigint
 ): Promise<L2Tx> {
-  const { transaction_hash } = await sender.execute([
+  const calls = [
     {
       contractAddress: btc.address,
       entrypoint: 'approve',
@@ -244,7 +269,10 @@ export async function withdraw(
         amount,
       }),
     },
-  ]);
+  ];
+
+  const txDetails = estimateToDetails(await sender.estimateInvokeFee(calls));
+  const { transaction_hash } = await sender.execute(calls, txDetails);
 
   return {
     type: 'l2tx',
