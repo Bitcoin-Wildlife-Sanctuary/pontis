@@ -82,9 +82,9 @@ export default function Page({initialState}: {initialState: StateWithDate}) {
                 ?.slice()
                 .reverse()
                 .map((depositBatch, index) => (
-                // depositBatch doesn't always have a unique identifier, so using the index as the key
-                <DepositCard key={index.toString()} deposit={depositBatch} />
-              ))}
+                  // depositBatch doesn't always have a unique identifier, so using the index as the key
+                  <DepositCard key={index.toString()} deposit={depositBatch} />
+                ))}
             </HistorySectionContainer>
           </SectionCard>
 
@@ -99,7 +99,7 @@ export default function Page({initialState}: {initialState: StateWithDate}) {
                 .reverse()
                 .map((withdrawalBatch) => (
                   <WithdrawalCard key={withdrawalBatch.id.toString()} withdrawal={withdrawalBatch} />
-              ))}
+                ))}
             </HistorySectionContainer>
           </SectionCard>
         </HistoryContainer>
