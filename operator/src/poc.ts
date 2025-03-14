@@ -10,10 +10,10 @@ import {
 } from './l1/events';
 import { existsSync } from 'fs';
 import { l2TransactionStatus } from './l2/transactions';
-import { l2BlockNumber, l2Events, totalSupply } from './l2/events';
+import { l2Events, totalSupply } from './l2/events';
 import { loadContractArtifacts } from './l1/utils/contractUtil';
 import { load, save } from './persistence';
-import { firstValueFrom, from, merge } from 'rxjs';
+import { filter, firstValueFrom, merge } from 'rxjs';
 import { Config, getConfig } from './config';
 import {
   aggregateLevelDeposits,
@@ -22,10 +22,8 @@ import {
   distributeLevelWithdrawals,
   expandLevelWithdrawals,
   finalizeDepositBatchOnL1,
-  getL1TransactionStatus,
   verifyDepositBatch,
 } from './l1/api';
-import logger from './logger';
 
 async function initialState(config: Config): Promise<OperatorState> {
   loadContractArtifacts();
@@ -44,8 +42,13 @@ async function initialState(config: Config): Promise<OperatorState> {
       l1BlockNumber: (
         await firstValueFrom(l1BlockNumber(config.l1.createL1Provider()))
       ).blockNumber,
-      l2BlockNumber: (await firstValueFrom(l2BlockNumber(config.l2.provider)))
-        .blockNumber,
+      l2BlockNumber: (
+        await firstValueFrom(
+          l2Events(config.l2.provider, 0, [config.l2.bridge.address]).pipe(
+            filter((e) => e.type === 'l2BlockNumber')
+          )
+        )
+      ).blockNumber,
       bridgeState,
       depositBatches: [],
       withdrawalBatches: [],

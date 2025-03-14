@@ -12,10 +12,10 @@ import {
   takeWhile,
 } from 'rxjs';
 import {
-  BlockNumberEvent,
   BridgeEvent,
   Deposit,
   Deposits,
+  L1BlockNumberEvent,
   L1TxId,
   L1TxStatus,
   OperatorState,
@@ -30,7 +30,7 @@ const POLL_INTERVAL = 5000;
 
 export function l1BlockNumber(
   provider: L1Provider
-): Observable<BlockNumberEvent> {
+): Observable<L1BlockNumberEvent> {
   return currentBlock(provider).pipe(
     map((blockNumber) => ({ type: 'l1BlockNumber', blockNumber }))
   );

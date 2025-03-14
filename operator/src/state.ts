@@ -44,9 +44,9 @@ export type L2TxId = {
 
 export type L2TxStatus = L2TxId &
   (
-    | { status: 'PENDING' | 'REJECTED' | 'ERROR' }
+    | { status: 'PENDING' | 'REVERTED' | 'REJECTED' | 'ERROR' }
     | {
-        status: 'SUCCEEDED' | 'REVERTED';
+        status: 'SUCCEEDED';
         blockNumber: number;
       }
   );
@@ -335,12 +335,9 @@ export async function applyChange(
   }
 
   await initiateAggregation(env, newState);
+  await initiateExpansion(env, newState);
   await manageAggregation(env, newState);
-  await manageVerification(env, newState);
-  await sendCloseWithdrawalBatch(env, newState);
-  await initiateExpansion(env, newState);
   await manageExpansion(env, newState);
-  await initiateExpansion(env, newState);
   await manageVerification(env, newState);
   await sendCloseWithdrawalBatch(env, newState);
 

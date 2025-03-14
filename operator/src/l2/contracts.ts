@@ -16,7 +16,6 @@ import * as fs from 'fs';
 import { Deposit, L2Tx, L2TxId, L2TxStatus } from '../state';
 import { from, map, Observable } from 'rxjs';
 import assert from 'assert';
-import logger from '../logger';
 import { utils } from 'l1';
 
 const defaultDetails: UniversalDetails = {
@@ -156,16 +155,6 @@ export async function closeWithdrawalBatch(
   };
 }
 
-function receipToStatus(receipt: GetTransactionReceiptResponse) {
-  return receipt.isSuccess()
-    ? 'SUCCEEDED'
-    : receipt.isReverted()
-      ? 'REVERTED'
-      : receipt.isRejected()
-        ? 'REJECTED'
-        : 'ERROR';
-}
-
 export async function closePendingWithdrawalBatch(
   admin: Account,
   bridge: Contract
@@ -175,20 +164,6 @@ export async function closePendingWithdrawalBatch(
   const batchId = await bridge.pending_batch_id();
 
   return await closeWithdrawalBatch(admin, bridge, batchId);
-}
-
-export function l2TxStatus(
-  provider: Provider,
-  tx: L2TxId
-): Observable<L2TxStatus> {
-  return from(provider.waitForTransaction(tx.hash)).pipe(
-    map((receipt) => {
-      return {
-        ...tx,
-        status: receipToStatus(receipt),
-      };
-    })
-  );
 }
 
 type WordSpan = {
@@ -277,7 +252,7 @@ export async function withdraw(
   return {
     type: 'l2tx',
     hash: transaction_hash as any,
-    status: receipToStatus(await provider.waitForTransaction(transaction_hash)),
+    status: 'PENDING',
   };
 }
 

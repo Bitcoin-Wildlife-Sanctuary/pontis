@@ -44,6 +44,7 @@ import { OffchainDataProvider } from './deps/offchainDataProvider';
 import { WithdrawalExpanderState } from 'l1';
 import { Transaction } from '@scrypt-inc/bitcoinjs-lib';
 import assert from 'assert';
+import logger from '../logger';
 
 async function checkBridgeUtxo(
   offchainDataProvider: OffchainDataProvider,

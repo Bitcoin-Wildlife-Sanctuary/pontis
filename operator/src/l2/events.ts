@@ -11,14 +11,7 @@ import {
   shareReplay,
 } from 'rxjs/operators';
 import { EMITTED_EVENT } from 'starknet-types-07/dist/types/api/components';
-import {
-  BlockNumberEvent,
-  L1Address,
-  L2TotalSupplyEvent,
-  L2Tx,
-  L2EventCommon,
-  L2Event,
-} from '../state';
+import { L2TotalSupplyEvent, L2Tx, L2Event } from '../state';
 import { fromDigest, getTotalSupply, wordSpanToHex } from './contracts';
 import logger from '../logger';
 
@@ -190,14 +183,6 @@ export function l2Events(
     )
   );
 }
-
-// export function l2BlockNumber(
-//   provider: Provider
-// ): Observable<BlockNumberEvent> {
-//   return currentBlock(provider).pipe(
-//     map((blockNumber) => ({ type: 'l2BlockNumber', blockNumber }))
-//   );
-// }
 
 export function totalSupply(
   provider: Provider,
