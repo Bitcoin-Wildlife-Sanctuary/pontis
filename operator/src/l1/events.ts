@@ -43,7 +43,7 @@ function currentBlock(provider: L1Provider): Observable<number> {
       delay: (error, retryCount) => {
         logger.warn(
           { retryCount, message: error.message },
-          'CurrentBlock retry attempt'
+          'current l1 block retry attempt'
         );
         return timer(POLL_INTERVAL);
       },

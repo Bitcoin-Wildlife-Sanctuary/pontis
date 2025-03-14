@@ -1,14 +1,12 @@
 import { closePendingWithdrawalBatch, init, withdraw } from './l2/contracts';
 import assert from 'assert';
 import {
-  BatchId,
   DepositAggregator,
-  DepositAggregatorState,
   loadContractArtifacts,
   stateToBatchID,
   WithdrawalExpander,
 } from 'l1';
-import { int2ByteString, len, PubKey, sha256, Sha256 } from 'scrypt-ts';
+import { PubKey, Sha256 } from 'scrypt-ts';
 import { createDeposit } from './l1/api';
 import { Config, getAdmin, getConfig } from './config';
 import { addressToScript, l2AddressToHex } from './l1/utils/contractUtil';
@@ -19,7 +17,7 @@ import { utils } from 'l1';
 async function withdrawFromAlice(config: Config, amount: bigint) {
   /// convert the btc address to the withdrawal expander address
   const recipient = addressToScript(
-    'bc1pu9tujtamxpetkgsjyetwey8esgr2y35374ag4a9xy6j3kwwy4mzqnetae0',
+    await config.l1.aliceSigner.getAddress(),
     config.l1.network
   );
 
@@ -31,7 +29,6 @@ async function withdrawFromAlice(config: Config, amount: bigint) {
     recipient,
     amount
   );
-
   console.log(withdrawal);
 }
 
@@ -50,11 +47,11 @@ async function deposit(config: Config, amount: bigint) {
     config.l1.createUtxoProvider(),
     config.l1.createChainProvider(),
     config.l1.feeRate,
-    config.l1.operatorSigner,
+    config.l1.aliceSigner,
     config.l2.alice.address as L2Address,
     amount
   );
-  console.log('deposit', deposit);
+  console.log(deposit);
 }
 
 function printWithdrawalHashes() {

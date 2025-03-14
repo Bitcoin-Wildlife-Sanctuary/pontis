@@ -1,4 +1,3 @@
-import { logger, RpcProvider } from 'starknet';
 import { importAddressesIntoNode } from './l1/prepare';
 import { closeWithdrawalBatch, submitDepositsToL2 } from './l2/contracts';
 import { applyChange, BridgeEnvironment, L1TxId, OperatorState } from './state';
@@ -26,6 +25,7 @@ import {
   getL1TransactionStatus,
   verifyDepositBatch,
 } from './l1/api';
+import logger from './logger';
 
 async function initialState(config: Config): Promise<OperatorState> {
   loadContractArtifacts();
@@ -154,7 +154,6 @@ async function pocOperator() {
       l2Events(config.l2.provider, startState.l2BlockNumber, [
         config.l2.bridge.address,
       ]),
-      l2BlockNumber(config.l2.provider),
       totalSupply(config.l2.provider, config.l2.btc)
     ),
     l1TxStatus,
@@ -166,4 +165,4 @@ async function pocOperator() {
   operator.subscribe((_) => {});
 }
 
-pocOperator().catch(logger.error);
+pocOperator().catch(console.error);

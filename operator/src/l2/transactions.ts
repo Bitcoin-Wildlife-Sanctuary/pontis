@@ -3,12 +3,9 @@ import { L2TxId, L2TxStatus } from '../state';
 import {
   distinctUntilKeyChanged,
   from,
-  map,
   mergeMap,
   Observable,
-  switchMap,
   takeWhile,
-  tap,
   timer,
 } from 'rxjs';
 

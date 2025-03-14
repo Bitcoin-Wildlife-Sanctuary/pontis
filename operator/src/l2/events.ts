@@ -32,7 +32,7 @@ export function currentBlock(provider: Provider): Observable<number> {
       delay: (error, retryCount) => {
         logger.warn(
           { retryCount, message: error.message },
-          'CurrentBlock retry attempt'
+          'current l2 block retry attempt'
         );
         return timer(POLL_INTERVAL);
       },
@@ -141,9 +141,9 @@ function contractEventsInRange(
             if (
               parsedEvent.hasOwnProperty('pontis::bridge::Bridge::DepositEvent')
             ) {
-              const id = fromDigest(
-                rawEvent.data.slice(0, 8).map(BigInt)
-              ).toString(16);
+              const id = fromDigest(rawEvent.data.slice(0, 8).map(BigInt))
+                .toString(16)
+                .padStart(64, '0');
               const total = BigInt(rawEvent.data[8]);
 
               subscriber.next({
@@ -155,6 +155,7 @@ function contractEventsInRange(
           }
           continuationToken = response.continuation_token;
         } while (continuationToken);
+        subscriber.next({ type: 'l2BlockNumber', blockNumber: to });
         subscriber.complete();
       } catch (err) {
         subscriber.error(err);
@@ -190,13 +191,13 @@ export function l2Events(
   );
 }
 
-export function l2BlockNumber(
-  provider: Provider
-): Observable<BlockNumberEvent> {
-  return currentBlock(provider).pipe(
-    map((blockNumber) => ({ type: 'l2BlockNumber', blockNumber }))
-  );
-}
+// export function l2BlockNumber(
+//   provider: Provider
+// ): Observable<BlockNumberEvent> {
+//   return currentBlock(provider).pipe(
+//     map((blockNumber) => ({ type: 'l2BlockNumber', blockNumber }))
+//   );
+// }
 
 export function totalSupply(
   provider: Provider,

@@ -189,9 +189,8 @@ export type Deposits = {
   deposits: Deposit[];
 };
 
-export type BlockNumberEvent =
-  | { type: 'l1BlockNumber'; blockNumber: number }
-  | { type: 'l2BlockNumber'; blockNumber: number };
+export type L1BlockNumberEvent = { type: 'l1BlockNumber'; blockNumber: number };
+export type L2BlockNumberEvent = { type: 'l2BlockNumber'; blockNumber: number };
 
 export type L2TotalSupplyEvent = { type: 'l2TotalSupply'; totalSupply: bigint };
 export type L1BridgeBalanceEvent = { type: 'l1BridgeBalance'; balance: bigint };
@@ -218,12 +217,16 @@ export interface BatchDepositedEvent extends L2EventCommon {
   id: string;
 }
 
-export type L2Event = WithdrawalEvent | CloseBatchEvent | BatchDepositedEvent;
+export type L2Event =
+  | WithdrawalEvent
+  | CloseBatchEvent
+  | BatchDepositedEvent
+  | L2BlockNumberEvent;
 
 export type BridgeEvent =
   | L2Event
   | Deposits
-  | BlockNumberEvent
+  | L1BlockNumberEvent
   | L2TotalSupplyEvent
   | L1BridgeBalanceEvent;
 
@@ -233,7 +236,7 @@ export type TransactionStatus = L1TxStatus | L2TxStatus;
 
 export type Transaction = L1Tx | L2Tx;
 
-export type OperatorChange = BridgeEvent | TransactionStatus | BlockNumberEvent;
+export type OperatorChange = BridgeEvent | TransactionStatus;
 
 export type BatchId = string;
 
@@ -618,7 +621,7 @@ async function manageAggregation(env: BridgeEnvironment, state: OperatorState) {
       if (aggregationTxs.every((tx) => tx.tx.status === 'MINED')) {
         if (aggregationTxs.length === 1) {
           if (state.bridgeState.latestTx.status === 'MINED') {
-            logger.info({ id: batch.id, deposits: 1 }, 'finalizing');
+            logger.info({ id: batch.id }, 'finalizing');
             const [bridgeState, batchId] = await env.finalizeDepositBatch(
               state.bridgeState,
               aggregationTxs.at(0)!

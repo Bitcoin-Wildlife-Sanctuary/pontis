@@ -19,12 +19,7 @@ import withdrawExpanderArtifact from 'l1/artifacts/contracts/withdrawalExpander.
 export async function getContractAddresses(
   operatorSigner: Signer,
   l1Network: SupportedNetwork
-): Promise<{
-  bridge: string;
-  depositAggregator: string;
-  withdrawExpander: string;
-  operator: string;
-}> {
+) {
   const operatorPubKey = await operatorSigner.getPublicKey();
   const spks = getContractScriptPubKeys(PubKey(operatorPubKey));
   const addressess = {
