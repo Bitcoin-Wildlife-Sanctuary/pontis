@@ -660,15 +660,15 @@ describe('test l1 api', () => {
     return script as L1Address;
   }
 
-  function createAMockWithdrawal(amount: bigint, address: L1Address) {
-    const withdrawal: Withdrawal = {
-      amount,
-      recipient: address,
-      origin: '0x123',
-      blockNumber: 1,
-    };
-    return withdrawal;
-  }
+  // function createAMockWithdrawal(amount: bigint, address: L1Address) {
+  //   const withdrawal: Withdrawal = {
+  //     amount,
+  //     recipient: address,
+  //     origin: '0x123',
+  //     blockNumber: 1,
+  //   };
+  //   return withdrawal;
+  // }
 
   // async function doADeposit(amount: bigint){
   //     let batch: DepositBatch = {

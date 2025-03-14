@@ -46,7 +46,7 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
       <Col $padding="small">
         <Table headings={['Recipient', 'Amount', 'Origin Tx']}>
           {withdrawal.withdrawals.map((batchWithdrawal) => (
-            <tr key={batchWithdrawal.origin}>
+            <tr key={batchWithdrawal.origin.hash}>
               <td>
                 <ExplorerLink network="l1" address={batchWithdrawal.recipient}>
                   <Text.BodyStrong $color="inherit">{shortenHex(batchWithdrawal.recipient)}</Text.BodyStrong>
@@ -58,8 +58,8 @@ export const WithdrawalCard: React.FC<WithdrawalCardProps> = ({withdrawal}) => {
               </td>
 
               <td>
-                <ExplorerLink tx={{type: 'l2tx', hash: batchWithdrawal.origin}}>
-                  <Text.BodyStrong $color="inherit">{shortenHex(batchWithdrawal.origin)}</Text.BodyStrong>
+                <ExplorerLink tx={{type: 'l2tx', hash: batchWithdrawal.origin.hash}}>
+                  <Text.BodyStrong $color="inherit">{shortenHex(batchWithdrawal.origin.hash)}</Text.BodyStrong>
                 </ExplorerLink>
               </td>
             </tr>

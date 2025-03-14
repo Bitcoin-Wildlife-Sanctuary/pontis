@@ -17,7 +17,6 @@ import {
   bridgeFeatures,
   depositFeatures,
   BatchId,
-  ExpansionMerkleTree,
   WithdrawalExpansionNode,
   withdrawalExpandedStateFromNode,
   leafNodes,
@@ -27,18 +26,13 @@ import {
   BridgeCovenantState,
   Deposit,
   DepositAggregationState,
-  DepositBatch,
   L1Tx,
   L1TxHash,
   L1TxStatus,
   L2Address,
 } from '../state';
 import { PubKey, Sha256 } from 'scrypt-ts';
-import {
-  l2AddressToHex,
-  getContractAddresses,
-  addressToScript,
-} from './utils/contractUtil';
+import { l2AddressToHex, getContractAddresses } from './utils/contractUtil';
 import {
   UNCONFIRMED_BLOCK_NUMBER,
   L1Provider,
@@ -175,8 +169,6 @@ export async function listDeposits(
   l1Provider: L1Provider,
   chainProvider: ChainProvider
 ): Promise<Deposit[]> {
-  // console.log(`listDeposits(${fromBlock}, ${toBlock})`)
-  // query utxo(address = depositAggregator) from node;
   const addresses = await getContractAddresses(operatorSigner, l1Network);
   const utxos = await l1Provider.listUtxos(
     addresses.depositAggregator,

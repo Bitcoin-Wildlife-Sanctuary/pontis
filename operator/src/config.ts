@@ -17,6 +17,7 @@ import { contractFromAddress } from './l2/contracts';
 import { Account, constants, RpcProvider } from 'starknet';
 import assert from 'assert';
 import { createL1Provider } from './l1/deps/l1Provider';
+import logger from './logger';
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
@@ -133,7 +134,29 @@ export async function getConfig() {
     ECPair.fromWIF(operatorPrivateKey),
     l1Network
   );
-  const mockUserSigner = operatorSigner;
+
+  logger.info(
+    { operatorAddress: await operatorSigner.getAddress() },
+    'l1 operator address'
+  );
+
+  assert(process.env.L1_ALICE_PRIVATE_KEY, 'L1_ALICE_PRIVATE_KEY is not set');
+  const alicePrivateKey = process.env.L1_ALICE_PRIVATE_KEY!;
+  try {
+    ECPair.fromWIF(alicePrivateKey);
+  } catch (e) {
+    throw new Error(
+      `L1_ALICE_PRIVATE_KEY ${alicePrivateKey} is not a valid private key`
+    );
+  }
+  const aliceSigner = new DefaultSigner(
+    ECPair.fromWIF(alicePrivateKey),
+    l1Network
+  );
+  logger.info(
+    { aliceAddress: await aliceSigner.getAddress() },
+    'l1 Alice address'
+  );
 
   assert(process.env.L2_NODE_URL, 'L2_NODE_URL is not set');
   const provider = new RpcProvider({ nodeUrl: process.env.L2_NODE_URL! });
@@ -189,7 +212,7 @@ export async function getConfig() {
       rpcConfig,
       operatorPrivateKey,
       operatorSigner,
-      mockUserSigner,
+      aliceSigner,
       useRpc,
       createUtxoProvider: () => createUtxoProvider(l1Network, rpcConfig),
       createChainProvider: () => createChainProvider(l1Network, rpcConfig),

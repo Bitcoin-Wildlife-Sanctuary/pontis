@@ -13,7 +13,6 @@ import {
 } from 'rxjs';
 import {
   BridgeEvent,
-  BlockNumberEvent,
   getAllL1Txs,
   L1TxStatus,
   L2TxStatus,
@@ -25,6 +24,7 @@ import {
   L2TxId,
   L1TxId,
   getAllL2Txs,
+  L1BlockNumberEvent,
 } from './state';
 import { isEqual } from 'lodash';
 
@@ -79,7 +79,7 @@ function operatorLoop<E, TI, TS, S>(
 export function setupOperator(
   initialState: OperatorState,
   environment: BridgeEnvironment,
-  block: Observable<BlockNumberEvent>,
+  block: Observable<L1BlockNumberEvent>,
   l1Events: Observable<BridgeEvent>,
   l2Events: Observable<BridgeEvent>,
   l1TxStatus: (tx: L1TxId) => Observable<L1TxStatus>,

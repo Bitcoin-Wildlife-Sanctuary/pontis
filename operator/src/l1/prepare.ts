@@ -51,6 +51,14 @@ export async function importAddressesIntoNode(config: Config) {
     config.l1.rpcConfig.wallet!,
     addresses.operator
   );
+
+  await btcRpc.rpc_importaddress(
+    config.l1.rpcConfig.host!,
+    config.l1.rpcConfig.user!,
+    config.l1.rpcConfig.password!,
+    config.l1.rpcConfig.wallet!,
+    await config.l1.aliceSigner.getAddress()
+  );
 }
 
 export async function prepareL1(config: Config): Promise<BridgeCovenantState> {
