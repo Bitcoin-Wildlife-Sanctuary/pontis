@@ -2,6 +2,10 @@
 
 `OP_CAT` enabled Bitcoin &lt;> Starknet Bridge POC
 
+<p align="center" width="100%">
+  <img src="./docs/img/dashboard.png" alt="dashboard"/>
+</p>
+
 ## Intro
 
 These POC builds of previous [Bridge Covenant POC](https://starkware.co/blog/implementing-a-bridge-covenant-on-op-cat-bitcoin/). It explores "easy" parts of the potentatial bridge implementation, ignoring more difficult parts of the design like dual finality, reorgs etc.
@@ -26,3 +30,41 @@ These POC builds of previous [Bridge Covenant POC](https://starkware.co/blog/imp
 <p align="center" width="100%">
   <img src="./docs/img/covenants.svg" alt="architecture"/>
 </p>
+
+## How To Run Locally
+
+### Operator
+
+1. Go to operator dir:</br>```cd operator```
+
+2. Copy config file and set private keys:</br>```cp .env-example .env```
+
+3. Install deps:</br>```yarn install```
+
+4. Run devnet:</br>```yarn run devnet```
+
+5. Deploy L2 contracts:</br>```yarn run command deploy```
+
+6. Start operator (in another terminal):</br>```yarn run poc```
+
+### Dashboard
+
+1. Go to dashboard dir:</br>```cd dashboard```
+
+2. Install deps:</br>```yarn install```
+
+3. Run dashboard server:</br>```yarn dev```
+
+### Test Deposit Flow
+
+1. Make sure Alice account is well funded
+
+2. Initiate several deposits:</br>```yarn command deposit 1000```</br>```yarn command deposit 1000```</br>```yarn command deposit 1000```</br>```yarn command deposit 1000```
+
+### Test Withdrawal Flow
+
+1. Execute Deposit flow first
+
+2. Initiate several withdrawals:</br>```yarn command withdraw 500```</br>```yarn command withdraw 500```</br>```yarn command withdraw 500```</br>```yarn command withdraw 500```</br>
+
+3. Optinally close the batch:</br>```yarn run command closeBatch```
