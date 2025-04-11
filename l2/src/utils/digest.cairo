@@ -5,6 +5,7 @@ use core::hash::{Hash, HashStateTrait};
 use core::integer::u128_byte_reverse;
 use core::num::traits::zero::Zero;
 use core::to_byte_array::AppendFormattedToByteArray;
+use core::sha256::compute_sha256_u32_array;
 
 /// 256-bit hash digest.
 /// Represented as an array of 4-byte words.
@@ -18,6 +19,17 @@ pub impl DigestImpl of DigestTrait {
     #[inline(always)]
     fn new(array: [u32; 8]) -> Digest {
         Digest { value: array }
+    }
+
+    fn calculate_hash256(a: @Digest, b: @Digest) -> Digest {
+        let mut input1: Array<u32> = array![];
+        input1.append_span(a.value.span());
+        input1.append_span(b.value.span());
+
+        let mut input2: Array<u32> = array![];
+        input2.append_span(compute_sha256_u32_array(input1, 0, 0).span());
+
+        Self::new(compute_sha256_u32_array(input2, 0, 0))
     }
 }
 

@@ -6,7 +6,7 @@
 
 use core::traits::DivRem;
 use crate::utils::bit_shifts::pow256;
-use crate::utils::hash::{Digest, DigestTrait};
+use crate::utils::digest::{Digest, DigestTrait};
 use core::sha256::compute_sha256_u32_array;
 
 /// Array of 4-byte words where the last word can be partial.
@@ -306,18 +306,34 @@ pub impl WordArrayImpl of WordArrayTrait {
         }
     }
 
-    fn append_word_array(ref self: WordArray, other: WordArray) {
-        let (words, word, num_bytes) = other.into_components();
-        self.append_span(words.span());
-        if num_bytes != 0 {
-            self.append_word(word, num_bytes);
+    fn append_word_span(ref self: WordArray, other: WordSpan) {
+        self.append_span(other.input);
+        if other.last_input_num_bytes != 0 {
+            self.append_word(other.last_input_word, other.last_input_num_bytes);
         }
+    }
+
+    fn append_digest(ref self: WordArray, d: Digest) {
+        self.append_span(d.value.span());
     }
 
     fn compute_sha256(self: WordArray) -> Digest {
         return DigestTrait::new(
             compute_sha256_u32_array(self.input, self.last_input_word, self.last_input_num_bytes),
         );
+    }
+
+    fn compute_hash256(self: WordArray) -> Digest {
+        let mut input2: Array<u32> = array![];
+        input2
+            .append_span(
+                compute_sha256_u32_array(
+                    self.input, self.last_input_word, self.last_input_num_bytes,
+                )
+                    .span(),
+            );
+
+        DigestTrait::new(compute_sha256_u32_array(input2, 0, 0))
     }
 
     /// Split word array into components:
@@ -363,6 +379,14 @@ impl ByteArrayIntoWordArray of Into<ByteArray, WordArray> {
         r
     }
 }
+
+impl ByteArrayIntoWordSpan of Into<ByteArray, WordSpan> {
+    fn into(self: ByteArray) -> WordSpan {
+        let r: WordArray = self.into();
+        r.span()
+    }
+}
+
 
 impl WordSpanDefault of Default<WordSpan> {
     fn default() -> WordSpan {

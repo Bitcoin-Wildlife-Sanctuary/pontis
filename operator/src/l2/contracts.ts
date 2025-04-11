@@ -48,8 +48,9 @@ async function declareAndDeploy(
       constructorCalldata,
       salt: '123',
       unique: true,
-    },
-    defaultDetails
+    }
+    // ,
+    // defaultDetails
   );
 
   return new Contract(
@@ -125,9 +126,6 @@ export async function submitDepositsToL2(
       amount,
     })),
   ]);
-  // we need to remove lenght due to the faulty handling of
-  // fixed array parameters in starknetjs
-  call.calldata = (call.calldata as any).slice(1);
 
   const txDetails = estimateToDetails(await admin.estimateInvokeFee(call));
   const { transaction_hash } = await admin.execute(call, txDetails);
