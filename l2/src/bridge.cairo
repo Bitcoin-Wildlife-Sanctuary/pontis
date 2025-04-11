@@ -1,5 +1,5 @@
 use starknet::ContractAddress;
-use crate::utils::hash::Digest;
+use crate::utils::digest::Digest;
 use crate::utils::word_array::WordSpan;
 
 type L1Address = WordSpan;
@@ -26,16 +26,14 @@ pub mod Bridge {
     use starknet::storage::VecTrait;
     use starknet::ContractAddress;
     use starknet::get_caller_address;
-    use crate::utils::hash::{Digest, DigestTrait};
+    use crate::utils::digest::{Digest, DigestTrait};
     use super::L1Address;
     use super::Deposit;
     use starknet::storage::{
         StoragePointerReadAccess, StoragePointerWriteAccess, Vec, MutableVecTrait,
     };
     use crate::btc::{IBTCDispatcher, IBTCDispatcherTrait};
-    use crate::utils::{
-        double_sha256::double_sha256_word_array, word_array::{WordArray, WordArrayTrait},
-    };
+    use crate::utils::{word_array::{WordArray, WordArrayTrait}};
 
 
     component!(path: OwnableComponent, storage: ownable, event: OwnableEvent);
@@ -191,11 +189,11 @@ pub mod Bridge {
                     let [a, b] = (*v).unbox();
                     let mut w: WordArray = Default::default();
                     w.append_u8(level);
-                    w.append_word_array(a.into());
-                    w.append_word_array(b.into());
-                    let hash = double_sha256_word_array(w);
+                    w.append_word_span(a);
+                    w.append_word_span(b);
+                    let hash = w.compute_hash256();
                     let mut w: WordArray = Default::default();
-                    w.append_span(hash.value.span());
+                    w.append_digest(hash);
                     next_hashes.append(w.span());
                 };
                 assert!(hashes.len() == 0, "Number of hashes should be a power of 2");
@@ -259,11 +257,7 @@ pub mod Bridge {
 
             let mut b: WordArray = recipient.into();
             b.append_u64_le(amount.into());
-
-            let (input, last_input_word, last_input_num_bytes) = b.into().into_components();
-            let hash = DigestTrait::new(
-                compute_sha256_u32_array(input, last_input_word, last_input_num_bytes),
-            );
+            let hash = b.compute_sha256();
 
             WithdrawalsTreeNode { hash, amount }
         }

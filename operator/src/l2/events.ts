@@ -123,7 +123,7 @@ function contractEventsInRange(
             ) {
               const root =
                 '0x' +
-                fromDigest(rawEvent.data.slice(1).map(BigInt)).toString(16);
+                fromDigest(rawEvent.data.slice(1).map(BigInt)).toString(16).padStart(64, '0');
               subscriber.next({
                 type: 'closeBatch',
                 id: BigInt(rawEvent.data[0]),

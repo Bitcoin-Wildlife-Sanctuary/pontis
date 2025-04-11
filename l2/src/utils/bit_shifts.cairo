@@ -118,7 +118,6 @@ mod tests {
     use super::{fast_pow, pow2, shr_u64};
 
     #[test]
-    #[available_gas(1000000000)]
     fn test_fast_pow() {
         assert_eq!(fast_pow(2_u128, 3_u128), 8, "invalid result");
         assert_eq!(fast_pow(3_u128, 4_u128), 81, "invalid result");
@@ -129,7 +128,6 @@ mod tests {
     }
 
     #[test]
-    #[available_gas(1000000000)]
     fn test_pow2() {
         assert_eq!(pow2(0), 1, "2^0 should be 1");
         assert_eq!(pow2(1), 2, "2^1 should be 2");
